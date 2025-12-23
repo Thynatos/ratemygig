@@ -13,13 +13,10 @@ function getEnv(): Env {
     const eventsProvider = (import.meta.env.VITE_EVENTS_PROVIDER as string) || 'mock'
     const ticketmasterApiKey = import.meta.env.VITE_TICKETMASTER_API_KEY as string | undefined
 
-    // Validate required env vars in production
+    // Log warning for missing env vars in production (but don't crash)
     if (import.meta.env.PROD) {
-        if (!supabaseUrl) {
-            throw new Error('VITE_SUPABASE_URL is required')
-        }
-        if (!supabaseAnonKey) {
-            throw new Error('VITE_SUPABASE_ANON_KEY is required')
+        if (!supabaseUrl || !supabaseAnonKey) {
+            console.warn('Supabase credentials not configured. Auth features will be disabled.')
         }
     }
 
