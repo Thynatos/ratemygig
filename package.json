@@ -1,0 +1,30 @@
+{
+  "name": "ratemygig",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Concert discovery and rating platform",
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/web",
+    "build": "npm run build --workspace=apps/web",
+    "preview": "npm run preview --workspace=apps/web",
+    "test": "npm run test --workspace=apps/web",
+    "test:e2e": "npm run test:e2e --workspace=apps/web",
+    "lint": "npm run lint --workspace=apps/web",
+    "jobs:ingest": "npm run ingest --workspace=packages/jobs",
+    "jobs:start": "npm run start --workspace=packages/jobs",
+    "jobs:test-api": "npm run test:api --workspace=packages/jobs"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "keywords": [
+    "concerts",
+    "music",
+    "reviews",
+    "ratings",
+    "gigs"
+  ],
+  "author": "",
+  "license": "MIT"
+}

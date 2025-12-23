@@ -1,0 +1,205 @@
+import { useState } from 'react'
+import { Search, Calendar, SlidersHorizontal, X } from 'lucide-react'
+import { useEvents } from '../api/events'
+import { EventCard } from '../components/EventCard'
+import { CitySelector } from '../components/CitySelector'
+import { Button } from '@/shared/components/ui/Button'
+import { Input } from '@/shared/components/ui/Input'
+import { EventCardSkeleton } from '@/shared/components/ui/Loading'
+import { cn } from '@/shared/lib/utils'
+
+export function DiscoverPage() {
+    const [city, setCity] = useState('')
+    const [searchQuery, setSearchQuery] = useState('')
+    const [debouncedQuery, setDebouncedQuery] = useState('')
+    const [page, setPage] = useState(1)
+    const [showFilters, setShowFilters] = useState(false)
+
+    const { data, isLoading, error } = useEvents({
+        city,
+        query: debouncedQuery,
+        page,
+        pageSize: 12,
+    })
+
+    // Debounce search
+    const handleSearch = (value: string) => {
+        setSearchQuery(value)
+        const timeoutId = setTimeout(() => {
+            setDebouncedQuery(value)
+            setPage(1)
+        }, 300)
+        return () => clearTimeout(timeoutId)
+    }
+
+    const handleCityChange = (newCity: string) => {
+        setCity(newCity)
+        setPage(1)
+    }
+
+    const clearFilters = () => {
+        setSearchQuery('')
+        setDebouncedQuery('')
+        setCity('')
+        setPage(1)
+    }
+
+    const hasActiveFilters = city || debouncedQuery
+
+    return (
+        <div className="page-container">
+            {/* Hero Section */}
+            <section className="text-center py-12 md:py-16">
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold text-white mb-4">
+                    Discover <span className="text-gradient">Amazing Gigs</span>
+                </h1>
+                <p className="text-lg text-surface-400 max-w-2xl mx-auto mb-8">
+                    Find upcoming concerts, get tickets, and share your experiences with the community.
+                </p>
+
+                {/* Search Bar */}
+                <div className="max-w-2xl mx-auto">
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        <CitySelector value={city} onChange={handleCityChange} />
+
+                        <div className="relative flex-1">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-surface-500" />
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => handleSearch(e.target.value)}
+                                placeholder="Search artists, venues, events..."
+                                className="input-field pl-12 pr-4"
+                            />
+                        </div>
+
+                        <Button
+                            variant="secondary"
+                            onClick={() => setShowFilters(!showFilters)}
+                            className={cn(showFilters && 'border-primary-500')}
+                        >
+                            <SlidersHorizontal className="w-5 h-5" />
+                        </Button>
+                    </div>
+
+                    {/* Active Filters */}
+                    {hasActiveFilters && (
+                        <div className="mt-4 flex items-center justify-center gap-2 flex-wrap">
+                            <span className="text-sm text-surface-400">Active filters:</span>
+                            {city && (
+                                <button
+                                    onClick={() => setCity('')}
+                                    className="badge-primary flex items-center gap-1"
+                                >
+                                    {city}
+                                    <X className="w-3 h-3" />
+                                </button>
+                            )}
+                            {debouncedQuery && (
+                                <button
+                                    onClick={() => { setSearchQuery(''); setDebouncedQuery('') }}
+                                    className="badge-accent flex items-center gap-1"
+                                >
+                                    "{debouncedQuery}"
+                                    <X className="w-3 h-3" />
+                                </button>
+                            )}
+                            <button
+                                onClick={clearFilters}
+                                className="text-sm text-surface-500 hover:text-surface-300"
+                            >
+                                Clear all
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </section>
+
+            {/* Results */}
+            <section>
+                <div className="flex items-center justify-between mb-6">
+                    <h2 className="section-title flex items-center gap-2">
+                        <Calendar className="w-6 h-6 text-primary-400" />
+                        Upcoming Events
+                    </h2>
+                    {data && (
+                        <span className="text-surface-400">
+                            {data.count} {data.count === 1 ? 'event' : 'events'} found
+                        </span>
+                    )}
+                </div>
+
+                {/* Error State */}
+                {error && (
+                    <div className="glass-card p-8 text-center">
+                        <p className="text-red-400 mb-4">Failed to load events</p>
+                        <Button variant="secondary" onClick={() => window.location.reload()}>
+                            Try Again
+                        </Button>
+                    </div>
+                )}
+
+                {/* Loading State */}
+                {isLoading && (
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        {Array.from({ length: 6 }).map((_, i) => (
+                            <EventCardSkeleton key={i} />
+                        ))}
+                    </div>
+                )}
+
+                {/* Empty State */}
+                {!isLoading && data?.data.length === 0 && (
+                    <div className="glass-card p-12 text-center">
+                        <Calendar className="w-16 h-16 text-surface-600 mx-auto mb-4" />
+                        <h3 className="text-xl font-semibold text-white mb-2">No events found</h3>
+                        <p className="text-surface-400 mb-6">
+                            {hasActiveFilters
+                                ? 'Try adjusting your filters or search query'
+                                : 'Check back later for upcoming events'}
+                        </p>
+                        {hasActiveFilters && (
+                            <Button variant="secondary" onClick={clearFilters}>
+                                Clear Filters
+                            </Button>
+                        )}
+                    </div>
+                )}
+
+                {/* Events Grid */}
+                {!isLoading && data && data.data.length > 0 && (
+                    <>
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            {data.data.map(event => (
+                                <EventCard key={event.id} event={event} />
+                            ))}
+                        </div>
+
+                        {/* Pagination */}
+                        {(data.hasMore || page > 1) && (
+                            <div className="mt-8 flex items-center justify-center gap-4">
+                                <Button
+                                    variant="secondary"
+                                    onClick={() => setPage(p => p - 1)}
+                                    disabled={page === 1}
+                                >
+                                    Previous
+                                </Button>
+                                <span className="text-surface-400">
+                                    Page {page} of {Math.ceil(data.count / 12)}
+                                </span>
+                                <Button
+                                    variant="secondary"
+                                    onClick={() => setPage(p => p + 1)}
+                                    disabled={!data.hasMore}
+                                >
+                                    Next
+                                </Button>
+                            </div>
+                        )}
+                    </>
+                )}
+            </section>
+        </div>
+    )
+}

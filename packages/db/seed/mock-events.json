@@ -1,0 +1,406 @@
+{
+    "venues": [
+        {
+            "id": "v1",
+            "name": "Madison Square Garden",
+            "city": "New York",
+            "country": "USA",
+            "lat": 40.7505,
+            "lng": -73.9934
+        },
+        {
+            "id": "v2",
+            "name": "The O2 Arena",
+            "city": "London",
+            "country": "UK",
+            "lat": 51.503,
+            "lng": 0.0032
+        },
+        {
+            "id": "v3",
+            "name": "Red Rocks Amphitheatre",
+            "city": "Denver",
+            "country": "USA",
+            "lat": 39.6655,
+            "lng": -105.2057
+        },
+        {
+            "id": "v4",
+            "name": "Hollywood Bowl",
+            "city": "Los Angeles",
+            "country": "USA",
+            "lat": 34.1122,
+            "lng": -118.3391
+        },
+        {
+            "id": "v5",
+            "name": "Brixton Academy",
+            "city": "London",
+            "country": "UK",
+            "lat": 51.4652,
+            "lng": -0.1149
+        },
+        {
+            "id": "v6",
+            "name": "The Fillmore",
+            "city": "San Francisco",
+            "country": "USA",
+            "lat": 37.784,
+            "lng": -122.433
+        },
+        {
+            "id": "v7",
+            "name": "Wembley Stadium",
+            "city": "London",
+            "country": "UK",
+            "lat": 51.556,
+            "lng": -0.2795
+        },
+        {
+            "id": "v8",
+            "name": "Barclays Center",
+            "city": "New York",
+            "country": "USA",
+            "lat": 40.6826,
+            "lng": -73.9754
+        }
+    ],
+    "artists": [
+        {
+            "id": "a1",
+            "name": "Taylor Swift"
+        },
+        {
+            "id": "a2",
+            "name": "The Weeknd"
+        },
+        {
+            "id": "a3",
+            "name": "Coldplay"
+        },
+        {
+            "id": "a4",
+            "name": "Ed Sheeran"
+        },
+        {
+            "id": "a5",
+            "name": "Bruno Mars"
+        },
+        {
+            "id": "a6",
+            "name": "Beyoncé"
+        },
+        {
+            "id": "a7",
+            "name": "Arctic Monkeys"
+        },
+        {
+            "id": "a8",
+            "name": "Foo Fighters"
+        },
+        {
+            "id": "a9",
+            "name": "Dua Lipa"
+        },
+        {
+            "id": "a10",
+            "name": "Harry Styles"
+        },
+        {
+            "id": "a11",
+            "name": "Kendrick Lamar"
+        },
+        {
+            "id": "a12",
+            "name": "Billie Eilish"
+        }
+    ],
+    "events": [
+        {
+            "id": "e1",
+            "name": "Taylor Swift - The Eras Tour",
+            "startAt": "2025-03-15T20:00:00Z",
+            "venueId": "v1",
+            "artistIds": [
+                "a1"
+            ],
+            "ticketUrls": [
+                {
+                    "label": "Ticketmaster",
+                    "url": "https://www.ticketmaster.com/taylor-swift"
+                },
+                {
+                    "label": "StubHub",
+                    "url": "https://www.stubhub.com"
+                }
+            ]
+        },
+        {
+            "id": "e2",
+            "name": "The Weeknd - After Hours Tour",
+            "startAt": "2025-03-22T21:00:00Z",
+            "venueId": "v2",
+            "artistIds": [
+                "a2"
+            ],
+            "ticketUrls": [
+                {
+                    "label": "Ticketmaster",
+                    "url": "https://www.ticketmaster.co.uk/the-weeknd"
+                }
+            ]
+        },
+        {
+            "id": "e3",
+            "name": "Coldplay - Music of the Spheres",
+            "startAt": "2025-04-05T19:30:00Z",
+            "venueId": "v7",
+            "artistIds": [
+                "a3"
+            ],
+            "ticketUrls": [
+                {
+                    "label": "AXS",
+                    "url": "https://www.axs.com/coldplay"
+                }
+            ]
+        },
+        {
+            "id": "e4",
+            "name": "Ed Sheeran - Mathematics Tour",
+            "startAt": "2025-04-12T20:00:00Z",
+            "venueId": "v3",
+            "artistIds": [
+                "a4"
+            ],
+            "ticketUrls": [
+                {
+                    "label": "Ticketmaster",
+                    "url": "https://www.ticketmaster.com/ed-sheeran"
+                }
+            ]
+        },
+        {
+            "id": "e5",
+            "name": "Bruno Mars - 24K Magic World Tour",
+            "startAt": "2025-04-20T20:30:00Z",
+            "venueId": "v4",
+            "artistIds": [
+                "a5"
+            ],
+            "ticketUrls": [
+                {
+                    "label": "Live Nation",
+                    "url": "https://www.livenation.com/bruno-mars"
+                }
+            ]
+        },
+        {
+            "id": "e6",
+            "name": "Beyoncé - Renaissance World Tour",
+            "startAt": "2025-05-01T20:00:00Z",
+            "venueId": "v1",
+            "artistIds": [
+                "a6"
+            ],
+            "ticketUrls": [
+                {
+                    "label": "Ticketmaster",
+                    "url": "https://www.ticketmaster.com/beyonce"
+                },
+                {
+                    "label": "VividSeats",
+                    "url": "https://www.vividseats.com"
+                }
+            ]
+        },
+        {
+            "id": "e7",
+            "name": "Arctic Monkeys - The Car Tour",
+            "startAt": "2025-05-10T21:00:00Z",
+            "venueId": "v5",
+            "artistIds": [
+                "a7"
+            ],
+            "ticketUrls": [
+                {
+                    "label": "See Tickets",
+                    "url": "https://www.seetickets.com/arctic-monkeys"
+                }
+            ]
+        },
+        {
+            "id": "e8",
+            "name": "Foo Fighters - Everything or Nothing Tour",
+            "startAt": "2025-05-18T19:00:00Z",
+            "venueId": "v3",
+            "artistIds": [
+                "a8"
+            ],
+            "ticketUrls": [
+                {
+                    "label": "Ticketmaster",
+                    "url": "https://www.ticketmaster.com/foo-fighters"
+                }
+            ]
+        },
+        {
+            "id": "e9",
+            "name": "Dua Lipa - Future Nostalgia Tour",
+            "startAt": "2025-06-01T20:00:00Z",
+            "venueId": "v6",
+            "artistIds": [
+                "a9"
+            ],
+            "ticketUrls": [
+                {
+                    "label": "Ticketmaster",
+                    "url": "https://www.ticketmaster.com/dua-lipa"
+                }
+            ]
+        },
+        {
+            "id": "e10",
+            "name": "Harry Styles - Love On Tour",
+            "startAt": "2025-06-15T20:30:00Z",
+            "venueId": "v8",
+            "artistIds": [
+                "a10"
+            ],
+            "ticketUrls": [
+                {
+                    "label": "Ticketmaster",
+                    "url": "https://www.ticketmaster.com/harry-styles"
+                }
+            ]
+        },
+        {
+            "id": "e11",
+            "name": "Kendrick Lamar - The Big Steppers Tour",
+            "startAt": "2025-06-25T21:00:00Z",
+            "venueId": "v4",
+            "artistIds": [
+                "a11"
+            ],
+            "ticketUrls": [
+                {
+                    "label": "Live Nation",
+                    "url": "https://www.livenation.com/kendrick-lamar"
+                }
+            ]
+        },
+        {
+            "id": "e12",
+            "name": "Billie Eilish - Happier Than Ever Tour",
+            "startAt": "2025-07-04T20:00:00Z",
+            "venueId": "v2",
+            "artistIds": [
+                "a12"
+            ],
+            "ticketUrls": [
+                {
+                    "label": "Ticketmaster",
+                    "url": "https://www.ticketmaster.co.uk/billie-eilish"
+                }
+            ]
+        },
+        {
+            "id": "e13",
+            "name": "Summer Festival 2025",
+            "startAt": "2025-07-15T14:00:00Z",
+            "venueId": "v3",
+            "artistIds": [
+                "a3",
+                "a4",
+                "a9"
+            ],
+            "ticketUrls": [
+                {
+                    "label": "Festival Tickets",
+                    "url": "https://example.com/summer-fest"
+                }
+            ]
+        },
+        {
+            "id": "e14",
+            "name": "NYC Music Week - Opening Night",
+            "startAt": "2025-08-01T19:00:00Z",
+            "venueId": "v1",
+            "artistIds": [
+                "a2",
+                "a5",
+                "a11"
+            ],
+            "ticketUrls": [
+                {
+                    "label": "NYC Music Week",
+                    "url": "https://example.com/nyc-music-week"
+                }
+            ]
+        },
+        {
+            "id": "e15",
+            "name": "London Calling Festival",
+            "startAt": "2025-08-10T13:00:00Z",
+            "venueId": "v7",
+            "artistIds": [
+                "a7",
+                "a8",
+                "a10"
+            ],
+            "ticketUrls": [
+                {
+                    "label": "London Calling",
+                    "url": "https://example.com/london-calling"
+                }
+            ]
+        },
+        {
+            "id": "e16",
+            "name": "The Weeknd - Special Intimate Show",
+            "startAt": "2025-09-01T21:00:00Z",
+            "venueId": "v5",
+            "artistIds": [
+                "a2"
+            ],
+            "ticketUrls": [
+                {
+                    "label": "AXS",
+                    "url": "https://www.axs.com/weeknd-special"
+                }
+            ]
+        },
+        {
+            "id": "e17",
+            "name": "Taylor Swift - Surprise Acoustic Night",
+            "startAt": "2025-09-15T20:00:00Z",
+            "venueId": "v6",
+            "artistIds": [
+                "a1"
+            ],
+            "ticketUrls": [
+                {
+                    "label": "Ticketmaster",
+                    "url": "https://www.ticketmaster.com/taylor-acoustic"
+                }
+            ]
+        },
+        {
+            "id": "e18",
+            "name": "Fall Music Fest",
+            "startAt": "2025-10-01T15:00:00Z",
+            "venueId": "v4",
+            "artistIds": [
+                "a6",
+                "a9",
+                "a12"
+            ],
+            "ticketUrls": [
+                {
+                    "label": "Live Nation",
+                    "url": "https://www.livenation.com/fall-fest"
+                }
+            ]
+        }
+    ]
+}

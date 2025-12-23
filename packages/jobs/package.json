@@ -1,0 +1,21 @@
+{
+    "name": "@ratemygig/jobs",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "ingest": "tsx src/jobs/daily-ingest.ts",
+        "start": "tsx src/scheduler.ts",
+        "test:api": "tsx src/test-api.ts"
+    },
+    "dependencies": {
+        "@supabase/supabase-js": "^2.49.1",
+        "node-cron": "^3.0.3"
+    },
+    "devDependencies": {
+        "@types/node": "^22.10.2",
+        "@types/node-cron": "^3.0.11",
+        "tsx": "^4.19.2",
+        "typescript": "~5.6.2"
+    }
+}

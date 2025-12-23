@@ -1,0 +1,142 @@
+import { z } from 'zod'
+
+// ============================================
+// Auth Schemas
+// ============================================
+
+export const emailSchema = z.object({
+    email: z.string().email('Please enter a valid email address'),
+})
+
+export type EmailInput = z.infer<typeof emailSchema>
+
+// ============================================
+// Profile Schemas
+// ============================================
+
+export const usernameSchema = z
+    .string()
+    .min(3, 'Username must be at least 3 characters')
+    .max(30, 'Username must be at most 30 characters')
+    .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores')
+    .optional()
+    .or(z.literal(''))
+
+export const profileSchema = z.object({
+    username: usernameSchema,
+    display_name: z.string().max(100, 'Display name too long').optional(),
+    bio: z.string().max(500, 'Bio must be 500 characters or less').optional(),
+    is_profile_public: z.boolean(),
+})
+
+export type ProfileInput = z.infer<typeof profileSchema>
+
+// ============================================
+// Review Schemas
+// ============================================
+
+export const reviewSchema = z.object({
+    rating: z
+        .number()
+        .min(1, 'Please select a rating')
+        .max(5, 'Rating must be between 1 and 5'),
+    title: z.string().max(200, 'Title too long').optional(),
+    body: z
+        .string()
+        .min(10, 'Review must be at least 10 characters')
+        .max(5000, 'Review must be 5000 characters or less'),
+    isPublic: z.boolean(),
+    tagIds: z.array(z.string().uuid()).optional(),
+})
+
+export type ReviewInput = z.infer<typeof reviewSchema>
+
+// ============================================
+// Event Schemas
+// ============================================
+
+export const eventFiltersSchema = z.object({
+    city: z.string().optional(),
+    query: z.string().optional(),
+    from: z.string().datetime().optional(),
+    to: z.string().datetime().optional(),
+    venueId: z.string().uuid().optional(),
+    artistId: z.string().uuid().optional(),
+    page: z.number().int().min(1).optional(),
+    pageSize: z.number().int().min(1).max(100).optional(),
+})
+
+export type EventFiltersInput = z.infer<typeof eventFiltersSchema>
+
+// ============================================
+// Rating Filter Schemas
+// ============================================
+
+export const ratingFiltersSchema = z.object({
+    city: z.string().optional(),
+    year: z.number().int().min(2000).max(2100).optional(),
+    venueId: z.string().uuid().optional(),
+    artistId: z.string().uuid().optional(),
+})
+
+export type RatingFiltersInput = z.infer<typeof ratingFiltersSchema>
+
+// ============================================
+// Attendance Schemas
+// ============================================
+
+export const attendanceStatusSchema = z.enum(['planned', 'attended'])
+
+export const attendanceSchema = z.object({
+    eventId: z.string().uuid(),
+    status: attendanceStatusSchema,
+})
+
+export type AttendanceInput = z.infer<typeof attendanceSchema>
+
+// ============================================
+// Photo Upload Schemas
+// ============================================
+
+export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const
+export const MAX_IMAGE_SIZE_MB = 10
+export const MAX_PHOTOS_PER_REVIEW = 10
+
+export const photoUploadSchema = z.object({
+    file: z
+        .instanceof(File)
+        .refine(
+            (file) => ALLOWED_IMAGE_TYPES.includes(file.type as typeof ALLOWED_IMAGE_TYPES[number]),
+            'Only JPG, PNG and WebP images are allowed'
+        )
+        .refine(
+            (file) => file.size <= MAX_IMAGE_SIZE_MB * 1024 * 1024,
+            `File size must be less than ${MAX_IMAGE_SIZE_MB}MB`
+        ),
+})
+
+export type PhotoUploadInput = z.infer<typeof photoUploadSchema>
+
+// ============================================
+// URL / Link Schemas
+// ============================================
+
+export const ticketUrlSchema = z.object({
+    label: z.string().min(1).max(100),
+    url: z.string().url('Invalid URL'),
+})
+
+export type TicketUrlInput = z.infer<typeof ticketUrlSchema>
+
+// ============================================
+// API Response Validation
+// ============================================
+
+export const paginatedResponseSchema = <T extends z.ZodTypeAny>(itemSchema: T) =>
+    z.object({
+        data: z.array(itemSchema),
+        count: z.number(),
+        page: z.number(),
+        pageSize: z.number(),
+        hasMore: z.boolean(),
+    })
