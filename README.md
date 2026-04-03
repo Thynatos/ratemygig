@@ -156,9 +156,21 @@ interface IEventsProvider {
 
 The mock provider includes sample concert data for development.
 
+### Provider mode behavior
+
+The web app now uses one consistent provider contract:
+
+| `VITE_EVENTS_PROVIDER` | Discover / event detail | Artists / venues / cities | Mock fallback |
+| --- | --- | --- | --- |
+| `mock` | DB `provider = mock` first, then mock seed data | DB mock-linked records first, then mock seed data | Yes |
+| `ticketmaster` | DB `provider = ticketmaster` first, then live Ticketmaster if `VITE_TICKETMASTER_API_KEY` is set | DB Ticketmaster-linked records only | No |
+| `all` | All DB rows first, then live Ticketmaster, then mock seed data | All DB-linked records first, then mock seed data | Yes |
+
+Provider-scoped queries also fail closed now: if there are no linked Ticketmaster venues/artists/events in the DB, the app returns an empty list instead of leaking mock or global rows.
+
 ### Ticketmaster and empty Discover
 
-If `VITE_EVENTS_PROVIDER=ticketmaster`, Discover reads **database** events where `provider = ticketmaster`. The app does not fall back to mock data in that mode. If you see no events:
+If `VITE_EVENTS_PROVIDER=ticketmaster`, Discover reads **database** events where `provider = ticketmaster` and only uses the live Ticketmaster API when `VITE_TICKETMASTER_API_KEY` is set. The app does not fall back to mock data in that mode. If you see no events:
 
 1. **Seed or migrate** — Run all SQL files in `packages/db/migrations/` in order (including `006_seed_mock_catalog.sql` if you want demo rows), or
 2. **Ingest from Ticketmaster** — From the repo root, after configuring the jobs workspace:

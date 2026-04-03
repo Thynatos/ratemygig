@@ -4,49 +4,23 @@ import type {
     SearchEventsResult,
     ProviderEvent
 } from '@core/index'
-import mockData from '@/../../../packages/db/seed/mock-events.json'
-
-interface MockVenue {
-    id: string
-    name: string
-    city: string
-    country: string
-    lat?: number
-    lng?: number
-}
-
-interface MockArtist {
-    id: string
-    name: string
-}
-
-interface MockEvent {
-    id: string
-    name: string
-    startAt: string
-    venueId: string
-    artistIds: string[]
-    ticketUrls: { label: string; url: string }[]
-}
+import {
+    getMockArtistRecord,
+    getMockCities,
+    getMockEventRecord,
+    getMockVenueRecord,
+    mapMockEventToProviderEvent,
+    mockEvents,
+} from './mock-catalog'
 
 export class MockEventsProvider implements IEventsProvider {
     readonly providerId = 'mock'
 
-    private venues: Map<string, MockVenue>
-    private artists: Map<string, MockArtist>
-    private events: MockEvent[]
-
-    constructor() {
-        this.venues = new Map(mockData.venues.map(v => [v.id, v]))
-        this.artists = new Map(mockData.artists.map(a => [a.id, a]))
-        this.events = mockData.events
-    }
-
     async searchEvents(params: SearchEventsParams): Promise<SearchEventsResult> {
         const { city, from, to, query, page = 1, pageSize = 10 } = params
 
-        let filtered = this.events.filter(event => {
-            const venue = this.venues.get(event.venueId)
+        const filtered = mockEvents.filter(event => {
+            const venue = getMockVenueRecord(event.venueId)
             if (!venue) return false
 
             // Filter by city
@@ -64,7 +38,7 @@ export class MockEventsProvider implements IEventsProvider {
                 const q = query.toLowerCase()
                 const matchesName = event.name.toLowerCase().includes(q)
                 const matchesArtist = event.artistIds.some(id => {
-                    const artist = this.artists.get(id)
+                    const artist = getMockArtistRecord(id)
                     return artist?.name.toLowerCase().includes(q)
                 })
                 const matchesVenue = venue.name.toLowerCase().includes(q)
@@ -85,7 +59,7 @@ export class MockEventsProvider implements IEventsProvider {
         const paginated = filtered.slice(start, end)
 
         // Map to ProviderEvent format
-        const events: ProviderEvent[] = paginated.map(event => this.mapToProviderEvent(event))
+        const events: ProviderEvent[] = paginated.map(mapMockEventToProviderEvent)
 
         return {
             events,
@@ -97,39 +71,13 @@ export class MockEventsProvider implements IEventsProvider {
     }
 
     async getEvent(providerEventId: string): Promise<ProviderEvent | null> {
-        const event = this.events.find(e => e.id === providerEventId)
+        const event = getMockEventRecord(providerEventId)
         if (!event) return null
-        return this.mapToProviderEvent(event)
-    }
-
-    private mapToProviderEvent(event: MockEvent): ProviderEvent {
-        const venue = this.venues.get(event.venueId)!
-        const artists = event.artistIds
-            .map(id => this.artists.get(id))
-            .filter((a): a is MockArtist => !!a)
-            .map(a => ({ id: a.id, name: a.name }))
-
-        return {
-            id: event.id,
-            name: event.name,
-            startAt: new Date(event.startAt),
-            venue: {
-                id: venue.id,
-                name: venue.name,
-                city: venue.city,
-                country: venue.country,
-                lat: venue.lat,
-                lng: venue.lng,
-            },
-            artists,
-            ticketUrls: event.ticketUrls,
-        }
+        return mapMockEventToProviderEvent(event)
     }
 
     getCities(): string[] {
-        const cities = new Set<string>()
-        this.venues.forEach(venue => cities.add(venue.city))
-        return Array.from(cities).sort()
+        return getMockCities()
     }
 }
 

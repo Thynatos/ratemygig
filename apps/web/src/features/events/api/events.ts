@@ -1,9 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/shared/lib/supabase'
-import { env, isSupabaseConfigured } from '@/shared/lib/env'
+import { env, isSupabaseConfigured, type EventsProviderMode } from '@/shared/lib/env'
+import { allowsMockFallback, allowsTicketmasterLive, getDatabaseProviderFilter } from '@/shared/lib/provider-policy'
 import { mockEventsProvider } from '../providers/mock-provider'
-import { createTicketmasterBrowserProvider } from '../providers/ticketmaster-browser-provider'
-import type { Event, EventFilters, PaginatedResponse, Provider, ProviderEvent, TicketUrl } from '@core/index'
+import type { Event, EventFilters, IEventsProvider, PaginatedResponse, Provider, ProviderEvent, TicketUrl } from '@core/index'
 
 // Query keys
 export const eventKeys = {
@@ -89,6 +89,8 @@ export function mapEventRow(row: EventRow): Event {
 }
 
 function mapProviderEventToEvent(e: ProviderEvent, provider: Provider): Event {
+    const timestamp = new Date().toISOString()
+
     return {
         id: e.id,
         provider,
@@ -106,31 +108,55 @@ function mapProviderEventToEvent(e: ProviderEvent, provider: Provider): Event {
             lat: e.venue.lat ?? null,
             lng: e.venue.lng ?? null,
             provider_venue_id: e.venue.id,
-            created_at: new Date().toISOString(),
+            created_at: timestamp,
         },
         ticket_urls: e.ticketUrls,
         lineup: e.artists.map(a => a.name),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        created_at: timestamp,
+        updated_at: timestamp,
     }
 }
 
-function applyProviderFilter<T extends { eq(column: string, value: string): T }>(
-    query: T,
-    mode: typeof env.EVENTS_PROVIDER
-): T {
-    if (mode === 'mock') return query.eq('provider', 'mock')
-    if (mode === 'ticketmaster') return query.eq('provider', 'ticketmaster')
+function applyProviderFilter<T extends { eq(column: string, value: string): T }>(query: T, mode: EventsProviderMode): T {
+    const provider = getDatabaseProviderFilter(mode)
+    if (provider) return query.eq('provider', provider)
     return query
 }
 
+function createEmptyPaginatedResponse<T>(page: number, pageSize: number): PaginatedResponse<T> {
+    return {
+        data: [],
+        count: 0,
+        page,
+        pageSize,
+        hasMore: false,
+    }
+}
+
+function getPagination(filters: EventFilters & { page?: number; pageSize?: number }) {
+    return {
+        page: filters.page || 1,
+        pageSize: filters.pageSize || 12,
+    }
+}
+
+async function getTicketmasterLiveProvider(mode: EventsProviderMode): Promise<IEventsProvider | null> {
+    if (!allowsTicketmasterLive(mode)) return null
+
+    const key = env.TICKETMASTER_API_KEY?.trim()
+    if (!key) return null
+
+    const { createTicketmasterBrowserProvider } = await import('../providers/ticketmaster-browser-provider')
+    return createTicketmasterBrowserProvider(key)
+}
+
 async function fetchEventsFromDatabase(
-    filters: EventFilters & { page?: number; pageSize?: number }
+    filters: EventFilters & { page?: number; pageSize?: number },
+    mode: EventsProviderMode = env.EVENTS_PROVIDER
 ): Promise<PaginatedResponse<Event> | null> {
     if (!isSupabaseConfigured()) return null
 
-    const page = filters.page || 1
-    const pageSize = filters.pageSize || 12
+    const { page, pageSize } = getPagination(filters)
     const from = (page - 1) * pageSize
     const to = from + pageSize - 1
 
@@ -139,7 +165,7 @@ async function fetchEventsFromDatabase(
         .select('*, venue:venues(*)', { count: 'exact' })
         .order('start_at', { ascending: true })
 
-    query = applyProviderFilter(query, env.EVENTS_PROVIDER)
+    query = applyProviderFilter(query, mode)
 
     if (filters.city?.trim()) {
         query = query.ilike('city', filters.city.trim())
@@ -209,12 +235,12 @@ async function fetchEventsFromMockProvider(
 }
 
 async function fetchEventsFromTicketmasterLive(
-    filters: EventFilters & { page?: number; pageSize?: number }
+    filters: EventFilters & { page?: number; pageSize?: number },
+    mode: EventsProviderMode = env.EVENTS_PROVIDER
 ): Promise<PaginatedResponse<Event> | null> {
-    const key = env.TICKETMASTER_API_KEY?.trim()
-    if (!key) return null
+    const live = await getTicketmasterLiveProvider(mode)
+    if (!live) return null
 
-    const live = createTicketmasterBrowserProvider(key)
     const result = await live.searchEvents({
         city: filters.city || '',
         country: filters.country,
@@ -235,73 +261,220 @@ async function fetchEventsFromTicketmasterLive(
     }
 }
 
-export function useEvents(filters: EventFilters & { page?: number; pageSize?: number }) {
-    return useQuery({
-        queryKey: [...eventKeys.list(filters), env.EVENTS_PROVIDER, isSupabaseConfigured()],
-        queryFn: async () => {
-            const db = await fetchEventsFromDatabase(filters)
-            if (db && db.data.length > 0) return db
-
-            if (env.EVENTS_PROVIDER === 'mock' || env.EVENTS_PROVIDER === 'all') {
-                const mock = await fetchEventsFromMockProvider(filters)
-                if (mock.data.length > 0) return mock
-            }
-
-            if (env.EVENTS_PROVIDER === 'ticketmaster' || env.EVENTS_PROVIDER === 'all') {
-                const live = await fetchEventsFromTicketmasterLive(filters)
-                if (live && live.data.length > 0) return live
-            }
-
-            if (db) return db
-
-            return (
-                (await fetchEventsFromMockProvider(filters)) || {
-                    data: [],
-                    count: 0,
-                    page: filters.page || 1,
-                    pageSize: filters.pageSize || 12,
-                    hasMore: false,
-                }
-            )
-        },
-        staleTime: 1000 * 60 * 2,
-    })
-}
-
-async function fetchSingleEventFromDb(eventId: string): Promise<Event | null> {
+async function fetchSingleEventFromDb(
+    eventId: string,
+    mode: EventsProviderMode = env.EVENTS_PROVIDER
+): Promise<Event | null> {
     if (!isSupabaseConfigured()) return null
 
-    const { data, error } = await supabase
+    const provider = getDatabaseProviderFilter(mode)
+
+    let query = supabase
         .from('events')
         .select('*, venue:venues(*)')
         .eq('id', eventId)
-        .maybeSingle()
+
+    if (provider) query = query.eq('provider', provider)
+
+    const { data, error } = await query.maybeSingle()
 
     if (error) throw error
     if (!data) return null
     return mapEventRow(data as EventRow)
 }
 
+async function fetchEventFromMockProvider(eventId: string): Promise<Event | null> {
+    const providerEvent = await mockEventsProvider.getEvent(eventId)
+    if (!providerEvent) return null
+    return mapProviderEventToEvent(providerEvent, 'mock')
+}
+
+async function fetchEventFromTicketmasterLive(
+    eventId: string,
+    mode: EventsProviderMode = env.EVENTS_PROVIDER
+): Promise<Event | null> {
+    const live = await getTicketmasterLiveProvider(mode)
+    if (!live) return null
+
+    const providerEvent = await live.getEvent(eventId)
+    if (!providerEvent) return null
+    return mapProviderEventToEvent(providerEvent, 'ticketmaster')
+}
+
+async function fetchCitiesFromDatabase(mode: EventsProviderMode = env.EVENTS_PROVIDER): Promise<string[] | null> {
+    if (!isSupabaseConfigured()) return null
+
+    const provider = getDatabaseProviderFilter(mode)
+    if (!provider) {
+        const { data, error } = await supabase.from('venues').select('city').order('city')
+        if (error) throw error
+
+        return [...new Set((data || []).map(row => row.city).filter(Boolean))].sort((a, b) => a.localeCompare(b))
+    }
+
+    const { data: events, error: eventsError } = await supabase
+        .from('events')
+        .select('venue_id')
+        .eq('provider', provider)
+
+    if (eventsError) throw eventsError
+
+    const venueIds = [...new Set((events || []).map(event => event.venue_id).filter(Boolean))] as string[]
+    if (venueIds.length === 0) return []
+
+    const { data, error } = await supabase.from('venues').select('city').in('id', venueIds).order('city')
+    if (error) throw error
+
+    return [...new Set((data || []).map(row => row.city).filter(Boolean))].sort((a, b) => a.localeCompare(b))
+}
+
+interface ResolveEventsDeps {
+    mode: EventsProviderMode
+    supabaseConfigured: boolean
+    fetchFromDatabase: (filters: EventFilters & { page?: number; pageSize?: number }) => Promise<PaginatedResponse<Event> | null>
+    fetchFromMock: (filters: EventFilters & { page?: number; pageSize?: number }) => Promise<PaginatedResponse<Event>>
+    fetchFromTicketmasterLive: (
+        filters: EventFilters & { page?: number; pageSize?: number }
+    ) => Promise<PaginatedResponse<Event> | null>
+}
+
+export async function resolveEventsWithDeps(
+    filters: EventFilters & { page?: number; pageSize?: number },
+    deps: ResolveEventsDeps
+): Promise<PaginatedResponse<Event>> {
+    const { page, pageSize } = getPagination(filters)
+    let fallback = createEmptyPaginatedResponse<Event>(page, pageSize)
+
+    if (deps.supabaseConfigured) {
+        const db = await deps.fetchFromDatabase(filters)
+        if (db) {
+            fallback = db
+            if (db.data.length > 0) return db
+        }
+    }
+
+    if (allowsTicketmasterLive(deps.mode)) {
+        const live = await deps.fetchFromTicketmasterLive(filters)
+        if (live) {
+            fallback = live
+            if (live.data.length > 0) return live
+        }
+    }
+
+    if (allowsMockFallback(deps.mode)) {
+        return deps.fetchFromMock(filters)
+    }
+
+    return fallback
+}
+
+export async function resolveEvents(
+    filters: EventFilters & { page?: number; pageSize?: number },
+    options?: { mode?: EventsProviderMode; supabaseConfigured?: boolean }
+): Promise<PaginatedResponse<Event>> {
+    const mode = options?.mode ?? env.EVENTS_PROVIDER
+    const supabaseConfigured = options?.supabaseConfigured ?? isSupabaseConfigured()
+
+    return resolveEventsWithDeps(filters, {
+        mode,
+        supabaseConfigured,
+        fetchFromDatabase: nextFilters => fetchEventsFromDatabase(nextFilters, mode),
+        fetchFromMock: fetchEventsFromMockProvider,
+        fetchFromTicketmasterLive: nextFilters => fetchEventsFromTicketmasterLive(nextFilters, mode),
+    })
+}
+
+interface ResolveEventDeps {
+    mode: EventsProviderMode
+    supabaseConfigured: boolean
+    fetchFromDatabase: (eventId: string) => Promise<Event | null>
+    fetchFromMock: (eventId: string) => Promise<Event | null>
+    fetchFromTicketmasterLive: (eventId: string) => Promise<Event | null>
+}
+
+export async function resolveEventWithDeps(eventId: string, deps: ResolveEventDeps): Promise<Event> {
+    if (deps.supabaseConfigured) {
+        const fromDb = await deps.fetchFromDatabase(eventId)
+        if (fromDb) return fromDb
+    }
+
+    if (allowsTicketmasterLive(deps.mode)) {
+        const live = await deps.fetchFromTicketmasterLive(eventId)
+        if (live) return live
+    }
+
+    if (allowsMockFallback(deps.mode)) {
+        const mock = await deps.fetchFromMock(eventId)
+        if (mock) return mock
+    }
+
+    throw new Error('Event not found')
+}
+
+export async function resolveEvent(
+    eventId: string,
+    options?: { mode?: EventsProviderMode; supabaseConfigured?: boolean }
+): Promise<Event> {
+    const mode = options?.mode ?? env.EVENTS_PROVIDER
+    const supabaseConfigured = options?.supabaseConfigured ?? isSupabaseConfigured()
+
+    return resolveEventWithDeps(eventId, {
+        mode,
+        supabaseConfigured,
+        fetchFromDatabase: id => fetchSingleEventFromDb(id, mode),
+        fetchFromMock: fetchEventFromMockProvider,
+        fetchFromTicketmasterLive: id => fetchEventFromTicketmasterLive(id, mode),
+    })
+}
+
+interface ResolveCitiesDeps {
+    mode: EventsProviderMode
+    supabaseConfigured: boolean
+    fetchFromDatabase: () => Promise<string[] | null>
+    fetchFromMock: () => Promise<string[]> | string[]
+}
+
+export async function resolveCitiesWithDeps(deps: ResolveCitiesDeps): Promise<string[]> {
+    if (deps.supabaseConfigured) {
+        const fromDb = await deps.fetchFromDatabase()
+        if (fromDb && fromDb.length > 0) return fromDb
+        if (fromDb && !allowsMockFallback(deps.mode)) return fromDb
+    }
+
+    if (allowsMockFallback(deps.mode)) {
+        return Promise.resolve(deps.fetchFromMock())
+    }
+
+    return []
+}
+
+export async function resolveCities(options?: {
+    mode?: EventsProviderMode
+    supabaseConfigured?: boolean
+}): Promise<string[]> {
+    const mode = options?.mode ?? env.EVENTS_PROVIDER
+    const supabaseConfigured = options?.supabaseConfigured ?? isSupabaseConfigured()
+
+    return resolveCitiesWithDeps({
+        mode,
+        supabaseConfigured,
+        fetchFromDatabase: () => fetchCitiesFromDatabase(mode),
+        fetchFromMock: () => mockEventsProvider.getCities(),
+    })
+}
+
+export function useEvents(filters: EventFilters & { page?: number; pageSize?: number }) {
+    return useQuery({
+        queryKey: [...eventKeys.list(filters), env.EVENTS_PROVIDER, isSupabaseConfigured()],
+        queryFn: () => resolveEvents(filters),
+        staleTime: 1000 * 60 * 2,
+    })
+}
+
 export function useEvent(eventId: string) {
     return useQuery({
         queryKey: [...eventKeys.detail(eventId), env.EVENTS_PROVIDER],
-        queryFn: async () => {
-            const fromDb = await fetchSingleEventFromDb(eventId)
-            if (fromDb) return fromDb
-
-            if (env.EVENTS_PROVIDER === 'ticketmaster' || env.EVENTS_PROVIDER === 'all') {
-                const key = env.TICKETMASTER_API_KEY?.trim()
-                if (key) {
-                    const live = createTicketmasterBrowserProvider(key)
-                    const pe = await live.getEvent(eventId)
-                    if (pe) return mapProviderEventToEvent(pe, 'ticketmaster')
-                }
-            }
-
-            const providerEvent = await mockEventsProvider.getEvent(eventId)
-            if (!providerEvent) throw new Error('Event not found')
-            return mapProviderEventToEvent(providerEvent, 'mock')
-        },
+        queryFn: () => resolveEvent(eventId),
         enabled: !!eventId,
     })
 }
@@ -309,35 +482,7 @@ export function useEvent(eventId: string) {
 export function useCities() {
     return useQuery({
         queryKey: ['cities', isSupabaseConfigured(), env.EVENTS_PROVIDER],
-        queryFn: async () => {
-            if (isSupabaseConfigured()) {
-                let q = supabase.from('venues').select('city').order('city')
-
-                if (env.EVENTS_PROVIDER === 'mock') {
-                    const { data: evs } = await supabase.from('events').select('venue_id').eq('provider', 'mock')
-                    const ids = [...new Set((evs || []).map(e => e.venue_id).filter(Boolean))] as string[]
-                    if (ids.length > 0) {
-                        q = supabase.from('venues').select('city').in('id', ids).order('city')
-                    }
-                } else if (env.EVENTS_PROVIDER === 'ticketmaster') {
-                    const { data: evs } = await supabase
-                        .from('events')
-                        .select('venue_id')
-                        .eq('provider', 'ticketmaster')
-                    const ids = [...new Set((evs || []).map(e => e.venue_id).filter(Boolean))] as string[]
-                    if (ids.length > 0) {
-                        q = supabase.from('venues').select('city').in('id', ids).order('city')
-                    }
-                }
-
-                const { data, error } = await q
-                if (!error && data?.length) {
-                    const cities = [...new Set(data.map(r => r.city).filter(Boolean))] as string[]
-                    return cities.sort((a, b) => a.localeCompare(b))
-                }
-            }
-            return mockEventsProvider.getCities()
-        },
+        queryFn: () => resolveCities(),
         staleTime: 1000 * 60 * 30,
     })
 }

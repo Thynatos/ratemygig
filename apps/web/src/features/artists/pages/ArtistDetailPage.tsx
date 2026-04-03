@@ -9,6 +9,8 @@ import { RatingDisplay } from '@/shared/components/ui/StarRating'
 import { LoadingPage } from '@/shared/components/ui/Loading'
 import { EventCard } from '@/features/events/components/EventCard'
 import { Input } from '@/shared/components/ui/Input'
+import { env } from '@/shared/lib/env'
+import { getProviderModeLabel, isTicketmasterMode } from '@/shared/lib/provider-policy'
 
 export function ArtistDetailPage() {
     const { artistId } = useParams<{ artistId: string }>()
@@ -48,6 +50,7 @@ export function ArtistDetailPage() {
 
     const upcomingEvents = events.filter(e => new Date(e.start_at) >= new Date())
     const pastEvents = events.filter(e => new Date(e.start_at) < new Date())
+    const showNoEventsState = events.length === 0
 
     return (
         <div className="page-container">
@@ -110,6 +113,23 @@ export function ArtistDetailPage() {
                                 ))}
                             </div>
                         </section>
+                    )}
+
+                    {showNoEventsState && (
+                        <Card>
+                            <CardContent className="p-6 text-center">
+                                <Calendar className="w-10 h-10 text-surface-600 mx-auto mb-3" />
+                                <h2 className="text-xl font-semibold text-white mb-2">No shows available yet</h2>
+                                <p className="text-surface-400 mb-3">
+                                    {isTicketmasterMode()
+                                        ? 'This artist does not have any Ticketmaster events in the current data source.'
+                                        : 'There are no events for this artist in the current catalog.'}
+                                </p>
+                                <p className="text-xs uppercase tracking-[0.2em] text-surface-500">
+                                    Current source: {getProviderModeLabel(env.EVENTS_PROVIDER)}
+                                </p>
+                            </CardContent>
+                        </Card>
                     )}
                 </div>
 

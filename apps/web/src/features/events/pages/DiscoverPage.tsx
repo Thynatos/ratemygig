@@ -1,12 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Search, Calendar, SlidersHorizontal, X } from 'lucide-react'
 import { useEvents } from '../api/events'
 import { EventCard } from '../components/EventCard'
 import { CitySelector } from '../components/CitySelector'
 import { Button } from '@/shared/components/ui/Button'
-import { Input } from '@/shared/components/ui/Input'
 import { EventCardSkeleton } from '@/shared/components/ui/Loading'
 import { env } from '@/shared/lib/env'
+import { allowsTicketmasterLive, getProviderModeLabel, isAllMode, isTicketmasterMode } from '@/shared/lib/provider-policy'
 import { cn } from '@/shared/lib/utils'
 
 export function DiscoverPage() {
@@ -23,15 +23,14 @@ export function DiscoverPage() {
         pageSize: 12,
     })
 
-    // Debounce search
-    const handleSearch = (value: string) => {
-        setSearchQuery(value)
-        const timeoutId = setTimeout(() => {
-            setDebouncedQuery(value)
+    useEffect(() => {
+        const timeoutId = window.setTimeout(() => {
+            setDebouncedQuery(searchQuery)
             setPage(1)
         }, 300)
-        return () => clearTimeout(timeoutId)
-    }
+
+        return () => window.clearTimeout(timeoutId)
+    }, [searchQuery])
 
     const handleCityChange = (newCity: string) => {
         setCity(newCity)
@@ -46,6 +45,19 @@ export function DiscoverPage() {
     }
 
     const hasActiveFilters = city || debouncedQuery
+    const isTicketmasterOnly = isTicketmasterMode()
+    const isMixedMode = isAllMode()
+    const hasTicketmasterKey = Boolean(env.TICKETMASTER_API_KEY?.trim())
+
+    const emptyStateDescription = hasActiveFilters
+        ? 'Try adjusting your filters or search query.'
+        : isTicketmasterOnly
+          ? hasTicketmasterKey
+              ? 'No Ticketmaster events matched this search. The app checked your DB first, then the live Ticketmaster API.'
+              : 'No Ticketmaster events are available. Add DB rows or set VITE_TICKETMASTER_API_KEY to enable live fallback.'
+          : isMixedMode
+            ? 'No events were found across your configured providers.'
+            : 'No demo events matched this search.'
 
     return (
         <div className="page-container">
@@ -68,7 +80,7 @@ export function DiscoverPage() {
                             <input
                                 type="text"
                                 value={searchQuery}
-                                onChange={(e) => handleSearch(e.target.value)}
+                                onChange={e => setSearchQuery(e.target.value)}
                                 placeholder="Search artists, venues, events..."
                                 className="input-field pl-12 pr-4"
                             />
@@ -154,13 +166,12 @@ export function DiscoverPage() {
                     <div className="glass-card p-12 text-center">
                         <Calendar className="w-16 h-16 text-surface-600 mx-auto mb-4" />
                         <h3 className="text-xl font-semibold text-white mb-2">No events found</h3>
-                        {env.EVENTS_PROVIDER === 'ticketmaster' && (
+                        {isTicketmasterOnly && (
                             <div className="mb-6 max-w-2xl mx-auto rounded-xl border border-surface-600 bg-surface-800/40 p-4 text-left text-sm text-surface-300 space-y-2">
                                 <p className="font-medium text-surface-200">
-                                    Ticketmaster mode loads events from your Supabase database (rows with{' '}
+                                    Ticketmaster mode checks your Supabase database first (rows with{' '}
                                     <code className="text-primary-300">provider = ticketmaster</code>). If this
-                                    project is empty, apply migrations (including the mock catalog seed if you
-                                    want sample data) or sync from Ticketmaster.
+                                    project is empty, sync Ticketmaster data into Supabase or enable browser-side live fallback.
                                 </p>
                                 <p>
                                     From the repo root, run{' '}
@@ -173,25 +184,37 @@ export function DiscoverPage() {
                                     <code className="text-primary-300">SUPABASE_SERVICE_ROLE_KEY</code> (see root{' '}
                                     <code className="text-primary-300">.env.example</code>).
                                 </p>
+                                {allowsTicketmasterLive() && (
+                                    <p>
+                                        To query Ticketmaster directly in the browser when the DB has no rows, set{' '}
+                                        <code className="text-primary-300">VITE_TICKETMASTER_API_KEY</code> in{' '}
+                                        <code className="text-primary-300">apps/web/.env.local</code>.
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                        {isMixedMode && (
+                            <div className="mb-6 max-w-2xl mx-auto rounded-xl border border-surface-600 bg-surface-800/40 p-4 text-left text-sm text-surface-300 space-y-2">
+                                <p className="font-medium text-surface-200">
+                                    Mixed mode reads all provider rows from Supabase first, then can fall back to live Ticketmaster and demo data when nothing matches.
+                                </p>
                                 <p>
-                                    To query the Ticketmaster API directly in the browser when the DB has no
-                                    rows, set{' '}
-                                    <code className="text-primary-300">VITE_TICKETMASTER_API_KEY</code> in{' '}
-                                    <code className="text-primary-300">apps/web/.env.local</code>.
+                                    This helps during setup, but an empty result still means none of the configured sources produced matching events.
                                 </p>
                             </div>
                         )}
                         <p className="text-surface-400 mb-6">
-                            {hasActiveFilters
-                                ? 'Try adjusting your filters or search query'
-                                : env.EVENTS_PROVIDER === 'ticketmaster'
-                                  ? 'If you already added data, try clearing filters or check your search.'
-                                  : 'Check back later for upcoming events'}
+                            {emptyStateDescription}
                         </p>
                         {hasActiveFilters && (
                             <Button variant="secondary" onClick={clearFilters}>
                                 Clear Filters
                             </Button>
+                        )}
+                        {!hasActiveFilters && (
+                            <p className="text-xs uppercase tracking-[0.2em] text-surface-500">
+                                Current source: {getProviderModeLabel()}
+                            </p>
                         )}
                     </div>
                 )}

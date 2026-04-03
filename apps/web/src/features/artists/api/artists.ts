@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/shared/lib/supabase'
-import { env, isSupabaseConfigured } from '@/shared/lib/env'
+import { env, isSupabaseConfigured, type EventsProviderMode } from '@/shared/lib/env'
+import { allowsMockFallback, getDatabaseProviderFilter } from '@/shared/lib/provider-policy'
 import type { Artist, ArtistRatingSummary, Event } from '@core/index'
 import { mapEventRow, type EventRow } from '../../events/api/events'
+import { getMockArtist, getMockArtists, getMockEventsByArtistId } from '../../events/providers/mock-catalog'
 
 export const artistKeys = {
     all: ['artists'] as const,
@@ -15,15 +17,19 @@ export const artistKeys = {
 
 export type ArtistRatingQuery = { city?: string; year?: number; venue_id?: string }
 
-async function fetchArtistsFromDb(search?: string): Promise<Artist[] | null> {
+async function fetchArtistsFromDb(
+    search?: string,
+    mode: EventsProviderMode = env.EVENTS_PROVIDER
+): Promise<Artist[] | null> {
     if (!isSupabaseConfigured()) return null
 
+    const provider = getDatabaseProviderFilter(mode)
     let allowedArtistIds: string[] | null = null
-    if (env.EVENTS_PROVIDER === 'mock' || env.EVENTS_PROVIDER === 'ticketmaster') {
+    if (provider) {
         const { data: evs, error: evErr } = await supabase
             .from('events')
             .select('id')
-            .eq('provider', env.EVENTS_PROVIDER)
+            .eq('provider', provider)
         if (evErr) throw evErr
         const eventIds = (evs || []).map(e => e.id)
         if (eventIds.length === 0) return []
@@ -56,54 +62,209 @@ async function fetchArtistsFromDb(search?: string): Promise<Artist[] | null> {
     )
 }
 
+async function fetchArtistFromMock(artistId: string): Promise<Artist | null> {
+    return getMockArtist(artistId)
+}
+
+async function fetchArtistsFromMock(search?: string): Promise<Artist[]> {
+    return getMockArtists(search)
+}
+
+async function fetchArtistEventsFromMock(artistId: string): Promise<Event[]> {
+    return getMockEventsByArtistId(artistId)
+}
+
+export interface ResolveArtistsDeps {
+    mode: EventsProviderMode
+    supabaseConfigured: boolean
+    fetchFromDatabase: (search?: string) => Promise<Artist[] | null>
+    fetchFromMock: (search?: string) => Promise<Artist[]>
+}
+
+export async function resolveArtistsWithDeps(search: string | undefined, deps: ResolveArtistsDeps): Promise<Artist[]> {
+    if (deps.supabaseConfigured) {
+        const fromDb = await deps.fetchFromDatabase(search)
+        if (fromDb && fromDb.length > 0) return fromDb
+        if (fromDb && !allowsMockFallback(deps.mode)) return fromDb
+    }
+
+    if (allowsMockFallback(deps.mode)) {
+        return deps.fetchFromMock(search)
+    }
+
+    return []
+}
+
+export async function resolveArtists(
+    search?: string,
+    options?: { mode?: EventsProviderMode; supabaseConfigured?: boolean }
+): Promise<Artist[]> {
+    const mode = options?.mode ?? env.EVENTS_PROVIDER
+    const supabaseConfigured = options?.supabaseConfigured ?? isSupabaseConfigured()
+
+    return resolveArtistsWithDeps(search, {
+        mode,
+        supabaseConfigured,
+        fetchFromDatabase: nextSearch => fetchArtistsFromDb(nextSearch, mode),
+        fetchFromMock: fetchArtistsFromMock,
+    })
+}
+
+export interface ResolveArtistDeps {
+    mode: EventsProviderMode
+    supabaseConfigured: boolean
+    fetchFromDatabase: (artistId: string) => Promise<Artist | null>
+    fetchFromMock: (artistId: string) => Promise<Artist | null>
+}
+
+export async function resolveArtistWithDeps(artistId: string, deps: ResolveArtistDeps): Promise<Artist> {
+    if (deps.supabaseConfigured) {
+        const fromDb = await deps.fetchFromDatabase(artistId)
+        if (fromDb) return fromDb
+    }
+
+    if (allowsMockFallback(deps.mode)) {
+        const fromMock = await deps.fetchFromMock(artistId)
+        if (fromMock) return fromMock
+    }
+
+    throw new Error('Artist not found')
+}
+
+async function fetchArtistFromDb(
+    artistId: string,
+    mode: EventsProviderMode = env.EVENTS_PROVIDER
+): Promise<Artist | null> {
+    if (!isSupabaseConfigured()) return null
+
+    const provider = getDatabaseProviderFilter(mode)
+    if (provider) {
+        const { data: links, error: linkErr } = await supabase
+            .from('event_artists')
+            .select('event_id')
+            .eq('artist_id', artistId)
+
+        if (linkErr) throw linkErr
+
+        const eventIds = (links || []).map(link => link.event_id)
+        if (eventIds.length === 0) return null
+
+        const { data: scopedEvents, error: eventsError } = await supabase
+            .from('events')
+            .select('id')
+            .eq('provider', provider)
+            .in('id', eventIds)
+            .limit(1)
+
+        if (eventsError) throw eventsError
+        if (!scopedEvents?.length) return null
+    }
+
+    const { data, error } = await supabase.from('artists').select('*').eq('id', artistId).maybeSingle()
+    if (error) throw error
+    if (!data) return null
+
+    return {
+        id: data.id,
+        name: data.name,
+        provider_artist_id: data.provider_artist_id,
+        created_at: data.created_at,
+    } as Artist
+}
+
+export async function resolveArtist(
+    artistId: string,
+    options?: { mode?: EventsProviderMode; supabaseConfigured?: boolean }
+): Promise<Artist> {
+    const mode = options?.mode ?? env.EVENTS_PROVIDER
+    const supabaseConfigured = options?.supabaseConfigured ?? isSupabaseConfigured()
+
+    return resolveArtistWithDeps(artistId, {
+        mode,
+        supabaseConfigured,
+        fetchFromDatabase: id => fetchArtistFromDb(id, mode),
+        fetchFromMock: fetchArtistFromMock,
+    })
+}
+
+export interface ResolveArtistEventsDeps {
+    mode: EventsProviderMode
+    supabaseConfigured: boolean
+    fetchFromDatabase: (artistId: string) => Promise<Event[] | null>
+    fetchFromMock: (artistId: string) => Promise<Event[]>
+}
+
+export async function resolveArtistEventsWithDeps(artistId: string, deps: ResolveArtistEventsDeps): Promise<Event[]> {
+    if (deps.supabaseConfigured) {
+        const fromDb = await deps.fetchFromDatabase(artistId)
+        if (fromDb && fromDb.length > 0) return fromDb
+        if (fromDb && !allowsMockFallback(deps.mode)) return fromDb
+    }
+
+    if (allowsMockFallback(deps.mode)) {
+        return deps.fetchFromMock(artistId)
+    }
+
+    return []
+}
+
+async function fetchArtistEventsFromDb(
+    artistId: string,
+    mode: EventsProviderMode = env.EVENTS_PROVIDER
+): Promise<Event[] | null> {
+    if (!isSupabaseConfigured()) return null
+
+    const { data: links, error: linkErr } = await supabase
+        .from('event_artists')
+        .select('event_id')
+        .eq('artist_id', artistId)
+
+    if (linkErr) throw linkErr
+    const eventIds = (links || []).map(link => link.event_id)
+    if (eventIds.length === 0) return []
+
+    let query = supabase
+        .from('events')
+        .select('*, venue:venues(*)')
+        .in('id', eventIds)
+        .order('start_at', { ascending: true })
+
+    const provider = getDatabaseProviderFilter(mode)
+    if (provider) query = query.eq('provider', provider)
+
+    const { data, error } = await query
+    if (error) throw error
+    if (!data?.length) return []
+
+    return (data as EventRow[]).map(mapEventRow) as Event[]
+}
+
+export async function resolveArtistEvents(
+    artistId: string,
+    options?: { mode?: EventsProviderMode; supabaseConfigured?: boolean }
+): Promise<Event[]> {
+    const mode = options?.mode ?? env.EVENTS_PROVIDER
+    const supabaseConfigured = options?.supabaseConfigured ?? isSupabaseConfigured()
+
+    return resolveArtistEventsWithDeps(artistId, {
+        mode,
+        supabaseConfigured,
+        fetchFromDatabase: id => fetchArtistEventsFromDb(id, mode),
+        fetchFromMock: fetchArtistEventsFromMock,
+    })
+}
+
 export function useArtists(query?: string) {
     return useQuery({
         queryKey: [...artistKeys.list(query), env.EVENTS_PROVIDER],
-        queryFn: async () => {
-            const fromDb = await fetchArtistsFromDb(query)
-            if (fromDb && fromDb.length > 0) return fromDb
-
-            const mockData = await import('@/../../../packages/db/seed/mock-events.json')
-            let artists = mockData.artists as { id: string; name: string }[]
-            if (query) {
-                artists = artists.filter(a => a.name.toLowerCase().includes(query.toLowerCase()))
-            }
-            return artists.map(a => ({
-                id: a.id,
-                name: a.name,
-                provider_artist_id: a.id,
-                created_at: new Date().toISOString(),
-            })) as Artist[]
-        },
+        queryFn: () => resolveArtists(query),
     })
 }
 
 export function useArtist(artistId: string) {
     return useQuery({
-        queryKey: artistKeys.detail(artistId),
-        queryFn: async () => {
-            if (isSupabaseConfigured()) {
-                const { data, error } = await supabase.from('artists').select('*').eq('id', artistId).maybeSingle()
-                if (!error && data) {
-                    return {
-                        id: data.id,
-                        name: data.name,
-                        provider_artist_id: data.provider_artist_id,
-                        created_at: data.created_at,
-                    } as Artist
-                }
-            }
-
-            const mockData = await import('@/../../../packages/db/seed/mock-events.json')
-            const artist = mockData.artists.find((a: { id: string }) => a.id === artistId)
-            if (!artist) throw new Error('Artist not found')
-            return {
-                id: artist.id,
-                name: artist.name,
-                provider_artist_id: artist.id,
-                created_at: new Date().toISOString(),
-            } as Artist
-        },
+        queryKey: [...artistKeys.detail(artistId), env.EVENTS_PROVIDER],
+        queryFn: () => resolveArtist(artistId),
         enabled: !!artistId,
     })
 }
@@ -129,78 +290,7 @@ export function useArtistRatingSummary(artistId: string, filters?: ArtistRatingQ
 export function useArtistEvents(artistId: string) {
     return useQuery({
         queryKey: ['artist-events', artistId, env.EVENTS_PROVIDER],
-        queryFn: async () => {
-            if (isSupabaseConfigured()) {
-                const { data: links, error: linkErr } = await supabase
-                    .from('event_artists')
-                    .select('event_id')
-                    .eq('artist_id', artistId)
-
-                if (linkErr) throw linkErr
-                const eventIds = (links || []).map(l => l.event_id)
-                if (eventIds.length === 0) return [] as Event[]
-
-                let q = supabase
-                    .from('events')
-                    .select('*, venue:venues(*)')
-                    .in('id', eventIds)
-                    .order('start_at', { ascending: true })
-
-                if (env.EVENTS_PROVIDER === 'mock') q = q.eq('provider', 'mock')
-                else if (env.EVENTS_PROVIDER === 'ticketmaster') q = q.eq('provider', 'ticketmaster')
-
-                const { data, error } = await q
-                if (!error && data?.length) {
-                    return (data as EventRow[]).map(mapEventRow) as Event[]
-                }
-            }
-
-            const mockData = await import('@/../../../packages/db/seed/mock-events.json')
-            const events = mockData.events.filter((e: { artistIds: string[] }) =>
-                e.artistIds.includes(artistId)
-            )
-
-            return events.map(
-                (e: {
-                    id: string
-                    name: string
-                    startAt: string
-                    venueId: string
-                    artistIds: string[]
-                    ticketUrls: { label: string; url: string }[]
-                }) => {
-                    const venue = mockData.venues.find((v: { id: string }) => v.id === e.venueId)
-                    return {
-                        id: e.id,
-                        provider: 'mock' as const,
-                        provider_event_id: e.id,
-                        name: e.name,
-                        start_at: e.startAt,
-                        city: venue?.city || '',
-                        country: venue?.country || '',
-                        venue_id: e.venueId,
-                        venue: venue
-                            ? {
-                                  id: venue.id,
-                                  name: venue.name,
-                                  city: venue.city,
-                                  country: venue.country,
-                                  lat: venue.lat ?? null,
-                                  lng: venue.lng ?? null,
-                                  provider_venue_id: null,
-                                  created_at: new Date().toISOString(),
-                              }
-                            : undefined,
-                        ticket_urls: e.ticketUrls,
-                        lineup: e.artistIds.map(
-                            id => mockData.artists.find((a: { id: string }) => a.id === id)?.name || ''
-                        ),
-                        created_at: new Date().toISOString(),
-                        updated_at: new Date().toISOString(),
-                    }
-                }
-            ) as Event[]
-        },
+        queryFn: () => resolveArtistEvents(artistId),
         enabled: !!artistId,
     })
 }
