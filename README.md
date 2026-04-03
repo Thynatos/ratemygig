@@ -44,8 +44,12 @@ ratemygig/
 ├── packages/
 │   ├── core/                   # Domain types & interfaces
 │   └── db/                     # SQL migrations & seeds
+├── docs/
+│   └── AGENT_CONTINUATION.md   # Handoff for AI agents / continuation loops
 └── README.md
 ```
+
+**Continuing development:** see [docs/AGENT_CONTINUATION.md](docs/AGENT_CONTINUATION.md) for what is done, what is open, and how to hand off to the next session.
 
 ## 🏁 Quick Start
 
@@ -87,6 +91,7 @@ VITE_EVENTS_PROVIDER=mock
    - `003_indexes.sql`
    - `004_aggregation_functions.sql`
    - `005_storage.sql`
+   - `006_seed_mock_catalog.sql` (demo events/venues/artists with UUIDs aligned to `packages/db/seed/mock-events.json`)
 3. Enable Auth providers:
    - Email (Magic Link)
    - Google OAuth
@@ -151,6 +156,21 @@ interface IEventsProvider {
 
 The mock provider includes sample concert data for development.
 
+### Ticketmaster and empty Discover
+
+If `VITE_EVENTS_PROVIDER=ticketmaster`, Discover reads **database** events where `provider = ticketmaster`. The app does not fall back to mock data in that mode. If you see no events:
+
+1. **Seed or migrate** — Run all SQL files in `packages/db/migrations/` in order (including `006_seed_mock_catalog.sql` if you want demo rows), or
+2. **Ingest from Ticketmaster** — From the repo root, after configuring the jobs workspace:
+
+   ```bash
+   npm run jobs:ingest
+   ```
+
+   Set environment variables for `packages/jobs` (see root [`.env.example`](.env.example)): `TICKETMASTER_API_KEY`, `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY` (export in your shell or load them with your usual tooling).
+
+3. **Live API in the browser** — Without DB rows, the app can still call Ticketmaster from the client if `VITE_TICKETMASTER_API_KEY` is set in `apps/web/.env.local`.
+
 ## 🔐 Authentication
 
 ### Magic Link (Email)
@@ -179,6 +199,15 @@ npm run test
 ```
 
 ### E2E Tests (Playwright)
+
+After installing dependencies, download browsers once (required on a fresh machine):
+
+```bash
+cd apps/web && npx playwright install
+```
+
+Then:
+
 ```bash
 npm run test:e2e
 ```
@@ -192,6 +221,7 @@ npm run test:e2e
 | `npm run preview` | Preview production build |
 | `npm run test` | Run unit tests |
 | `npm run test:e2e` | Run E2E tests |
+| `npm run jobs:ingest` | One-shot Ticketmaster sync into Supabase (`packages/jobs`; service role + TM key) |
 | `npm run lint` | Lint code |
 
 ## 🎨 Design System
@@ -203,8 +233,8 @@ The app uses a custom dark theme with:
 
 ## 🚧 Roadmap
 
-- [ ] Real event provider integration (Ticketmaster/Songkick)
-- [ ] Scheduled event sync (Supabase Edge Functions)
+- [x] DB-backed events + mock seed (`006_seed_mock_catalog.sql`) and optional live Ticketmaster (`VITE_EVENTS_PROVIDER`, `VITE_TICKETMASTER_API_KEY`)
+- [ ] Scheduled event sync (Supabase Edge Functions) — see `packages/jobs`
 - [ ] Image thumbnails generation
 - [ ] Top rated venues/artists leaderboard
 - [ ] Review reactions (helpful/upvote)

@@ -1,7 +1,7 @@
 {
     "venues": [
         {
-            "id": "v1",
+            "id": "b0000001-0000-4000-8000-000000000001",
             "name": "Madison Square Garden",
             "city": "New York",
             "country": "USA",
@@ -9,7 +9,7 @@
             "lng": -73.9934
         },
         {
-            "id": "v2",
+            "id": "b0000001-0000-4000-8000-000000000002",
             "name": "The O2 Arena",
             "city": "London",
             "country": "UK",
@@ -17,7 +17,7 @@
             "lng": 0.0032
         },
         {
-            "id": "v3",
+            "id": "b0000001-0000-4000-8000-000000000003",
             "name": "Red Rocks Amphitheatre",
             "city": "Denver",
             "country": "USA",
@@ -25,7 +25,7 @@
             "lng": -105.2057
         },
         {
-            "id": "v4",
+            "id": "b0000001-0000-4000-8000-000000000004",
             "name": "Hollywood Bowl",
             "city": "Los Angeles",
             "country": "USA",
@@ -33,7 +33,7 @@
             "lng": -118.3391
         },
         {
-            "id": "v5",
+            "id": "b0000001-0000-4000-8000-000000000005",
             "name": "Brixton Academy",
             "city": "London",
             "country": "UK",
@@ -41,7 +41,7 @@
             "lng": -0.1149
         },
         {
-            "id": "v6",
+            "id": "b0000001-0000-4000-8000-000000000006",
             "name": "The Fillmore",
             "city": "San Francisco",
             "country": "USA",
@@ -49,7 +49,7 @@
             "lng": -122.433
         },
         {
-            "id": "v7",
+            "id": "b0000001-0000-4000-8000-000000000007",
             "name": "Wembley Stadium",
             "city": "London",
             "country": "UK",
@@ -57,7 +57,7 @@
             "lng": -0.2795
         },
         {
-            "id": "v8",
+            "id": "b0000001-0000-4000-8000-000000000008",
             "name": "Barclays Center",
             "city": "New York",
             "country": "USA",
@@ -66,341 +66,185 @@
         }
     ],
     "artists": [
-        {
-            "id": "a1",
-            "name": "Taylor Swift"
-        },
-        {
-            "id": "a2",
-            "name": "The Weeknd"
-        },
-        {
-            "id": "a3",
-            "name": "Coldplay"
-        },
-        {
-            "id": "a4",
-            "name": "Ed Sheeran"
-        },
-        {
-            "id": "a5",
-            "name": "Bruno Mars"
-        },
-        {
-            "id": "a6",
-            "name": "Beyoncé"
-        },
-        {
-            "id": "a7",
-            "name": "Arctic Monkeys"
-        },
-        {
-            "id": "a8",
-            "name": "Foo Fighters"
-        },
-        {
-            "id": "a9",
-            "name": "Dua Lipa"
-        },
-        {
-            "id": "a10",
-            "name": "Harry Styles"
-        },
-        {
-            "id": "a11",
-            "name": "Kendrick Lamar"
-        },
-        {
-            "id": "a12",
-            "name": "Billie Eilish"
-        }
+        { "id": "b0000002-0000-4000-8000-000000000001", "name": "Taylor Swift" },
+        { "id": "b0000002-0000-4000-8000-000000000002", "name": "The Weeknd" },
+        { "id": "b0000002-0000-4000-8000-000000000003", "name": "Coldplay" },
+        { "id": "b0000002-0000-4000-8000-000000000004", "name": "Ed Sheeran" },
+        { "id": "b0000002-0000-4000-8000-000000000005", "name": "Bruno Mars" },
+        { "id": "b0000002-0000-4000-8000-000000000006", "name": "Beyoncé" },
+        { "id": "b0000002-0000-4000-8000-000000000007", "name": "Arctic Monkeys" },
+        { "id": "b0000002-0000-4000-8000-000000000008", "name": "Foo Fighters" },
+        { "id": "b0000002-0000-4000-8000-000000000009", "name": "Dua Lipa" },
+        { "id": "b0000002-0000-4000-8000-00000000000a", "name": "Harry Styles" },
+        { "id": "b0000002-0000-4000-8000-00000000000b", "name": "Kendrick Lamar" },
+        { "id": "b0000002-0000-4000-8000-00000000000c", "name": "Billie Eilish" }
     ],
     "events": [
         {
-            "id": "e1",
+            "id": "b0000003-0000-4000-8000-000000000001",
             "name": "Taylor Swift - The Eras Tour",
-            "startAt": "2025-03-15T20:00:00Z",
-            "venueId": "v1",
-            "artistIds": [
-                "a1"
-            ],
+            "startAt": "2026-03-15T20:00:00Z",
+            "venueId": "b0000001-0000-4000-8000-000000000001",
+            "artistIds": ["b0000002-0000-4000-8000-000000000001"],
             "ticketUrls": [
-                {
-                    "label": "Ticketmaster",
-                    "url": "https://www.ticketmaster.com/taylor-swift"
-                },
-                {
-                    "label": "StubHub",
-                    "url": "https://www.stubhub.com"
-                }
+                { "label": "Ticketmaster", "url": "https://www.ticketmaster.com/taylor-swift" },
+                { "label": "StubHub", "url": "https://www.stubhub.com" }
             ]
         },
         {
-            "id": "e2",
+            "id": "b0000003-0000-4000-8000-000000000002",
             "name": "The Weeknd - After Hours Tour",
-            "startAt": "2025-03-22T21:00:00Z",
-            "venueId": "v2",
-            "artistIds": [
-                "a2"
-            ],
-            "ticketUrls": [
-                {
-                    "label": "Ticketmaster",
-                    "url": "https://www.ticketmaster.co.uk/the-weeknd"
-                }
-            ]
+            "startAt": "2026-03-22T21:00:00Z",
+            "venueId": "b0000001-0000-4000-8000-000000000002",
+            "artistIds": ["b0000002-0000-4000-8000-000000000002"],
+            "ticketUrls": [{ "label": "Ticketmaster", "url": "https://www.ticketmaster.co.uk/the-weeknd" }]
         },
         {
-            "id": "e3",
+            "id": "b0000003-0000-4000-8000-000000000003",
             "name": "Coldplay - Music of the Spheres",
-            "startAt": "2025-04-05T19:30:00Z",
-            "venueId": "v7",
-            "artistIds": [
-                "a3"
-            ],
-            "ticketUrls": [
-                {
-                    "label": "AXS",
-                    "url": "https://www.axs.com/coldplay"
-                }
-            ]
+            "startAt": "2026-04-05T19:30:00Z",
+            "venueId": "b0000001-0000-4000-8000-000000000007",
+            "artistIds": ["b0000002-0000-4000-8000-000000000003"],
+            "ticketUrls": [{ "label": "AXS", "url": "https://www.axs.com/coldplay" }]
         },
         {
-            "id": "e4",
+            "id": "b0000003-0000-4000-8000-000000000004",
             "name": "Ed Sheeran - Mathematics Tour",
-            "startAt": "2025-04-12T20:00:00Z",
-            "venueId": "v3",
-            "artistIds": [
-                "a4"
-            ],
-            "ticketUrls": [
-                {
-                    "label": "Ticketmaster",
-                    "url": "https://www.ticketmaster.com/ed-sheeran"
-                }
-            ]
+            "startAt": "2026-04-12T20:00:00Z",
+            "venueId": "b0000001-0000-4000-8000-000000000003",
+            "artistIds": ["b0000002-0000-4000-8000-000000000004"],
+            "ticketUrls": [{ "label": "Ticketmaster", "url": "https://www.ticketmaster.com/ed-sheeran" }]
         },
         {
-            "id": "e5",
+            "id": "b0000003-0000-4000-8000-000000000005",
             "name": "Bruno Mars - 24K Magic World Tour",
-            "startAt": "2025-04-20T20:30:00Z",
-            "venueId": "v4",
-            "artistIds": [
-                "a5"
-            ],
-            "ticketUrls": [
-                {
-                    "label": "Live Nation",
-                    "url": "https://www.livenation.com/bruno-mars"
-                }
-            ]
+            "startAt": "2026-04-20T20:30:00Z",
+            "venueId": "b0000001-0000-4000-8000-000000000004",
+            "artistIds": ["b0000002-0000-4000-8000-000000000005"],
+            "ticketUrls": [{ "label": "Live Nation", "url": "https://www.livenation.com/bruno-mars" }]
         },
         {
-            "id": "e6",
+            "id": "b0000003-0000-4000-8000-000000000006",
             "name": "Beyoncé - Renaissance World Tour",
-            "startAt": "2025-05-01T20:00:00Z",
-            "venueId": "v1",
-            "artistIds": [
-                "a6"
-            ],
+            "startAt": "2026-05-01T20:00:00Z",
+            "venueId": "b0000001-0000-4000-8000-000000000001",
+            "artistIds": ["b0000002-0000-4000-8000-000000000006"],
             "ticketUrls": [
-                {
-                    "label": "Ticketmaster",
-                    "url": "https://www.ticketmaster.com/beyonce"
-                },
-                {
-                    "label": "VividSeats",
-                    "url": "https://www.vividseats.com"
-                }
+                { "label": "Ticketmaster", "url": "https://www.ticketmaster.com/beyonce" },
+                { "label": "VividSeats", "url": "https://www.vividseats.com" }
             ]
         },
         {
-            "id": "e7",
+            "id": "b0000003-0000-4000-8000-000000000007",
             "name": "Arctic Monkeys - The Car Tour",
-            "startAt": "2025-05-10T21:00:00Z",
-            "venueId": "v5",
-            "artistIds": [
-                "a7"
-            ],
-            "ticketUrls": [
-                {
-                    "label": "See Tickets",
-                    "url": "https://www.seetickets.com/arctic-monkeys"
-                }
-            ]
+            "startAt": "2026-05-10T21:00:00Z",
+            "venueId": "b0000001-0000-4000-8000-000000000005",
+            "artistIds": ["b0000002-0000-4000-8000-000000000007"],
+            "ticketUrls": [{ "label": "See Tickets", "url": "https://www.seetickets.com/arctic-monkeys" }]
         },
         {
-            "id": "e8",
+            "id": "b0000003-0000-4000-8000-000000000008",
             "name": "Foo Fighters - Everything or Nothing Tour",
-            "startAt": "2025-05-18T19:00:00Z",
-            "venueId": "v3",
-            "artistIds": [
-                "a8"
-            ],
-            "ticketUrls": [
-                {
-                    "label": "Ticketmaster",
-                    "url": "https://www.ticketmaster.com/foo-fighters"
-                }
-            ]
+            "startAt": "2026-05-18T19:00:00Z",
+            "venueId": "b0000001-0000-4000-8000-000000000003",
+            "artistIds": ["b0000002-0000-4000-8000-000000000008"],
+            "ticketUrls": [{ "label": "Ticketmaster", "url": "https://www.ticketmaster.com/foo-fighters" }]
         },
         {
-            "id": "e9",
+            "id": "b0000003-0000-4000-8000-000000000009",
             "name": "Dua Lipa - Future Nostalgia Tour",
-            "startAt": "2025-06-01T20:00:00Z",
-            "venueId": "v6",
-            "artistIds": [
-                "a9"
-            ],
-            "ticketUrls": [
-                {
-                    "label": "Ticketmaster",
-                    "url": "https://www.ticketmaster.com/dua-lipa"
-                }
-            ]
+            "startAt": "2026-06-01T20:00:00Z",
+            "venueId": "b0000001-0000-4000-8000-000000000006",
+            "artistIds": ["b0000002-0000-4000-8000-000000000009"],
+            "ticketUrls": [{ "label": "Ticketmaster", "url": "https://www.ticketmaster.com/dua-lipa" }]
         },
         {
-            "id": "e10",
+            "id": "b0000003-0000-4000-8000-00000000000a",
             "name": "Harry Styles - Love On Tour",
-            "startAt": "2025-06-15T20:30:00Z",
-            "venueId": "v8",
-            "artistIds": [
-                "a10"
-            ],
-            "ticketUrls": [
-                {
-                    "label": "Ticketmaster",
-                    "url": "https://www.ticketmaster.com/harry-styles"
-                }
-            ]
+            "startAt": "2026-06-15T20:30:00Z",
+            "venueId": "b0000001-0000-4000-8000-000000000008",
+            "artistIds": ["b0000002-0000-4000-8000-00000000000a"],
+            "ticketUrls": [{ "label": "Ticketmaster", "url": "https://www.ticketmaster.com/harry-styles" }]
         },
         {
-            "id": "e11",
+            "id": "b0000003-0000-4000-8000-00000000000b",
             "name": "Kendrick Lamar - The Big Steppers Tour",
-            "startAt": "2025-06-25T21:00:00Z",
-            "venueId": "v4",
-            "artistIds": [
-                "a11"
-            ],
-            "ticketUrls": [
-                {
-                    "label": "Live Nation",
-                    "url": "https://www.livenation.com/kendrick-lamar"
-                }
-            ]
+            "startAt": "2026-06-25T21:00:00Z",
+            "venueId": "b0000001-0000-4000-8000-000000000004",
+            "artistIds": ["b0000002-0000-4000-8000-00000000000b"],
+            "ticketUrls": [{ "label": "Live Nation", "url": "https://www.livenation.com/kendrick-lamar" }]
         },
         {
-            "id": "e12",
+            "id": "b0000003-0000-4000-8000-00000000000c",
             "name": "Billie Eilish - Happier Than Ever Tour",
-            "startAt": "2025-07-04T20:00:00Z",
-            "venueId": "v2",
-            "artistIds": [
-                "a12"
-            ],
-            "ticketUrls": [
-                {
-                    "label": "Ticketmaster",
-                    "url": "https://www.ticketmaster.co.uk/billie-eilish"
-                }
-            ]
+            "startAt": "2026-07-04T20:00:00Z",
+            "venueId": "b0000001-0000-4000-8000-000000000002",
+            "artistIds": ["b0000002-0000-4000-8000-00000000000c"],
+            "ticketUrls": [{ "label": "Ticketmaster", "url": "https://www.ticketmaster.co.uk/billie-eilish" }]
         },
         {
-            "id": "e13",
-            "name": "Summer Festival 2025",
-            "startAt": "2025-07-15T14:00:00Z",
-            "venueId": "v3",
+            "id": "b0000003-0000-4000-8000-00000000000d",
+            "name": "Summer Festival 2026",
+            "startAt": "2026-07-15T14:00:00Z",
+            "venueId": "b0000001-0000-4000-8000-000000000003",
             "artistIds": [
-                "a3",
-                "a4",
-                "a9"
+                "b0000002-0000-4000-8000-000000000003",
+                "b0000002-0000-4000-8000-000000000004",
+                "b0000002-0000-4000-8000-000000000009"
             ],
-            "ticketUrls": [
-                {
-                    "label": "Festival Tickets",
-                    "url": "https://example.com/summer-fest"
-                }
-            ]
+            "ticketUrls": [{ "label": "Festival Tickets", "url": "https://example.com/summer-fest" }]
         },
         {
-            "id": "e14",
+            "id": "b0000003-0000-4000-8000-00000000000e",
             "name": "NYC Music Week - Opening Night",
-            "startAt": "2025-08-01T19:00:00Z",
-            "venueId": "v1",
+            "startAt": "2026-08-01T19:00:00Z",
+            "venueId": "b0000001-0000-4000-8000-000000000001",
             "artistIds": [
-                "a2",
-                "a5",
-                "a11"
+                "b0000002-0000-4000-8000-000000000002",
+                "b0000002-0000-4000-8000-000000000005",
+                "b0000002-0000-4000-8000-00000000000b"
             ],
-            "ticketUrls": [
-                {
-                    "label": "NYC Music Week",
-                    "url": "https://example.com/nyc-music-week"
-                }
-            ]
+            "ticketUrls": [{ "label": "NYC Music Week", "url": "https://example.com/nyc-music-week" }]
         },
         {
-            "id": "e15",
+            "id": "b0000003-0000-4000-8000-00000000000f",
             "name": "London Calling Festival",
-            "startAt": "2025-08-10T13:00:00Z",
-            "venueId": "v7",
+            "startAt": "2026-08-10T13:00:00Z",
+            "venueId": "b0000001-0000-4000-8000-000000000007",
             "artistIds": [
-                "a7",
-                "a8",
-                "a10"
+                "b0000002-0000-4000-8000-000000000007",
+                "b0000002-0000-4000-8000-000000000008",
+                "b0000002-0000-4000-8000-00000000000a"
             ],
-            "ticketUrls": [
-                {
-                    "label": "London Calling",
-                    "url": "https://example.com/london-calling"
-                }
-            ]
+            "ticketUrls": [{ "label": "London Calling", "url": "https://example.com/london-calling" }]
         },
         {
-            "id": "e16",
+            "id": "b0000003-0000-4000-8000-000000000010",
             "name": "The Weeknd - Special Intimate Show",
-            "startAt": "2025-09-01T21:00:00Z",
-            "venueId": "v5",
-            "artistIds": [
-                "a2"
-            ],
-            "ticketUrls": [
-                {
-                    "label": "AXS",
-                    "url": "https://www.axs.com/weeknd-special"
-                }
-            ]
+            "startAt": "2026-09-01T21:00:00Z",
+            "venueId": "b0000001-0000-4000-8000-000000000005",
+            "artistIds": ["b0000002-0000-4000-8000-000000000002"],
+            "ticketUrls": [{ "label": "AXS", "url": "https://www.axs.com/weeknd-special" }]
         },
         {
-            "id": "e17",
+            "id": "b0000003-0000-4000-8000-000000000011",
             "name": "Taylor Swift - Surprise Acoustic Night",
-            "startAt": "2025-09-15T20:00:00Z",
-            "venueId": "v6",
-            "artistIds": [
-                "a1"
-            ],
-            "ticketUrls": [
-                {
-                    "label": "Ticketmaster",
-                    "url": "https://www.ticketmaster.com/taylor-acoustic"
-                }
-            ]
+            "startAt": "2026-09-15T20:00:00Z",
+            "venueId": "b0000001-0000-4000-8000-000000000006",
+            "artistIds": ["b0000002-0000-4000-8000-000000000001"],
+            "ticketUrls": [{ "label": "Ticketmaster", "url": "https://www.ticketmaster.com/taylor-acoustic" }]
         },
         {
-            "id": "e18",
+            "id": "b0000003-0000-4000-8000-000000000012",
             "name": "Fall Music Fest",
-            "startAt": "2025-10-01T15:00:00Z",
-            "venueId": "v4",
+            "startAt": "2026-10-01T15:00:00Z",
+            "venueId": "b0000001-0000-4000-8000-000000000004",
             "artistIds": [
-                "a6",
-                "a9",
-                "a12"
+                "b0000002-0000-4000-8000-000000000006",
+                "b0000002-0000-4000-8000-000000000009",
+                "b0000002-0000-4000-8000-00000000000c"
             ],
-            "ticketUrls": [
-                {
-                    "label": "Live Nation",
-                    "url": "https://www.livenation.com/fall-fest"
-                }
-            ]
+            "ticketUrls": [{ "label": "Live Nation", "url": "https://www.livenation.com/fall-fest" }]
         }
     ]
 }

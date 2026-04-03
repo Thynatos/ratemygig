@@ -1,19 +1,28 @@
+import { useState, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { MapPin, Calendar, ExternalLink, Star, ChevronLeft } from 'lucide-react'
 import { useVenue, useVenueRatingSummary, useVenueEvents } from '../api/venues'
 import { Button } from '@/shared/components/ui/Button'
 import { Card, CardContent } from '@/shared/components/ui/Card'
-import { Badge } from '@/shared/components/ui/Badge'
 import { RatingDisplay } from '@/shared/components/ui/StarRating'
 import { LoadingPage } from '@/shared/components/ui/Loading'
 import { EventCard } from '@/features/events/components/EventCard'
-import { formatDate } from '@/shared/lib/utils'
+import { Input } from '@/shared/components/ui/Input'
 
 export function VenueDetailPage() {
     const { venueId } = useParams<{ venueId: string }>()
+    const yearChoices = useMemo(
+        () => Array.from({ length: 8 }, (_, i) => new Date().getFullYear() - i),
+        []
+    )
+    const [summaryYear, setSummaryYear] = useState<number | ''>('')
+    const [summaryCity, setSummaryCity] = useState('')
 
     const { data: venue, isLoading: venueLoading } = useVenue(venueId!)
-    const { data: ratingSummary } = useVenueRatingSummary(venueId!)
+    const { data: ratingSummary } = useVenueRatingSummary(venueId!, {
+        year: summaryYear === '' ? undefined : summaryYear,
+        city: summaryCity.trim() || undefined,
+    })
     const { data: events = [] } = useVenueEvents(venueId!)
 
     if (venueLoading) return <LoadingPage message="Loading venue..." />
@@ -113,6 +122,36 @@ export function VenueDetailPage() {
                                 <Star className="w-5 h-5 text-yellow-400" />
                                 Rating Summary
                             </h3>
+
+                            <div className="space-y-3 mb-4 text-left">
+                                <label className="block text-xs text-surface-500 uppercase tracking-wide">
+                                    Event year
+                                    <select
+                                        value={summaryYear === '' ? '' : String(summaryYear)}
+                                        onChange={e => {
+                                            const v = e.target.value
+                                            setSummaryYear(v === '' ? '' : Number(v))
+                                        }}
+                                        className="mt-1 w-full rounded-lg border border-surface-600 bg-surface-800 px-3 py-2 text-sm text-white"
+                                    >
+                                        <option value="">All years</option>
+                                        {yearChoices.map(y => (
+                                            <option key={y} value={y}>
+                                                {y}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
+                                <label className="block text-xs text-surface-500 uppercase tracking-wide">
+                                    Event city (optional)
+                                    <Input
+                                        value={summaryCity}
+                                        onChange={e => setSummaryCity(e.target.value)}
+                                        placeholder="e.g. New York"
+                                        className="mt-1"
+                                    />
+                                </label>
+                            </div>
 
                             {ratingSummary ? (
                                 <div className="text-center">

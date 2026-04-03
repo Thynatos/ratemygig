@@ -6,6 +6,7 @@ import { CitySelector } from '../components/CitySelector'
 import { Button } from '@/shared/components/ui/Button'
 import { Input } from '@/shared/components/ui/Input'
 import { EventCardSkeleton } from '@/shared/components/ui/Loading'
+import { env } from '@/shared/lib/env'
 import { cn } from '@/shared/lib/utils'
 
 export function DiscoverPage() {
@@ -153,10 +154,39 @@ export function DiscoverPage() {
                     <div className="glass-card p-12 text-center">
                         <Calendar className="w-16 h-16 text-surface-600 mx-auto mb-4" />
                         <h3 className="text-xl font-semibold text-white mb-2">No events found</h3>
+                        {env.EVENTS_PROVIDER === 'ticketmaster' && (
+                            <div className="mb-6 max-w-2xl mx-auto rounded-xl border border-surface-600 bg-surface-800/40 p-4 text-left text-sm text-surface-300 space-y-2">
+                                <p className="font-medium text-surface-200">
+                                    Ticketmaster mode loads events from your Supabase database (rows with{' '}
+                                    <code className="text-primary-300">provider = ticketmaster</code>). If this
+                                    project is empty, apply migrations (including the mock catalog seed if you
+                                    want sample data) or sync from Ticketmaster.
+                                </p>
+                                <p>
+                                    From the repo root, run{' '}
+                                    <code className="rounded bg-surface-900 px-1.5 py-0.5 text-surface-100">
+                                        npm run jobs:ingest
+                                    </code>
+                                    . Configure <code className="text-primary-300">packages/jobs</code> with{' '}
+                                    <code className="text-primary-300">TICKETMASTER_API_KEY</code>,{' '}
+                                    <code className="text-primary-300">SUPABASE_URL</code>, and{' '}
+                                    <code className="text-primary-300">SUPABASE_SERVICE_ROLE_KEY</code> (see root{' '}
+                                    <code className="text-primary-300">.env.example</code>).
+                                </p>
+                                <p>
+                                    To query the Ticketmaster API directly in the browser when the DB has no
+                                    rows, set{' '}
+                                    <code className="text-primary-300">VITE_TICKETMASTER_API_KEY</code> in{' '}
+                                    <code className="text-primary-300">apps/web/.env.local</code>.
+                                </p>
+                            </div>
+                        )}
                         <p className="text-surface-400 mb-6">
                             {hasActiveFilters
                                 ? 'Try adjusting your filters or search query'
-                                : 'Check back later for upcoming events'}
+                                : env.EVENTS_PROVIDER === 'ticketmaster'
+                                  ? 'If you already added data, try clearing filters or check your search.'
+                                  : 'Check back later for upcoming events'}
                         </p>
                         {hasActiveFilters && (
                             <Button variant="secondary" onClick={clearFilters}>
