@@ -7,7 +7,6 @@ import {
     formatNumber,
     calculateAverageRating,
     isValidUrl,
-    sanitizeHtml,
     generateId,
     formatRelativeTime,
     getCityDisplayName,
@@ -19,8 +18,8 @@ describe('cn (classname utility)', () => {
         expect(cn('foo', 'bar')).toBe('foo bar')
     })
 
-    it('handles conditional classes', () => {
-        expect(cn('base', false && 'hidden', true && 'visible')).toBe('base visible')
+    it('handles conditional classes with falsy values', () => {
+        expect(cn('base', undefined, 'visible')).toBe('base visible')
     })
 
     it('handles undefined/null values', () => {

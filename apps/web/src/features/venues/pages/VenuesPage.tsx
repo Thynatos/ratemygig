@@ -5,8 +5,7 @@ import { useVenues } from '../api/venues'
 import { useCities } from '@/features/events/api/events'
 import { Card, CardContent } from '@/shared/components/ui/Card'
 import { Badge } from '@/shared/components/ui/Badge'
-import { LoadingPage, Skeleton } from '@/shared/components/ui/Loading'
-import { cn } from '@/shared/lib/utils'
+import { Skeleton } from '@/shared/components/ui/Loading'
 
 export function VenuesPage() {
     const [selectedCity, setSelectedCity] = useState<string>('')

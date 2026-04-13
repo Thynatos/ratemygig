@@ -2,10 +2,10 @@
 
 ## Security
 
-### XSS / Review Body Sanitization
-- **Risk**: User-submitted review `body` and `title` are stored and rendered without sanitization
-- **Location**: `apps/web/src/features/reviews/api/reviews.ts` → stored in Supabase → rendered in review pages
-- **Recommendation**: Add HTML sanitization (e.g., DOMPurify) before rendering, or escape on write. PROMPT.md explicitly calls out XSS prevention as a requirement.
+### ~~XSS / Review Body Sanitization~~ — FIXED
+- **Resolved**: Added `dompurify` + `sanitizeText()` utility at `apps/web/src/shared/lib/sanitize.ts`
+- Applied at write-side (`reviews.ts` create/update mutations) and read-side (all 3 pages rendering review body/title)
+- Tests: 11 new tests in `sanitize.test.ts`
 
 ### No Rate Limiting
 - **Risk**: No rate limiting on review creation, attendance toggling, or photo uploads
@@ -51,9 +51,8 @@
 - **Concern**: All data flows directly from React → Supabase client. This works but makes it harder to add server-side business logic, rate limiting, or data transformation in the future.
 - **Mitigation**: RPC functions in PostgreSQL serve as the server-side layer for aggregations
 
-### Zustand Dependency Unused
-- **Concern**: `zustand` is declared as a dependency in `package.json` but not meaningfully used — all state management uses React Query + local state
-- **Location**: `apps/web/package.json`
+### ~~Unused Zustand Dependency~~ — FIXED
+- **Resolved**: Removed `zustand` from `apps/web/package.json` — was declared but never imported anywhere in the codebase.
 
 ## Developer Experience
 

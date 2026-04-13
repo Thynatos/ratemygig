@@ -51,7 +51,7 @@ export function ProfilePage() {
         async function loadProfile() {
             if (!user) return
 
-            const { data, error } = await supabase
+            const { data } = await supabase
                 .from('profiles')
                 .select('*')
                 .eq('id', user.id)

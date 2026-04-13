@@ -1,5 +1,5 @@
 import { useParams, Link } from 'react-router-dom'
-import { User, Star, Calendar, ChevronLeft } from 'lucide-react'
+import { User, Star, Calendar } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/shared/lib/supabase'
 import { Card, CardContent } from '@/shared/components/ui/Card'
@@ -8,6 +8,7 @@ import { Badge } from '@/shared/components/ui/Badge'
 import { RatingDisplay } from '@/shared/components/ui/StarRating'
 import { LoadingPage } from '@/shared/components/ui/Loading'
 import { formatDate, formatRelativeTime } from '@/shared/lib/utils'
+import { sanitizeText } from '@/shared/lib/sanitize'
 
 export function PublicProfilePage() {
     const { username } = useParams<{ username: string }>()
@@ -148,10 +149,10 @@ export function PublicProfilePage() {
                                     </div>
 
                                     {review.title && (
-                                        <p className="mt-3 font-medium text-white">"{review.title}"</p>
+                                        <p className="mt-3 font-medium text-white">&ldquo;{sanitizeText(review.title)}&rdquo;</p>
                                     )}
 
-                                    <p className="mt-2 text-surface-300 line-clamp-3">{review.body}</p>
+                                    <p className="mt-2 text-surface-300 line-clamp-3">{sanitizeText(review.body)}</p>
 
                                     <div className="mt-4 flex items-center justify-between">
                                         <span className="text-sm text-surface-500">

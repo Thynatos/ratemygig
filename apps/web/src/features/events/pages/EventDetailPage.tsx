@@ -13,6 +13,7 @@ import { Avatar } from '@/shared/components/ui/Avatar'
 import { LoadingPage, Skeleton } from '@/shared/components/ui/Loading'
 import { Card, CardContent } from '@/shared/components/ui/Card'
 import { formatDate, formatRelativeTime, isValidUrl, calculateAverageRating } from '@/shared/lib/utils'
+import { sanitizeText } from '@/shared/lib/sanitize'
 
 export function EventDetailPage() {
     const { eventId } = useParams<{ eventId: string }>()
@@ -254,9 +255,9 @@ export function EventDetailPage() {
                                             </div>
 
                                             {review.title && (
-                                                <p className="mt-3 font-medium text-white">"{review.title}"</p>
+                                                <p className="mt-3 font-medium text-white">&ldquo;{sanitizeText(review.title)}&rdquo;</p>
                                             )}
-                                            <p className="mt-2 text-surface-300 line-clamp-3">{review.body}</p>
+                                            <p className="mt-2 text-surface-300 line-clamp-3">{sanitizeText(review.body)}</p>
 
                                             <div className="mt-3">
                                                 <Link

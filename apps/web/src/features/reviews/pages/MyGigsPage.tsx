@@ -2,20 +2,16 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Calendar, Check, Edit, Star, Plus } from 'lucide-react'
 import { useMyGigs } from '../api/reviews'
-import { useAuth } from '@/features/auth/hooks/useAuth'
 import { Button } from '@/shared/components/ui/Button'
 import { Card, CardContent } from '@/shared/components/ui/Card'
 import { Badge } from '@/shared/components/ui/Badge'
-import { LoadingPage, EventCardSkeleton } from '@/shared/components/ui/Loading'
-import { RatingDisplay } from '@/shared/components/ui/StarRating'
-import { formatDate, cn } from '@/shared/lib/utils'
+import { EventCardSkeleton } from '@/shared/components/ui/Loading'
+import { cn } from '@/shared/lib/utils'
 
 type TabType = 'all' | 'planned' | 'attended'
 
 export function MyGigsPage() {
     const [activeTab, setActiveTab] = useState<TabType>('all')
-    const { user } = useAuth()
-
     const statusFilter = activeTab === 'all' ? undefined : activeTab
     const { data: gigs, isLoading } = useMyGigs(statusFilter)
 
@@ -90,7 +86,6 @@ export function MyGigsPage() {
                         if (!event) return null
 
                         const eventDate = new Date(event.start_at)
-                        const isPast = eventDate < new Date()
                         const hasReview = gig.review && gig.review.length > 0
 
                         return (

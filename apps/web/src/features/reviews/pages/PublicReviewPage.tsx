@@ -1,13 +1,13 @@
 import { useParams, Link } from 'react-router-dom'
-import { Calendar, MapPin, Share2, User, ChevronLeft } from 'lucide-react'
+import { Calendar, MapPin, Share2, ChevronLeft } from 'lucide-react'
 import { useReview } from '../api/reviews'
 import { Button } from '@/shared/components/ui/Button'
 import { Card, CardContent } from '@/shared/components/ui/Card'
-import { Badge } from '@/shared/components/ui/Badge'
-import { RatingDisplay, StarRating } from '@/shared/components/ui/StarRating'
+import { StarRating } from '@/shared/components/ui/StarRating'
 import { Avatar } from '@/shared/components/ui/Avatar'
 import { LoadingPage } from '@/shared/components/ui/Loading'
 import { formatDate, formatRelativeTime } from '@/shared/lib/utils'
+import { sanitizeText } from '@/shared/lib/sanitize'
 
 export function PublicReviewPage() {
     const { reviewId } = useParams<{ reviewId: string }>()
@@ -94,14 +94,14 @@ export function PublicReviewPage() {
                     {/* Review Title */}
                     {review.title && (
                         <h1 className="text-2xl font-display font-bold text-white text-center mb-4">
-                            "{review.title}"
+                            &ldquo;{sanitizeText(review.title)}&rdquo;
                         </h1>
                     )}
 
                     {/* Review Body */}
                     <div className="prose prose-invert max-w-none mb-6">
                         <p className="text-surface-200 text-lg leading-relaxed whitespace-pre-wrap">
-                            {review.body}
+                            {sanitizeText(review.body)}
                         </p>
                     </div>
 

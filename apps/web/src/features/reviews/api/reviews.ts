@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/shared/lib/supabase'
+import { sanitizeText } from '@/shared/lib/sanitize'
 import type { Review, ReviewPhoto } from '@core/index'
 
 // Query keys
@@ -132,8 +133,8 @@ export function useCreateReview() {
                     user_id: user.id,
                     event_id: input.eventId,
                     rating: input.rating,
-                    title: input.title || null,
-                    body: input.body,
+                    title: input.title ? sanitizeText(input.title) : null,
+                    body: sanitizeText(input.body),
                     is_public: input.isPublic,
                 })
                 .select()
@@ -171,8 +172,8 @@ export function useUpdateReview() {
                 .from('reviews')
                 .update({
                     rating: input.rating,
-                    title: input.title || null,
-                    body: input.body,
+                    title: input.title ? sanitizeText(input.title) : null,
+                    body: sanitizeText(input.body),
                     is_public: input.isPublic,
                 })
                 .eq('id', reviewId)
@@ -195,7 +196,7 @@ export function useDeleteReview() {
     const queryClient = useQueryClient()
 
     return useMutation({
-        mutationFn: async ({ reviewId, eventId }: { reviewId: string; eventId: string }) => {
+        mutationFn: async ({ reviewId }: { reviewId: string; eventId: string }) => {
             const { error } = await supabase
                 .from('reviews')
                 .delete()

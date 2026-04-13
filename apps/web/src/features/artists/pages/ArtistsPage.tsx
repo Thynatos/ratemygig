@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Users, Star, Search } from 'lucide-react'
+import { Users, Search } from 'lucide-react'
 import { useArtists } from '../api/artists'
 import { Card, CardContent } from '@/shared/components/ui/Card'
 import { Badge } from '@/shared/components/ui/Badge'
-import { LoadingPage, Skeleton } from '@/shared/components/ui/Loading'
+import { Skeleton } from '@/shared/components/ui/Loading'
 
 export function ArtistsPage() {
     const [searchQuery, setSearchQuery] = useState('')
