@@ -19,6 +19,14 @@ Plans:
 
 ---
 
-### Phase B: Setlist Archive (Planned)
+### Phase B: Setlist Archive
+**Goal:** Community wiki-style setlists for events — find out what was played, add your own, see artist song statistics.
+
+Plans:
+- [x] B-01-PLAN.md — Database schema + API hooks for setlists and songs (Wave 1)
+- [x] B-02-PLAN.md — Setlist viewer & editor UI (Wave 2)
+- [x] B-03-PLAN.md — Setlist statistics & artist song pages (Wave 2, parallel to B-02)
+
+---
 ### Phase C: Discovery Intelligence (Planned)
 ### Phase D: Profile & Lists (Planned)

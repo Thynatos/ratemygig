@@ -12,6 +12,7 @@
 - `useCreateReview`: 5s throttle
 - `useUploadReviewPhotos`: 3s throttle
 - `useToggleAttendance`: 2s throttle
+- `useCreateSetlist`: 5s throttle
 - **Remaining risk**: Client-side only; a determined user can bypass. Server-side rate limiting via Supabase Edge Functions would be more robust.
 
 ### API Key Exposure
@@ -73,7 +74,7 @@
 
 ### Bundle Size
 - **Concern**: Main JS chunk is 597 KB (down from 692 KB after code splitting). Still above 500 KB warning threshold.
-- **Mitigation**: 13 routes now lazy-loaded via `React.lazy()`. Further splitting possible with `manualChunks` in Vite config.
+- **Mitigation**: 15 routes now lazy-loaded via `React.lazy()`. Further splitting possible with `manualChunks` in Vite config.
 - **Location**: `apps/web/src/app/App.tsx`
 
 ### Feed Pagination Architecture
@@ -83,25 +84,33 @@
 
 ### Phase A — Social Proof (COMPLETE)
 
-### Phase B — Setlist Archive (Setlist.fm differentiator)
+### Phase B — Setlist Archive (COMPLETE)
 
-#### B1. Setlist Data Model
-- New `songs` table (id, name, artist_id FK nullable)
-- New `setlists` table (id, event_id FK, user_id, source: 'manual' | 'verified', created_at, updated_at)
-- New `setlist_songs` table (setlist_id, song_id, position, is_encore, is_debut, notes)
-- Migration: `007_setlists.sql`
+#### B1. Setlist Data Model — DONE
+- `songs` table (id, name, artist_id FK nullable, created_at) with UNIQUE(name, artist_id)
+- `setlists` table (id, event_id FK, user_id, source: 'manual' | 'verified', notes, created_at, updated_at) with UNIQUE(event_id, user_id)
+- `setlist_songs` table (id, setlist_id FK, song_id FK, position, is_encore, is_debut, notes, created_at) with UNIQUE(setlist_id, song_id, position)
+- Migration: `008_setlists.sql`
+- RLS: public read on all, owner write on setlists/setlist_songs, authenticated insert on songs
+- Domain types: `Song`, `Setlist`, `SetlistSong`, `SetlistWithSongs` in `@core/types`
+- Query hooks: `useEventSetlists`, `useSetlist`, `useMySetlists`, `useCreateSetlist` (5s rate-limited), `useUpdateSetlist`, `useDeleteSetlist`, `useAddSong`, `useRemoveSong`, `useReorderSongs`
+- Song hooks: `useSongSearch`, `useCreateSong`
+- Stats hooks: `useArtistSongStats`, `useArtistSetlistStats`, `useSongStats`
+- RPC functions: `get_artist_song_stats`, `get_artist_setlist_stats`, `get_song_stats` in `009_setlist_stats_rpc.sql`
 
-#### B2. Setlist Editor (Community Wiki)
-- `/events/:eventId/setlist` page — view/add/edit songs
-- UI: drag-to-reorder song list, mark encores, mark debuts
-- "Best Song Moment" tag on reviews linking to a specific setlist_songs row
-- Community editing: any authenticated user can submit a setlist
+#### B2. Setlist Editor — DONE
+- `SetlistViewer` component with position numbers, encore section, debut badges, owner edit/delete
+- `SetlistCard` compact view with first 3-4 songs preview
+- `SetlistEditor` with song search autocomplete, reorder buttons, encore/debut toggles
+- `SetlistPage` at `/events/:eventId/setlist`
+- Setlists section on `EventDetailPage`
+- Lazy-loaded routes in App.tsx
 
-#### B3. Setlist Statistics Pages
-- Artist most-played songs (aggregate from setlist_songs)
-- Tour statistics: average setlist length, unique songs per tour
-- "This song was played X times" stats on setlist pages
-- Comparison view: how setlists differ between dates/venues
+#### B3. Setlist Statistics — DONE
+- `SongStatsList` table component (most-played songs per artist)
+- `ArtistSetlistSummary` card (setlist count, avg length, unique songs)
+- `SongPage` at `/songs/:songId`
+- Song Statistics section on `ArtistDetailPage`
 
 ### Phase C — Discovery Intelligence (Songkick-like personalization)
 

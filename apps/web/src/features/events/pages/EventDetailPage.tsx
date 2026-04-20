@@ -1,10 +1,12 @@
 import { useParams, Link } from 'react-router-dom'
 import {
     Calendar, MapPin, ExternalLink, Ticket, Users, Heart,
-    Check, Plus, Share2, Star, ChevronLeft
+    Check, Plus, Share2, Star, ChevronLeft, Music
 } from 'lucide-react'
 import { useEvent, useAttendance, useToggleAttendance } from '../api/events'
 import { useEventReviews } from '@/features/reviews/api/reviews'
+import { useEventSetlists } from '@/features/setlists/api/setlists'
+import { SetlistCard } from '@/features/setlists/components/SetlistCard'
 import { ReactionButtons } from '@/features/reviews/components/ReactionButtons'
 import { usePhotoUrls } from '@/shared/hooks'
 import { useAuth } from '@/features/auth/hooks/useAuth'
@@ -23,6 +25,7 @@ export function EventDetailPage() {
     const { data: event, isLoading, error } = useEvent(eventId!)
     const { data: attendance } = useAttendance(eventId!)
     const { data: reviews = [], isLoading: reviewsLoading } = useEventReviews(eventId!)
+    const { data: setlists = [], isLoading: setlistsLoading } = useEventSetlists(eventId!)
     const toggleAttendance = useToggleAttendance()
     const allPhotoPaths = reviews.flatMap((r: { photos?: { storage_path: string }[] }) =>
         (r.photos ?? []).map((p: { storage_path: string }) => p.storage_path)
@@ -296,6 +299,57 @@ export function EventDetailPage() {
                                                 <ReactionButtons reviewId={review.id} compact />
                                             </div>
                                         </div>
+                                    ))}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    {/* Setlists Section */}
+                    <Card>
+                        <CardContent className="p-6">
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center gap-3">
+                                    <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                                        <Music className="w-5 h-5 text-primary-400" />
+                                        Setlists
+                                    </h2>
+                                    {setlists.length > 0 && (
+                                        <Badge variant="surface">{setlists.length}</Badge>
+                                    )}
+                                </div>
+                                <Link to={`/events/${event.id}/setlist`}>
+                                    {setlists.length > 0 && (
+                                        <Button variant="ghost" size="sm">View All</Button>
+                                    )}
+                                </Link>
+                            </div>
+
+                            {setlistsLoading ? (
+                                <div className="space-y-3">
+                                    {[1, 2].map(i => (
+                                        <div key={i} className="p-4 rounded-xl bg-surface-800/50">
+                                            <Skeleton className="h-4 w-32 mb-2" />
+                                            <Skeleton className="h-3 w-full" />
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : setlists.length === 0 ? (
+                                <div className="text-center py-8">
+                                    <Music className="w-12 h-12 text-surface-600 mx-auto mb-4" />
+                                    <p className="text-surface-400 mb-4">No setlists yet for this event.</p>
+                                    {user && (
+                                        <Link to={`/events/${event.id}/setlist`}>
+                                            <Button variant="secondary" size="sm">Add a Setlist</Button>
+                                        </Link>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {setlists.slice(0, 3).map(setlist => (
+                                        <Link key={setlist.id} to={`/events/${event.id}/setlist`}>
+                                            <SetlistCard setlist={setlist} onClick={() => {}} />
+                                        </Link>
                                     ))}
                                 </div>
                             )}

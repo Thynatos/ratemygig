@@ -26,6 +26,8 @@ const FeedPage = lazy(() => import('@/features/feed/pages/FeedPage').then(m => (
 const MyGigsPage = lazy(() => import('@/features/reviews/pages/MyGigsPage').then(m => ({ default: m.MyGigsPage })))
 const WriteReviewPage = lazy(() => import('@/features/reviews/pages/WriteReviewPage').then(m => ({ default: m.WriteReviewPage })))
 const ProfilePage = lazy(() => import('@/features/profile/pages/ProfilePage').then(m => ({ default: m.ProfilePage })))
+const SetlistPage = lazy(() => import('@/features/setlists/pages/SetlistPage').then(m => ({ default: m.SetlistPage })))
+const SongPage = lazy(() => import('@/features/setlists/pages/SongPage').then(m => ({ default: m.SongPage })))
 
 function App() {
     return (
@@ -43,6 +45,8 @@ function App() {
                     <Route path="/artists/:artistId" element={<ArtistDetailPage />} />
                     <Route path="/r/:reviewId" element={<PublicReviewPage />} />
                     <Route path="/u/:username" element={<PublicProfilePage />} />
+                    <Route path="/events/:eventId/setlist" element={<SetlistPage />} />
+                    <Route path="/songs/:songId" element={<SongPage />} />
 
                     {/* Legal pages */}
                     <Route path="/about" element={<AboutPage />} />

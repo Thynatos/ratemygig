@@ -1,8 +1,11 @@
 import { useState, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { Users, Calendar, Star, ChevronLeft } from 'lucide-react'
+import { Users, Calendar, Star, ChevronLeft, Music } from 'lucide-react'
 import { useArtist, useArtistRatingSummary, useArtistEvents } from '../api/artists'
 import { FollowArtistButton } from '../components/FollowArtistButton'
+import { useArtistSetlistStats } from '@/features/setlists/api/stats'
+import { ArtistSetlistSummary } from '@/features/setlists/components/ArtistSetlistSummary'
+import { SongStatsList } from '@/features/setlists/components/SongStatsList'
 import { useVenues } from '@/features/venues/api/venues'
 import { Button } from '@/shared/components/ui/Button'
 import { Card, CardContent } from '@/shared/components/ui/Card'
@@ -31,6 +34,7 @@ export function ArtistDetailPage() {
         venue_id: summaryVenueId || undefined,
     })
     const { data: events = [] } = useArtistEvents(artistId!)
+    const { data: artistSetlistStats } = useArtistSetlistStats(artistId!)
 
     if (artistLoading) return <LoadingPage message="Loading artist..." />
 
@@ -119,7 +123,7 @@ export function ArtistDetailPage() {
                         </section>
                     )}
 
-                    {showNoEventsState && (
+{showNoEventsState && (
                         <Card>
                             <CardContent className="p-6 text-center">
                                 <Calendar className="w-10 h-10 text-surface-600 mx-auto mb-3" />
@@ -134,6 +138,18 @@ export function ArtistDetailPage() {
                                 </p>
                             </CardContent>
                         </Card>
+                    )}
+
+                    {/* Song Statistics */}
+                    <ArtistSetlistSummary artistId={artist.id} />
+                    {artistSetlistStats && artistSetlistStats.setlist_count > 0 && (
+                        <section>
+                            <h2 className="section-title mb-4 flex items-center gap-2">
+                                <Music className="w-6 h-6 text-primary-400" />
+                                Song Statistics
+                            </h2>
+                            <SongStatsList artistId={artist.id} />
+                        </section>
                     )}
                 </div>
 

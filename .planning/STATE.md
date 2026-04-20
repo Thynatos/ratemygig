@@ -1,7 +1,7 @@
 # Project State
 
 ## Current Phase
-**Phase:** A — Social Proof
+**Phase:** B — Setlist Archive
 **Status:** Complete
 **Last Activity:** 2026-04-20
 
@@ -20,6 +20,11 @@
 - MyGigsPage tracked artists/venues tabs
 - Public profile with follower/following counts
 - Route-level code splitting (13 lazy-loaded routes)
+- Setlist archive: songs, setlists, setlist_songs tables + RLS
+- Setlist viewer/editor UI with song search autocomplete
+- Setlist statistics RPC (artist song stats, setlist stats, song stats)
+- Song detail page (/songs/:songId)
+- Artist detail song statistics section
 - 112 unit tests passing, 0 lint errors
 
 ## Decisions
