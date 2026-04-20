@@ -3,6 +3,9 @@ import { Search, Calendar, SlidersHorizontal, X } from 'lucide-react'
 import { useEvents } from '../api/events'
 import { EventCard } from '../components/EventCard'
 import { CitySelector } from '../components/CitySelector'
+import { RecommendedEventsSection } from '@/features/discovery/components/RecommendedEventsSection'
+import { TrendingEventsSection } from '@/features/discovery/components/TrendingEventsSection'
+import { NearbyVenuesSection } from '@/features/discovery/components/NearbyVenuesSection'
 import { Button } from '@/shared/components/ui/Button'
 import { EventCardSkeleton } from '@/shared/components/ui/Loading'
 import { env } from '@/shared/lib/env'
@@ -128,19 +131,24 @@ export function DiscoverPage() {
                 </div>
             </section>
 
+            {/* Recommended & Trending */}
+            <RecommendedEventsSection limit={4} />
+            <TrendingEventsSection limit={6} />
+
             {/* Results */}
-            <section>
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="section-title flex items-center gap-2">
-                        <Calendar className="w-6 h-6 text-primary-400" />
-                        Upcoming Events
-                    </h2>
-                    {data && (
-                        <span className="text-surface-400">
-                            {data.count} {data.count === 1 ? 'event' : 'events'} found
-                        </span>
-                    )}
-                </div>
+            <div className="grid gap-8 lg:grid-cols-3">
+                <div className="lg:col-span-2">
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="section-title flex items-center gap-2">
+                            <Calendar className="w-6 h-6 text-primary-400" />
+                            Upcoming Events
+                        </h2>
+                        {data && (
+                            <span className="text-surface-400">
+                                {data.count} {data.count === 1 ? 'event' : 'events'} found
+                            </span>
+                        )}
+                    </div>
 
                 {/* Error State */}
                 {error && (
@@ -222,7 +230,7 @@ export function DiscoverPage() {
                 {/* Events Grid */}
                 {!isLoading && data && data.data.length > 0 && (
                     <>
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        <div className="grid gap-4 md:grid-cols-2">
                             {data.data.map(event => (
                                 <EventCard key={event.id} event={event} />
                             ))}
@@ -252,7 +260,13 @@ export function DiscoverPage() {
                         )}
                     </>
                 )}
-            </section>
+                </div>
+
+                {/* Sidebar */}
+                <div className="space-y-6">
+                    <NearbyVenuesSection />
+                </div>
+            </div>
         </div>
     )
 }

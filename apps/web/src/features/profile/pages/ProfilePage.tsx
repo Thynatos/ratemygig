@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { User, Save, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { supabase } from '@/shared/lib/supabase'
+import { PreferencesForm } from '@/features/profile/components/PreferencesForm'
 import { Button } from '@/shared/components/ui/Button'
 import { Input } from '@/shared/components/ui/Input'
 import { Textarea } from '@/shared/components/ui/Textarea'
@@ -214,6 +215,10 @@ export function ProfilePage() {
                     </form>
                 </CardContent>
             </Card>
+
+            <div className="mt-6">
+                <PreferencesForm />
+            </div>
         </div>
     )
 }

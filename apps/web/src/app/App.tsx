@@ -28,6 +28,7 @@ const WriteReviewPage = lazy(() => import('@/features/reviews/pages/WriteReviewP
 const ProfilePage = lazy(() => import('@/features/profile/pages/ProfilePage').then(m => ({ default: m.ProfilePage })))
 const SetlistPage = lazy(() => import('@/features/setlists/pages/SetlistPage').then(m => ({ default: m.SetlistPage })))
 const SongPage = lazy(() => import('@/features/setlists/pages/SongPage').then(m => ({ default: m.SongPage })))
+const NotificationsPage = lazy(() => import('@/features/notifications/pages/NotificationsPage').then(m => ({ default: m.NotificationsPage })))
 
 function App() {
     return (
@@ -57,6 +58,7 @@ function App() {
                     <Route element={<ProtectedRoute />}>
                         <Route path="/feed" element={<FeedPage />} />
                         <Route path="/my-gigs" element={<MyGigsPage />} />
+                        <Route path="/notifications" element={<NotificationsPage />} />
                         <Route path="/review/:eventId" element={<WriteReviewPage />} />
                         <Route path="/review/:eventId/edit" element={<WriteReviewPage />} />
                         <Route path="/profile" element={<ProfilePage />} />

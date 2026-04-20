@@ -28,5 +28,14 @@ Plans:
 - [x] B-03-PLAN.md — Setlist statistics & artist song pages (Wave 2, parallel to B-02)
 
 ---
-### Phase C: Discovery Intelligence (Planned)
+
+### Phase C: Discovery Intelligence
+**Goal:** Personalized recommendations, geolocation, enhanced search, and notification foundation.
+
+Plans:
+- [x] C-01-PLAN.md — Database schema, RPC functions, and API hooks for discovery features (Wave 1)
+- [x] C-02-PLAN.md — Discovery UI enhancements (Wave 2)
+- [x] C-03-PLAN.md — Preferences & Notifications UI (Wave 2, parallel to C-02)
+
+---
 ### Phase D: Profile & Lists (Planned)

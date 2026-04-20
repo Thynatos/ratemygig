@@ -2,6 +2,7 @@ import { Link, Outlet, useLocation } from 'react-router-dom'
 import { Music, Calendar, MapPin, Users, Trophy, User, LogOut, Menu, X, Rss } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '@/features/auth/hooks/useAuth'
+import { NotificationBell } from '@/features/notifications/components/NotificationBell'
 import { cn } from '@/shared/lib/utils'
 
 const NAV_LINKS = [
@@ -80,6 +81,7 @@ export function Layout() {
                                         <Calendar className="w-4 h-4" />
                                         My Gigs
                                     </Link>
+                                    <NotificationBell />
                                     <Link
                                         to="/profile"
                                         className="btn-icon"
@@ -163,6 +165,14 @@ export function Layout() {
                                     >
                                         <Calendar className="w-5 h-5" />
                                         My Gigs
+                                    </Link>
+                                    <Link
+                                        to="/notifications"
+                                        onClick={() => setMobileMenuOpen(false)}
+                                        className="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-surface-300 hover:bg-surface-800 hover:text-surface-100"
+                                    >
+                                        <Rss className="w-5 h-5" />
+                                        Notifications
                                     </Link>
                                 </>
                             )}
