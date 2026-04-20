@@ -6,22 +6,29 @@
 - **Auth**: Magic link (`signInWithOtp`) + Google OAuth (`signInWithOAuth`)
 - **Database**: Direct client-side queries with RLS enforcement
 - **Storage**: `review-photos` bucket for user photo uploads
-- **RPC Functions**: `get_venue_rating_summary()`, `get_artist_rating_summary()` — server-side aggregation filters
+- **RPC Functions**:
+  - `get_venue_rating_summary(p_venue_id, p_city, p_year)` — aggregate ratings for a venue or all venues (NULL = all)
+  - `get_artist_rating_summary(p_artist_id, p_city, p_year, p_venue_id)` — aggregate ratings for an artist or all artists (NULL = all)
+  - `get_event_rating_summary(p_event_id)` — aggregate ratings for a single event
+  - `get_venue_top_tags(p_venue_id, p_limit)` — most-used tags for a venue
+  - `get_artist_top_tags(p_artist_id, p_limit)` — most-used tags for an artist
 
 ### Supabase Tables (direct query pattern)
 
 All data access in the frontend goes through `supabase.from('table')` calls in feature API modules (`features/*/api/*.ts`). No custom backend API layer exists.
 
-| Table | Query Location |
-|-------|---------------|
-| `events` | `features/events/api/events.ts` |
-| `venues` | `features/venues/api/venues.ts` |
-| `artists` | `features/artists/api/artists.ts` |
-| `reviews` | `features/reviews/api/reviews.ts` |
-| `attendance` | `features/events/api/events.ts` |
-| `profiles` | `features/profile/pages/ProfilePage.tsx` (direct) |
-| `review_photos` | `features/reviews/api/reviews.ts` |
-| `review_tags` | `features/reviews/api/reviews.ts` |
+| Table | Query Location | Notes |
+|-------|---------------|-------|
+| `events` | `features/events/api/events.ts` | Paginated with count |
+| `venues` | `features/venues/api/venues.ts` | Paginated with count |
+| `artists` | `features/artists/api/artists.ts` | Paginated with count |
+| `reviews` | `features/reviews/api/reviews.ts` | Per-event, per-user, single |
+| `attendance` | `features/events/api/events.ts` | Per-event per-user |
+| `review_photos` | `features/reviews/api/reviews.ts` | Nested in reviews |
+| `review_tags` | `features/reviews/api/reviews.ts` | On create review |
+| `tags` | `features/reviews/api/reviews.ts` | All tags |
+| `profiles` | `features/profile/pages/ProfilePage.tsx` | Direct query |
+| `event_artists` | `features/artists/api/artists.ts` | Artist-to-event junction |
 
 ## Ticketmaster Discovery API
 

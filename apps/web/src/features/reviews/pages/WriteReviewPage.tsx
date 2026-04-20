@@ -13,6 +13,7 @@ import {
     useUploadReviewPhotos,
     useTags
 } from '../api/reviews'
+import { usePhotoUrls } from '@/shared/hooks'
 import { Button } from '@/shared/components/ui/Button'
 import { Input } from '@/shared/components/ui/Input'
 import { Textarea } from '@/shared/components/ui/Textarea'
@@ -51,6 +52,9 @@ export function WriteReviewPage() {
 
     const isEditing = !!existingReview
 
+    const existingPaths = existingReview?.photos?.map((p: { storage_path: string }) => p.storage_path) ?? []
+    const { urls: existingPhotoUrls } = usePhotoUrls(existingPaths)
+
     const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<ReviewFormData>({
         resolver: zodResolver(reviewSchema),
         defaultValues: {
@@ -71,17 +75,18 @@ export function WriteReviewPage() {
             setValue('title', existingReview.title || '')
             setValue('body', existingReview.body)
             setValue('isPublic', existingReview.is_public)
-
-            // Load existing photos
-            if (existingReview.photos) {
-                // Would need to get signed URLs here
-                setPhotos(existingReview.photos.map((p: { id: string; storage_path: string }) => ({
-                    id: p.id,
-                    url: '', // Would need signed URL
-                })))
-            }
         }
     }, [existingReview, setValue])
+
+    // Load existing photos with signed URLs
+    useEffect(() => {
+        if (existingReview?.photos && existingPhotoUrls.size > 0) {
+            setPhotos(existingReview.photos.map((p: { id: string; storage_path: string }) => ({
+                id: p.id,
+                url: existingPhotoUrls.get(p.storage_path) || '',
+            })))
+        }
+    }, [existingReview, existingPhotoUrls])
 
     const onSubmit = async (data: ReviewFormData) => {
         try {

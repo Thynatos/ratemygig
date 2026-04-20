@@ -1,7 +1,8 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/shared/lib/supabase'
 import { env, isSupabaseConfigured, type EventsProviderMode } from '@/shared/lib/env'
 import { allowsMockFallback, getDatabaseProviderFilter } from '@/shared/lib/provider-policy'
+import { useAuth } from '@/features/auth/hooks/useAuth'
 import type { Venue, VenueRatingSummary, Event } from '@core/index'
 import { mapEventRow, type EventRow } from '../../events/api/events'
 import { getMockEventsByVenueId, getMockVenue, getMockVenues } from '../../events/providers/mock-catalog'
@@ -19,19 +20,21 @@ export type VenueRatingQuery = { city?: string; year?: number }
 
 async function fetchVenuesFromDb(
     city?: string,
-    mode: EventsProviderMode = env.EVENTS_PROVIDER
-): Promise<Venue[] | null> {
+    mode: EventsProviderMode = env.EVENTS_PROVIDER,
+    page?: number,
+    pageSize?: number,
+): Promise<{ data: Venue[]; hasMore: boolean } | null> {
     if (!isSupabaseConfigured()) return null
 
     const provider = getDatabaseProviderFilter(mode)
-    let q = supabase.from('venues').select('*').order('name', { ascending: true })
+    let q = supabase.from('venues').select('*', { count: 'exact' }).order('name', { ascending: true })
 
     if (provider) {
         const { data: evs, error: eventsError } = await supabase.from('events').select('venue_id').eq('provider', provider)
         if (eventsError) throw eventsError
 
         const ids = [...new Set((evs || []).map(e => e.venue_id).filter(Boolean))] as string[]
-        if (ids.length === 0) return []
+        if (ids.length === 0) return { data: [], hasMore: false }
         q = q.in('id', ids)
     }
 
@@ -39,11 +42,13 @@ async function fetchVenuesFromDb(
         q = q.ilike('city', city.trim())
     }
 
-    const { data, error } = await q
+    const limit = pageSize ?? 24
+    const offset = ((page ?? 1) - 1) * limit
+    const { data, error, count } = await q.range(offset, offset + limit - 1)
     if (error) throw error
-    if (!data?.length) return []
+    if (!data) return { data: [], hasMore: false }
 
-    return data.map(
+    const venues = data.map(
         row =>
             ({
                 id: row.id,
@@ -56,6 +61,8 @@ async function fetchVenuesFromDb(
                 created_at: row.created_at,
             }) as Venue
     )
+
+    return { data: venues, hasMore: (count ?? 0) > offset + limit }
 }
 
 async function fetchVenueFromDb(
@@ -130,37 +137,38 @@ async function fetchVenueEventsFromMock(venueId: string): Promise<Event[]> {
 export interface ResolveVenuesDeps {
     mode: EventsProviderMode
     supabaseConfigured: boolean
-    fetchFromDatabase: (city?: string) => Promise<Venue[] | null>
+    fetchFromDatabase: (city?: string, page?: number, pageSize?: number) => Promise<{ data: Venue[]; hasMore: boolean } | null>
     fetchFromMock: (city?: string) => Promise<Venue[]>
 }
 
-export async function resolveVenuesWithDeps(city: string | undefined, deps: ResolveVenuesDeps): Promise<Venue[]> {
+export async function resolveVenuesWithDeps(city: string | undefined, deps: ResolveVenuesDeps, page?: number, pageSize?: number): Promise<{ data: Venue[]; hasMore: boolean }> {
     if (deps.supabaseConfigured) {
-        const fromDb = await deps.fetchFromDatabase(city)
-        if (fromDb && fromDb.length > 0) return fromDb
+        const fromDb = await deps.fetchFromDatabase(city, page, pageSize)
+        if (fromDb && fromDb.data.length > 0) return fromDb
         if (fromDb && !allowsMockFallback(deps.mode)) return fromDb
     }
 
     if (allowsMockFallback(deps.mode)) {
-        return deps.fetchFromMock(city)
+        const mockData = await deps.fetchFromMock(city)
+        return { data: mockData, hasMore: false }
     }
 
-    return []
+    return { data: [], hasMore: false }
 }
 
 export async function resolveVenues(
     city?: string,
-    options?: { mode?: EventsProviderMode; supabaseConfigured?: boolean }
-): Promise<Venue[]> {
+    options?: { mode?: EventsProviderMode; supabaseConfigured?: boolean; page?: number; pageSize?: number }
+): Promise<{ data: Venue[]; hasMore: boolean }> {
     const mode = options?.mode ?? env.EVENTS_PROVIDER
     const supabaseConfigured = options?.supabaseConfigured ?? isSupabaseConfigured()
 
     return resolveVenuesWithDeps(city, {
         mode,
         supabaseConfigured,
-        fetchFromDatabase: nextCity => fetchVenuesFromDb(nextCity, mode),
+        fetchFromDatabase: (nextCity, nextPage, nextPageSize) => fetchVenuesFromDb(nextCity, mode, nextPage, nextPageSize),
         fetchFromMock: fetchVenuesFromMock,
-    })
+    }, options?.page, options?.pageSize)
 }
 
 export interface ResolveVenueDeps {
@@ -235,10 +243,10 @@ export async function resolveVenueEvents(
     })
 }
 
-export function useVenues(city?: string) {
+export function useVenues(city?: string, page?: number, pageSize?: number) {
     return useQuery({
-        queryKey: [...venueKeys.list(city), env.EVENTS_PROVIDER],
-        queryFn: () => resolveVenues(city),
+        queryKey: [...venueKeys.list(city), env.EVENTS_PROVIDER, page, pageSize],
+        queryFn: () => resolveVenues(city, { page, pageSize }),
     })
 }
 
@@ -272,5 +280,143 @@ export function useVenueEvents(venueId: string) {
         queryKey: ['venue-events', venueId, env.EVENTS_PROVIDER],
         queryFn: () => resolveVenueEvents(venueId),
         enabled: !!venueId,
+    })
+}
+
+type VenueLeaderboardEntry = {
+    venue_id: string
+    venue_name: string
+    city: string
+    avg_rating: number
+    count_reviews: number
+}
+
+export function useTopVenues(city?: string, year?: number) {
+    return useQuery({
+        queryKey: [...venueKeys.all, 'top', city, year],
+        queryFn: async () => {
+            const { data, error } = await supabase.rpc('get_venue_rating_summary', {
+                p_venue_id: null,
+                p_city: city?.trim() || null,
+                p_year: year ?? null,
+            })
+            if (error) throw error
+            return (data || []) as VenueLeaderboardEntry[]
+        },
+    })
+}
+
+// ============================================
+// Venue Follow Hooks
+// ============================================
+
+export const venueFollowKeys = {
+    all: ['venue-follows'] as const,
+    isFollowing: (venueId: string) => [...venueFollowKeys.all, 'is-following', venueId] as const,
+    followedVenues: () => [...venueFollowKeys.all, 'followed'] as const,
+}
+
+export function useIsFollowingVenue(venueId: string) {
+    const { user } = useAuth()
+    return useQuery({
+        queryKey: venueFollowKeys.isFollowing(venueId),
+        queryFn: async () => {
+            if (!user) return false
+
+            const { data, error } = await supabase
+                .from('venue_follows')
+                .select('id')
+                .eq('user_id', user.id)
+                .eq('venue_id', venueId)
+                .maybeSingle()
+
+            if (error) throw error
+            return !!data
+        },
+        enabled: !!venueId && !!user,
+    })
+}
+
+export function useFollowedVenues() {
+    const { user } = useAuth()
+    return useQuery({
+        queryKey: venueFollowKeys.followedVenues(),
+        queryFn: async () => {
+            if (!user) return []
+
+            const { data, error } = await supabase
+                .from('venue_follows')
+                .select('*, venue:venues(*)')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false })
+
+            if (error) throw error
+            return data
+        },
+        enabled: !!user,
+    })
+}
+
+export function useFollowVenue(venueId: string) {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: async () => {
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) throw new Error('Not authenticated')
+
+            const { error } = await supabase
+                .from('venue_follows')
+                .insert({ user_id: user.id, venue_id: venueId })
+
+            if (error) throw error
+        },
+        onMutate: async () => {
+            await queryClient.cancelQueries({ queryKey: venueFollowKeys.isFollowing(venueId) })
+            const prev = queryClient.getQueryData(venueFollowKeys.isFollowing(venueId))
+            queryClient.setQueryData(venueFollowKeys.isFollowing(venueId), true)
+            return { prev }
+        },
+        onError: (_err, _vars, ctx) => {
+            if (ctx?.prev !== undefined) {
+                queryClient.setQueryData(venueFollowKeys.isFollowing(venueId), ctx.prev)
+            }
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: venueFollowKeys.all })
+        },
+    })
+}
+
+export function useUnfollowVenue(venueId: string) {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: async () => {
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) throw new Error('Not authenticated')
+
+            const { error } = await supabase
+                .from('venue_follows')
+                .delete()
+                .eq('user_id', user.id)
+                .eq('venue_id', venueId)
+
+            if (error) throw error
+        },
+        onMutate: async () => {
+            await queryClient.cancelQueries({ queryKey: venueFollowKeys.isFollowing(venueId) })
+            const prev = queryClient.getQueryData(venueFollowKeys.isFollowing(venueId))
+            queryClient.setQueryData(venueFollowKeys.isFollowing(venueId), false)
+            return { prev }
+        },
+        onError: (_err, _vars, ctx) => {
+            if (ctx?.prev !== undefined) {
+                queryClient.setQueryData(venueFollowKeys.isFollowing(venueId), ctx.prev)
+            }
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: venueFollowKeys.all })
+        },
     })
 }

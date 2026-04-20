@@ -7,6 +7,7 @@
 - **Function components**: All React components are function components with hooks
 - **Named exports**: Components and hooks use named exports (not default), except `App.tsx` which uses `export default`
 - **Path aliases**: `@/`, `@shared/`, `@features/`, `@core/`, `@jobs/` — used consistently in imports
+- **No comments in code**: Unless explicitly requested
 
 ## Component Patterns
 
@@ -23,13 +24,16 @@
 - **Cache invalidation**: Explicit `queryClient.invalidateQueries()` on mutations
 - **Stale time**: 5 minutes default, 30 minutes for cities
 - **Auth state**: React Context (`AuthProvider`) — not in React Query
+- **Rate limiting**: `createRateLimiter(minIntervalMs)` from `shared/lib/throttle.ts` — used in review creation (5s), photo upload (3s), attendance toggle (2s)
 
 ## Data Access
 
 - **Direct Supabase queries**: No API middleware; all database access uses `supabase.from('table')` or `supabase.rpc()`
 - **Zod validation**: Input schemas in `shared/validation/schemas.ts` — used with `react-hook-form` resolvers
 - **Row mapping**: `mapEventRow()`, `mapProviderEventToEvent()` — transform DB/provider shapes into domain types
-- **Dependency injection**: Event resolution uses `resolveEventsWithDeps()` / `resolveEventWithDeps()` pattern for testability
+- **Dependency injection**: Event/venue/artist resolution uses `resolveXxxWithDeps()` pattern for testability
+- **Pagination**: Venue and artist listings return `{ data: T[], hasMore: boolean }` using Supabase `.range()` with `{ count: 'exact' }`
+- **Signed URLs**: Photo URLs generated via `usePhotoUrls` hook → `getSignedPhotoUrls()` → Supabase Storage `.createSignedUrls()`
 
 ## Form Handling
 
@@ -43,6 +47,8 @@
 - Path format: `{userId}/{reviewId}/{uuid}.{ext}`
 - Constraints: JPG/PNG/WebP only, 10MB max, 10 photos per review
 - Validated at schema level (`photoUploadSchema`)
+- Signed URLs with 1-hour expiry generated client-side via `usePhotoUrls` hook
+- `blurhash` column exists but is not yet populated
 
 ## Error Handling
 
@@ -50,6 +56,7 @@
 - Supabase errors thrown and caught by React Query error boundaries
 - `logger.ts` for structured logging
 - Ticketmaster client: 404s return `null`, other errors are thrown
+- Rate limit errors: mutations throw descriptive error messages when throttled
 
 ## Styling
 
@@ -68,3 +75,5 @@
 - JSONB columns for `ticket_urls` and `lineup` in events table
 - RLS policies on all user-owned tables
 - Composite unique constraints: `(provider, provider_event_id)`, `(user_id, event_id)`, `(name, city, country)`
+- RPC functions for aggregation: `get_venue_rating_summary`, `get_artist_rating_summary`, `get_event_rating_summary`, `get_venue_top_tags`, `get_artist_top_tags`
+- RPC functions accept `NULL` for aggregate (all-rows) queries: passing `p_venue_id: null` returns all venues ranked

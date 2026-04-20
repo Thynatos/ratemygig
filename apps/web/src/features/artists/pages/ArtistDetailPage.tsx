@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { Users, Calendar, Star, ChevronLeft } from 'lucide-react'
 import { useArtist, useArtistRatingSummary, useArtistEvents } from '../api/artists'
+import { FollowArtistButton } from '../components/FollowArtistButton'
 import { useVenues } from '@/features/venues/api/venues'
 import { Button } from '@/shared/components/ui/Button'
 import { Card, CardContent } from '@/shared/components/ui/Card'
@@ -83,6 +84,9 @@ export function ArtistDetailPage() {
                                         <Users className="w-5 h-5" />
                                         {events.length} {events.length === 1 ? 'concert' : 'concerts'}
                                     </p>
+                                    <div className="mt-3">
+                                        <FollowArtistButton artistId={artist.id} />
+                                    </div>
                                 </div>
                             </div>
                         </CardContent>

@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { MapPin, Calendar, ExternalLink, Star, ChevronLeft } from 'lucide-react'
 import { useVenue, useVenueRatingSummary, useVenueEvents } from '../api/venues'
+import { FollowVenueButton } from '../components/FollowVenueButton'
 import { Button } from '@/shared/components/ui/Button'
 import { Card, CardContent } from '@/shared/components/ui/Card'
 import { RatingDisplay } from '@/shared/components/ui/StarRating'
@@ -85,6 +86,10 @@ export function VenueDetailPage() {
                                 <ExternalLink className="w-4 h-4" />
                                 View on Google Maps
                             </a>
+
+                            <div className="mt-4">
+                                <FollowVenueButton venueId={venue.id} />
+                            </div>
                         </CardContent>
                     </Card>
 

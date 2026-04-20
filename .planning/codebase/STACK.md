@@ -15,19 +15,19 @@
 | Build | Vite | 7.2 |
 | Routing | React Router DOM | 6.25 |
 | State (server) | TanStack React Query | 5.51 |
-| State (client) | Zustand (declared but minimal usage) | 4.5 |
 | Forms | React Hook Form + @hookform/resolvers | 7.52 / 3.9 |
 | Validation | Zod | 3.23 |
 | Styling | Tailwind CSS | 3.4 |
 | Icons | Lucide React | 0.424 |
 | Dates | date-fns | 3.6 |
+| Photo upload | Supabase Storage (signed URLs) | — |
 
 ## Frontend Dev Dependencies
 
 | Tool | Version |
 |------|---------|
 | TypeScript | ~5.9 |
-| ESLint | 9.39 + typescript-eslint 8.46 + react-hooks + react-refresh |
+| ESLint | 9.39 + typescript-eslint 8.46 + react-hooks + react-refresh + React Compiler plugin |
 | Vitest | 2.0 |
 | Playwright | 1.45 |
 | Testing Library | @testing-library/react 16 + @testing-library/jest-dom 6.6 |
@@ -41,7 +41,7 @@
 | Auth | Supabase Auth (magic link + Google OAuth) |
 | Storage | Supabase Storage (`review-photos` bucket) |
 | API | Supabase client SDK (direct from frontend, no custom API layer) |
-| Aggregations | PostgreSQL RPC functions (`get_venue_rating_summary`, `get_artist_rating_summary`) |
+| Aggregations | PostgreSQL RPC functions (`get_venue_rating_summary`, `get_artist_rating_summary`, `get_event_rating_summary`, `get_venue_top_tags`, `get_artist_top_tags`) |
 
 ## Background Jobs (`packages/jobs`)
 

@@ -13,7 +13,7 @@
 ├─────────────────────────────────────────────────────────┤
 │  Shared Layer (apps/web/src/shared/)                     │
 │  Components, hooks, validation (Zod), lib (supabase,    │
-│  env, utils, storage, logger, provider-policy)           │
+│  env, utils, storage, logger, provider-policy, throttle)  │
 ├─────────────────────────────────────────────────────────┤
 │  Core Package (packages/core/src/)                       │
 │  Domain types (Event, Venue, Artist, Review...)          │
@@ -45,8 +45,15 @@ Provider resolution is dependency-injected for testability (`resolveEventsWithDe
 ```
 WriteReviewPage → useCreateReview() → supabase.from('reviews').insert()
                                           → supabase.from('review_tags').insert()
-                                          → storage.upload() for photos
-                                          → supabase.from('review_photos').insert()
+                                          → useUploadReviewPhotos() → storage.upload() + supabase.from('review_photos').insert()
+```
+
+### Review Photo Display
+
+```
+PublicReviewPage / EventDetailPage → usePhotoUrls(storagePaths)
+  → getSignedPhotoUrls(paths) → supabase.storage.from('review-photos').createSignedUrls()
+  → <img src={signedUrl}> rendered for each photo
 ```
 
 ### Rating Aggregation
@@ -56,6 +63,20 @@ VenueDetailPage → useVenueRatingSummary(venueId, filters)
   → supabase.rpc('get_venue_rating_summary', { venue_id, ...filters })
 ArtistDetailPage → useArtistRatingSummary(artistId, filters)
   → supabase.rpc('get_artist_rating_summary', { artist_id, ...filters })
+TopVenuesPage → useTopVenues(city?, year?)
+  → supabase.rpc('get_venue_rating_summary', { p_venue_id: null, p_city, p_year })
+TopArtistsPage → useTopArtists(city?, year?)
+  → supabase.rpc('get_artist_rating_summary', { p_artist_id: null, p_city, p_year, p_venue_id: null })
+```
+
+### Paginated Listing (Venues/Artists)
+
+```
+VenuesPage → useVenues(city?, page, pageSize) → resolveVenues(city, { page, pageSize })
+  → fetchVenuesFromDb(city, mode, page, pageSize) → supabase.from('venues').select('*', { count: 'exact' }).range(...)
+  → Returns { data: Venue[], hasMore: boolean }
+ArtistsPage → useArtists(query?, page, pageSize) → resolveArtists(query, { page, pageSize })
+  → Same pattern with offset pagination and { data, hasMore } response
 ```
 
 ### Background Ingestion
@@ -111,6 +132,13 @@ Implementations:
 ### ProviderPolicy
 
 `apps/web/src/shared/lib/provider-policy.ts` — determines which data sources are available based on `VITE_EVENTS_PROVIDER` mode.
+
+### Rate Limiting
+
+`apps/web/src/shared/lib/throttle.ts` — `createRateLimiter(minIntervalMs)` for client-side mutation throttling:
+- `useCreateReview`: 5s limit
+- `useUploadReviewPhotos`: 3s limit
+- `useToggleAttendance`: 2s limit
 
 ## Vite Build Configuration
 

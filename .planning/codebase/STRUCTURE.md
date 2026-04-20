@@ -11,38 +11,41 @@ ratemygig/
 │       │   │   └── App.tsx            # Root component, route definitions
 │       │   ├── features/
 │       │   │   ├── auth/              # Authentication
-│       │   │   │   ├── api/           # (none — direct Supabase Auth)
 │       │   │   │   ├── components/    # ProtectedRoute.tsx
-│       │   │   │   ├── hooks/        # useAuth.ts
+│       │   │   │   ├── hooks/         # useAuth.ts
 │       │   │   │   └── pages/        # LoginPage.tsx, AuthCallbackPage.tsx
 │       │   │   ├── events/           # Event discovery
-│       │   │   │   ├── api/          # events.ts (hooks + resolver)
+│       │   │   │   ├── api/          # events.ts (hooks + resolvers + pagination)
 │       │   │   │   ├── components/   # CitySelector, DateRangePicker, EventCard
 │       │   │   │   ├── pages/        # DiscoverPage, EventDetailPage
-│       │   │   │   └── providers/    # mock-provider.ts, mock-catalog.ts, ticketmaster-browser-provider.ts
+│       │   │   │   └── providers/    # mock-provider, mock-catalog, ticketmaster-browser-provider
 │       │   │   ├── reviews/          # Reviews & My Gigs
-│       │   │   │   ├── api/          # reviews.ts
+│       │   │   │   ├── api/          # reviews.ts (mutations with rate limiting)
 │       │   │   │   ├── components/   # PhotoUploader.tsx
 │       │   │   │   └── pages/        # MyGigsPage, WriteReviewPage, PublicReviewPage
-│       │   │   ├── venues/          # Venue pages
-│       │   │   │   ├── api/          # venues.ts + venues.resolver.test.ts
-│       │   │   │   └── pages/        # VenuesPage, VenueDetailPage
-│       │   │   ├── artists/         # Artist pages
-│       │   │   │   ├── api/          # artists.ts + artists.resolver.test.ts
-│       │   │   │   └── pages/        # ArtistsPage, ArtistDetailPage
+│       │   │   ├── venues/           # Venue pages
+│       │   │   │   ├── api/          # venues.ts + venues.resolver.test.ts (paginated)
+│       │   │   │   └── pages/        # VenuesPage, VenueDetailPage, TopVenuesPage
+│       │   │   ├── artists/          # Artist pages
+│       │   │   │   ├── api/          # artists.ts + artists.resolver.test.ts (paginated)
+│       │   │   │   └── pages/        # ArtistsPage, ArtistDetailPage, TopArtistsPage
 │       │   │   └── profile/          # User profile
 │       │   │       └── pages/        # ProfilePage, PublicProfilePage
 │       │   ├── shared/
 │       │   │   ├── components/       # Layout, ErrorBoundary, NotFoundPage
-│       │   │   │   └── ui/           # Avatar, Badge, Button, Card, Input, Loading, Modal, StarRating, Textarea
-│       │   │   ├── hooks/            # useInfiniteScroll, usePhotoUrls
-│       │   │   ├── lib/              # env.ts, supabase.ts, utils.ts, logger.ts, storage.ts, provider-policy.ts
-│       │   │   └── validation/       # schemas.ts (Zod), index.ts
+│       │   │   │   └── ui/          # Avatar, Badge, Button, Card, Input, Loading, Modal, StarRating, Textarea
+│       │   │   ├── hooks/           # useInfiniteScroll, usePhotoUrls
+│       │   │   ├── lib/            # env, supabase, utils, logger, storage, provider-policy, sanitize, throttle
+│       │   │   └── validation/      # schemas.ts (Zod), index.ts
 │       │   ├── test/                 # Vitest setup (setup.ts)
 │       │   ├── index.css             # Global styles + Tailwind directives
 │       │   └── main.tsx              # Entry point: QueryClient, AuthProvider, BrowserRouter
 │       ├── e2e/                      # Playwright E2E tests
-│       │   └── discover.spec.ts
+│       │   ├── discover.spec.ts      # Home page + 404 smoke test
+│       │   ├── login.spec.ts         # Login page renders, validation, nav redirect
+│       │   ├── venue.spec.ts         # Venues page, detail 404, top venues
+│       │   ├── artist.spec.ts        # Artists page, detail 404, top artists
+│       │   └── review.spec.ts        # Review 404, auth redirects
 │       ├── dist/                     # Production build output
 │       ├── public/                   # Static assets
 │       ├── index.html                # HTML entry
@@ -82,9 +85,7 @@ ratemygig/
 │           └── test-api.ts           # API connection test
 ├── .env.example                      # Root env template
 ├── README.md                         # Setup docs + architecture overview
-├── SYSTEM.md                         # LLM-oriented architecture doc
 ├── PROMPT.md                         # Original build prompt / spec
-├── docs/AGENT_CONTINUATION.md        # Agent handoff document
 └── package.json                      # Monorepo root with workspace scripts
 ```
 
@@ -92,7 +93,7 @@ ratemygig/
 
 | Type | Convention | Example |
 |------|-----------|---------|
-| Pages | `{Name}Page.tsx` | `DiscoverPage.tsx`, `VenueDetailPage.tsx` |
+| Pages | `{Name}Page.tsx` | `DiscoverPage.tsx`, `VenueDetailPage.tsx`, `TopVenuesPage.tsx` |
 | Components | `{Name}.tsx` | `EventCard.tsx`, `PhotoUploader.tsx` |
 | Hooks | `use{Name}.ts` | `useAuth.ts`, `usePhotoUrls.ts` |
 | API modules | `{entity}.ts` | `events.ts`, `venues.ts` |
@@ -105,9 +106,12 @@ ratemygig/
 | Concern | Path |
 |---------|------|
 | Routes | `apps/web/src/app/App.tsx` |
+| Navigation | `apps/web/src/shared/components/Layout.tsx` |
 | Supabase client | `apps/web/src/shared/lib/supabase.ts` |
 | Environment config | `apps/web/src/shared/lib/env.ts` |
 | Provider policy | `apps/web/src/shared/lib/provider-policy.ts` |
+| Rate limiter | `apps/web/src/shared/lib/throttle.ts` |
+| Photo URL hook | `apps/web/src/shared/hooks/usePhotoUrls.ts` |
 | Auth context | `apps/web/src/features/auth/AuthProvider.tsx` |
 | Mock provider | `apps/web/src/features/events/providers/mock-provider.ts` |
 | Mock seed data | `apps/web/src/features/events/providers/mock-catalog.ts` |
@@ -117,3 +121,30 @@ ratemygig/
 | DB migrations | `packages/db/migrations/001-006` |
 | TM API client | `packages/jobs/src/ticketmaster/ticketmaster-client.ts` |
 | Sync service | `packages/jobs/src/sync/sync-service.ts` |
+
+## Routes
+
+| Path | Component | Access |
+|------|-----------|--------|
+| `/` | `DiscoverPage` | Public |
+| `/events/:eventId` | `EventDetailPage` | Public |
+| `/venues` | `VenuesPage` (paginated) | Public |
+| `/venues/top` | `TopVenuesPage` | Public |
+| `/venues/:venueId` | `VenueDetailPage` | Public |
+| `/artists` | `ArtistsPage` (paginated) | Public |
+| `/artists/top` | `TopArtistsPage` | Public |
+| `/artists/:artistId` | `ArtistDetailPage` | Public |
+| `/r/:reviewId` | `PublicReviewPage` | Public |
+| `/u/:username` | `PublicProfilePage` | Public |
+| `/my-gigs` | `MyGigsPage` | Protected |
+| `/review/:eventId` | `WriteReviewPage` | Protected |
+| `/review/:eventId/edit` | `WriteReviewPage` | Protected |
+| `/profile` | `ProfilePage` | Protected |
+| `/login` | `LoginPage` | No layout |
+| `/auth/callback` | `AuthCallbackPage` | No layout |
+| `*` | `NotFoundPage` | Public |
+
+## Navigation
+
+Primary nav links (desktop + mobile): Discover, Venues, Top Venues, Artists, Top Artists
+Authenticated user links: My Gigs, Profile, Sign Out

@@ -1,34 +1,31 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { getSignedPhotoUrls } from '@/shared/lib/storage'
 
 export function usePhotoUrls(storagePaths: string[]) {
     const [urls, setUrls] = useState<Map<string, string>>(new Map())
-    const [isLoading, setIsLoading] = useState(false)
-    const mountedRef = useRef(true)
+    const [fetchKey, setFetchKey] = useState(0)
 
     const pathsKey = useMemo(() => storagePaths.join(','), [storagePaths])
+    const pathsLength = storagePaths.length
 
     useEffect(() => {
-        mountedRef.current = true
+        if (pathsLength === 0) return
 
-        if (storagePaths.length === 0) {
-            return
-        }
-
+        let cancelled = false
         getSignedPhotoUrls(storagePaths).then((urlMap) => {
-            if (mountedRef.current) {
+            if (!cancelled) {
                 setUrls(urlMap)
-                setIsLoading(false)
+                setFetchKey(k => k + 1)
             }
         })
 
         return () => {
-            mountedRef.current = false
+            cancelled = true
         }
-    }, [pathsKey, storagePaths])
+    }, [pathsKey, pathsLength, storagePaths])
 
-    const resolvedUrls = storagePaths.length === 0 ? new Map<string, string>() : urls
-    const resolvedLoading = storagePaths.length === 0 ? false : isLoading
+    const resolvedUrls = pathsLength === 0 ? new Map<string, string>() : urls
+    const resolvedLoading = pathsLength === 0 ? false : fetchKey === 0 && pathsLength > 0
 
     return { urls: resolvedUrls, isLoading: resolvedLoading }
 }

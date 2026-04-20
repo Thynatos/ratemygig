@@ -1,7 +1,8 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/shared/lib/supabase'
 import { env, isSupabaseConfigured, type EventsProviderMode } from '@/shared/lib/env'
 import { allowsMockFallback, getDatabaseProviderFilter } from '@/shared/lib/provider-policy'
+import { useAuth } from '@/features/auth/hooks/useAuth'
 import type { Artist, ArtistRatingSummary, Event } from '@core/index'
 import { mapEventRow, type EventRow } from '../../events/api/events'
 import { getMockArtist, getMockArtists, getMockEventsByArtistId } from '../../events/providers/mock-catalog'
@@ -19,8 +20,10 @@ export type ArtistRatingQuery = { city?: string; year?: number; venue_id?: strin
 
 async function fetchArtistsFromDb(
     search?: string,
-    mode: EventsProviderMode = env.EVENTS_PROVIDER
-): Promise<Artist[] | null> {
+    mode: EventsProviderMode = env.EVENTS_PROVIDER,
+    page?: number,
+    pageSize?: number,
+): Promise<{ data: Artist[]; hasMore: boolean } | null> {
     if (!isSupabaseConfigured()) return null
 
     const provider = getDatabaseProviderFilter(mode)
@@ -32,7 +35,7 @@ async function fetchArtistsFromDb(
             .eq('provider', provider)
         if (evErr) throw evErr
         const eventIds = (evs || []).map(e => e.id)
-        if (eventIds.length === 0) return []
+        if (eventIds.length === 0) return { data: [], hasMore: false }
 
         const { data: links, error: linkErr } = await supabase
             .from('event_artists')
@@ -40,18 +43,20 @@ async function fetchArtistsFromDb(
             .in('event_id', eventIds)
         if (linkErr) throw linkErr
         allowedArtistIds = [...new Set((links || []).map(l => l.artist_id))]
-        if (allowedArtistIds.length === 0) return []
+        if (allowedArtistIds.length === 0) return { data: [], hasMore: false }
     }
 
-    let q = supabase.from('artists').select('*').order('name', { ascending: true })
+    let q = supabase.from('artists').select('*', { count: 'exact' }).order('name', { ascending: true })
     if (allowedArtistIds) q = q.in('id', allowedArtistIds)
     if (search?.trim()) q = q.ilike('name', `%${search.trim()}%`)
 
-    const { data, error } = await q
+    const limit = pageSize ?? 24
+    const offset = ((page ?? 1) - 1) * limit
+    const { data, error, count } = await q.range(offset, offset + limit - 1)
     if (error) throw error
-    if (!data?.length) return []
+    if (!data) return { data: [], hasMore: false }
 
-    return data.map(
+    const artists = data.map(
         row =>
             ({
                 id: row.id,
@@ -60,6 +65,8 @@ async function fetchArtistsFromDb(
                 created_at: row.created_at,
             }) as Artist
     )
+
+    return { data: artists, hasMore: (count ?? 0) > offset + limit }
 }
 
 async function fetchArtistFromMock(artistId: string): Promise<Artist | null> {
@@ -77,37 +84,38 @@ async function fetchArtistEventsFromMock(artistId: string): Promise<Event[]> {
 export interface ResolveArtistsDeps {
     mode: EventsProviderMode
     supabaseConfigured: boolean
-    fetchFromDatabase: (search?: string) => Promise<Artist[] | null>
+    fetchFromDatabase: (search?: string, page?: number, pageSize?: number) => Promise<{ data: Artist[]; hasMore: boolean } | null>
     fetchFromMock: (search?: string) => Promise<Artist[]>
 }
 
-export async function resolveArtistsWithDeps(search: string | undefined, deps: ResolveArtistsDeps): Promise<Artist[]> {
+export async function resolveArtistsWithDeps(search: string | undefined, deps: ResolveArtistsDeps, page?: number, pageSize?: number): Promise<{ data: Artist[]; hasMore: boolean }> {
     if (deps.supabaseConfigured) {
-        const fromDb = await deps.fetchFromDatabase(search)
-        if (fromDb && fromDb.length > 0) return fromDb
+        const fromDb = await deps.fetchFromDatabase(search, page, pageSize)
+        if (fromDb && fromDb.data.length > 0) return fromDb
         if (fromDb && !allowsMockFallback(deps.mode)) return fromDb
     }
 
     if (allowsMockFallback(deps.mode)) {
-        return deps.fetchFromMock(search)
+        const mockData = await deps.fetchFromMock(search)
+        return { data: mockData, hasMore: false }
     }
 
-    return []
+    return { data: [], hasMore: false }
 }
 
 export async function resolveArtists(
     search?: string,
-    options?: { mode?: EventsProviderMode; supabaseConfigured?: boolean }
-): Promise<Artist[]> {
+    options?: { mode?: EventsProviderMode; supabaseConfigured?: boolean; page?: number; pageSize?: number }
+): Promise<{ data: Artist[]; hasMore: boolean }> {
     const mode = options?.mode ?? env.EVENTS_PROVIDER
     const supabaseConfigured = options?.supabaseConfigured ?? isSupabaseConfigured()
 
     return resolveArtistsWithDeps(search, {
         mode,
         supabaseConfigured,
-        fetchFromDatabase: nextSearch => fetchArtistsFromDb(nextSearch, mode),
+        fetchFromDatabase: (nextSearch, nextPage, nextPageSize) => fetchArtistsFromDb(nextSearch, mode, nextPage, nextPageSize),
         fetchFromMock: fetchArtistsFromMock,
-    })
+    }, options?.page, options?.pageSize)
 }
 
 export interface ResolveArtistDeps {
@@ -254,10 +262,10 @@ export async function resolveArtistEvents(
     })
 }
 
-export function useArtists(query?: string) {
+export function useArtists(query?: string, page?: number, pageSize?: number) {
     return useQuery({
-        queryKey: [...artistKeys.list(query), env.EVENTS_PROVIDER],
-        queryFn: () => resolveArtists(query),
+        queryKey: [...artistKeys.list(query), env.EVENTS_PROVIDER, page, pageSize],
+        queryFn: () => resolveArtists(query, { page, pageSize }),
     })
 }
 
@@ -292,5 +300,143 @@ export function useArtistEvents(artistId: string) {
         queryKey: ['artist-events', artistId, env.EVENTS_PROVIDER],
         queryFn: () => resolveArtistEvents(artistId),
         enabled: !!artistId,
+    })
+}
+
+type ArtistLeaderboardEntry = {
+    artist_id: string
+    artist_name: string
+    avg_rating: number
+    count_reviews: number
+}
+
+export function useTopArtists(city?: string, year?: number) {
+    return useQuery({
+        queryKey: [...artistKeys.all, 'top', city, year],
+        queryFn: async () => {
+            const { data, error } = await supabase.rpc('get_artist_rating_summary', {
+                p_artist_id: null,
+                p_city: city?.trim() || null,
+                p_year: year ?? null,
+                p_venue_id: null,
+            })
+            if (error) throw error
+            return (data || []) as ArtistLeaderboardEntry[]
+        },
+    })
+}
+
+// ============================================
+// Artist Follow Hooks
+// ============================================
+
+export const artistFollowKeys = {
+    all: ['artist-follows'] as const,
+    isFollowing: (artistId: string) => [...artistFollowKeys.all, 'is-following', artistId] as const,
+    followedArtists: () => [...artistFollowKeys.all, 'followed'] as const,
+}
+
+export function useIsFollowingArtist(artistId: string) {
+    const { user } = useAuth()
+    return useQuery({
+        queryKey: artistFollowKeys.isFollowing(artistId),
+        queryFn: async () => {
+            if (!user) return false
+
+            const { data, error } = await supabase
+                .from('artist_follows')
+                .select('id')
+                .eq('user_id', user.id)
+                .eq('artist_id', artistId)
+                .maybeSingle()
+
+            if (error) throw error
+            return !!data
+        },
+        enabled: !!artistId && !!user,
+    })
+}
+
+export function useFollowedArtists() {
+    const { user } = useAuth()
+    return useQuery({
+        queryKey: artistFollowKeys.followedArtists(),
+        queryFn: async () => {
+            if (!user) return []
+
+            const { data, error } = await supabase
+                .from('artist_follows')
+                .select('*, artist:artists(*)')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false })
+
+            if (error) throw error
+            return data
+        },
+        enabled: !!user,
+    })
+}
+
+export function useFollowArtist(artistId: string) {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: async () => {
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) throw new Error('Not authenticated')
+
+            const { error } = await supabase
+                .from('artist_follows')
+                .insert({ user_id: user.id, artist_id: artistId })
+
+            if (error) throw error
+        },
+        onMutate: async () => {
+            await queryClient.cancelQueries({ queryKey: artistFollowKeys.isFollowing(artistId) })
+            const prev = queryClient.getQueryData(artistFollowKeys.isFollowing(artistId))
+            queryClient.setQueryData(artistFollowKeys.isFollowing(artistId), true)
+            return { prev }
+        },
+        onError: (_err, _vars, ctx) => {
+            if (ctx?.prev !== undefined) {
+                queryClient.setQueryData(artistFollowKeys.isFollowing(artistId), ctx.prev)
+            }
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: artistFollowKeys.all })
+        },
+    })
+}
+
+export function useUnfollowArtist(artistId: string) {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: async () => {
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) throw new Error('Not authenticated')
+
+            const { error } = await supabase
+                .from('artist_follows')
+                .delete()
+                .eq('user_id', user.id)
+                .eq('artist_id', artistId)
+
+            if (error) throw error
+        },
+        onMutate: async () => {
+            await queryClient.cancelQueries({ queryKey: artistFollowKeys.isFollowing(artistId) })
+            const prev = queryClient.getQueryData(artistFollowKeys.isFollowing(artistId))
+            queryClient.setQueryData(artistFollowKeys.isFollowing(artistId), false)
+            return { prev }
+        },
+        onError: (_err, _vars, ctx) => {
+            if (ctx?.prev !== undefined) {
+                queryClient.setQueryData(artistFollowKeys.isFollowing(artistId), ctx.prev)
+            }
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: artistFollowKeys.all })
+        },
     })
 }

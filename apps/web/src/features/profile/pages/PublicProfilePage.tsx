@@ -7,8 +7,10 @@ import { Avatar } from '@/shared/components/ui/Avatar'
 import { Badge } from '@/shared/components/ui/Badge'
 import { RatingDisplay } from '@/shared/components/ui/StarRating'
 import { LoadingPage } from '@/shared/components/ui/Loading'
+import { Button } from '@/shared/components/ui/Button'
 import { formatDate, formatRelativeTime } from '@/shared/lib/utils'
 import { sanitizeText } from '@/shared/lib/sanitize'
+import { FollowUserButton, FollowerCounts } from '../components/FollowUserButton'
 
 export function PublicProfilePage() {
     const { username } = useParams<{ username: string }>()
@@ -94,6 +96,10 @@ export function PublicProfilePage() {
                                 <Badge variant="primary">
                                     {reviews.length} {reviews.length === 1 ? 'Review' : 'Reviews'}
                                 </Badge>
+                                <FollowerCounts userId={profile.id} />
+                            </div>
+                            <div className="mt-4">
+                                <FollowUserButton userId={profile.id} />
                             </div>
                         </div>
                     </div>
@@ -174,6 +180,3 @@ export function PublicProfilePage() {
         </div>
     )
 }
-
-// Need to import Button for the not found state
-import { Button } from '@/shared/components/ui/Button'

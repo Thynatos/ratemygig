@@ -1,6 +1,8 @@
 import { useParams, Link } from 'react-router-dom'
 import { Calendar, MapPin, Share2, ChevronLeft } from 'lucide-react'
 import { useReview } from '../api/reviews'
+import { ReactionButtons } from '../components/ReactionButtons'
+import { usePhotoUrls } from '@/shared/hooks'
 import { Button } from '@/shared/components/ui/Button'
 import { Card, CardContent } from '@/shared/components/ui/Card'
 import { StarRating } from '@/shared/components/ui/StarRating'
@@ -12,6 +14,8 @@ import { sanitizeText } from '@/shared/lib/sanitize'
 export function PublicReviewPage() {
     const { reviewId } = useParams<{ reviewId: string }>()
     const { data: review, isLoading, error } = useReview(reviewId!)
+    const storagePaths = review?.photos?.map((p: { storage_path: string }) => p.storage_path) ?? []
+    const { urls: photoUrls, isLoading: photosLoading } = usePhotoUrls(storagePaths)
 
     const handleShare = async () => {
         if (navigator.share) {
@@ -109,17 +113,31 @@ export function PublicReviewPage() {
                     {review.photos && review.photos.length > 0 && (
                         <div className="mb-6">
                             <div className="photo-grid">
-                                {review.photos.map((photo: { id: string; storage_path: string }) => (
-                                    <div key={photo.id} className="photo-item">
-                                        {/* Would need signed URL for image */}
-                                        <div className="w-full h-full bg-surface-700 flex items-center justify-center text-surface-500">
-                                            Photo
+                                {review.photos.map((photo: { id: string; storage_path: string }) => {
+                                    const url = photoUrls.get(photo.storage_path)
+                                    return (
+                                        <div key={photo.id} className="photo-item">
+                                            {photosLoading || !url ? (
+                                                <div className="w-full h-full bg-surface-700 animate-pulse" />
+                                            ) : (
+                                                <img
+                                                    src={url}
+                                                    alt="Review photo"
+                                                    className="w-full h-full object-cover rounded-lg"
+                                                    loading="lazy"
+                                                />
+                                            )}
                                         </div>
-                                    </div>
-                                ))}
+                                    )
+                                })}
                             </div>
                         </div>
                     )}
+
+                    {/* Reactions */}
+                    <div className="mt-6 pt-4 border-t border-surface-700">
+                        <ReactionButtons reviewId={review.id} />
+                    </div>
 
                     {/* Author */}
                     <div className="flex items-center justify-between pt-6 border-t border-surface-700">

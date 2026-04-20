@@ -5,19 +5,26 @@ import { useVenues } from '../api/venues'
 import { useCities } from '@/features/events/api/events'
 import { Card, CardContent } from '@/shared/components/ui/Card'
 import { Badge } from '@/shared/components/ui/Badge'
+import { Button } from '@/shared/components/ui/Button'
 import { Skeleton } from '@/shared/components/ui/Loading'
+
+const PAGE_SIZE = 24
 
 export function VenuesPage() {
     const [selectedCity, setSelectedCity] = useState<string>('')
     const [searchQuery, setSearchQuery] = useState('')
+    const [page, setPage] = useState(1)
 
     const { data: cities = [] } = useCities()
-    const { data: venues, isLoading } = useVenues(selectedCity || undefined)
+    const { data, isLoading } = useVenues(selectedCity || undefined, page, PAGE_SIZE)
 
-    const filteredVenues = venues?.filter(venue =>
+    const venues = data?.data ?? []
+    const hasMore = data?.hasMore ?? false
+
+    const filteredVenues = venues.filter(venue =>
         venue.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         venue.city.toLowerCase().includes(searchQuery.toLowerCase())
-    ) || []
+    )
 
     return (
         <div className="page-container">
@@ -46,7 +53,7 @@ export function VenuesPage() {
                 {/* City Filter */}
                 <select
                     value={selectedCity}
-                    onChange={(e) => setSelectedCity(e.target.value)}
+                    onChange={(e) => { setSelectedCity(e.target.value); setPage(1) }}
                     className="input-field w-full sm:w-48"
                 >
                     <option value="">All Cities</option>
@@ -57,7 +64,7 @@ export function VenuesPage() {
             </div>
 
             {/* Loading */}
-            {isLoading && (
+            {isLoading && page === 1 && (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {Array.from({ length: 6 }).map((_, i) => (
                         <Card key={i}>
@@ -87,7 +94,7 @@ export function VenuesPage() {
             )}
 
             {/* Venues Grid */}
-            {!isLoading && filteredVenues.length > 0 && (
+            {(!isLoading || page > 1) && filteredVenues.length > 0 && (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {filteredVenues.map(venue => (
                         <Link key={venue.id} to={`/venues/${venue.id}`}>
@@ -103,7 +110,6 @@ export function VenuesPage() {
 
                                     <div className="flex items-center justify-between">
                                         <Badge variant="surface">Venue</Badge>
-                                        {/* Rating would come from aggregation */}
                                         <span className="flex items-center gap-1 text-sm text-surface-400">
                                             <Star className="w-4 h-4" />
                                             <span>—</span>
@@ -113,6 +119,19 @@ export function VenuesPage() {
                             </Card>
                         </Link>
                     ))}
+                </div>
+            )}
+
+            {/* Load More */}
+            {hasMore && (
+                <div className="mt-8 text-center">
+                    <Button
+                        variant="secondary"
+                        onClick={() => setPage(p => p + 1)}
+                        isLoading={isLoading && page > 1}
+                    >
+                        Load More Venues
+                    </Button>
                 </div>
             )}
         </div>

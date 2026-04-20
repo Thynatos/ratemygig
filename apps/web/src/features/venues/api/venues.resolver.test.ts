@@ -8,11 +8,11 @@ describe('venue resolver policy', () => {
         const result = await resolveVenuesWithDeps('London', {
             mode: 'ticketmaster',
             supabaseConfigured: true,
-            fetchFromDatabase: vi.fn().mockResolvedValue([]),
+            fetchFromDatabase: vi.fn().mockResolvedValue({ data: [], hasMore: false }),
             fetchFromMock,
         })
 
-        expect(result).toEqual([])
+        expect(result).toEqual({ data: [], hasMore: false })
         expect(fetchFromMock).not.toHaveBeenCalled()
     })
 

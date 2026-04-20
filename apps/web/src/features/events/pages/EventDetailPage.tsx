@@ -5,6 +5,8 @@ import {
 } from 'lucide-react'
 import { useEvent, useAttendance, useToggleAttendance } from '../api/events'
 import { useEventReviews } from '@/features/reviews/api/reviews'
+import { ReactionButtons } from '@/features/reviews/components/ReactionButtons'
+import { usePhotoUrls } from '@/shared/hooks'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { Button } from '@/shared/components/ui/Button'
 import { Badge } from '@/shared/components/ui/Badge'
@@ -22,6 +24,10 @@ export function EventDetailPage() {
     const { data: attendance } = useAttendance(eventId!)
     const { data: reviews = [], isLoading: reviewsLoading } = useEventReviews(eventId!)
     const toggleAttendance = useToggleAttendance()
+    const allPhotoPaths = reviews.flatMap((r: { photos?: { storage_path: string }[] }) =>
+        (r.photos ?? []).map((p: { storage_path: string }) => p.storage_path)
+    )
+    const { urls: photoUrls } = usePhotoUrls(allPhotoPaths)
 
     if (isLoading) return <LoadingPage message="Loading event details..." />
 
@@ -259,6 +265,24 @@ export function EventDetailPage() {
                                             )}
                                             <p className="mt-2 text-surface-300 line-clamp-3">{sanitizeText(review.body)}</p>
 
+                                            {review.photos && review.photos.length > 0 && (
+                                                <div className="mt-3 flex gap-2 overflow-x-auto">
+                                                    {review.photos.map((photo: { id: string; storage_path: string }) => {
+                                                        const url = photoUrls.get(photo.storage_path)
+                                                        return url ? (
+                                                            <Link key={photo.id} to={`/r/${review.id}`} className="shrink-0">
+                                                                <img
+                                                                    src={url}
+                                                                    alt="Review photo"
+                                                                    className="h-16 w-16 rounded-lg object-cover hover:opacity-80 transition-opacity"
+                                                                    loading="lazy"
+                                                                />
+                                                            </Link>
+                                                        ) : null
+                                                    })}
+                                                </div>
+                                            )}
+
                                             <div className="mt-3">
                                                 <Link
                                                     to={`/r/${review.id}`}
@@ -266,6 +290,10 @@ export function EventDetailPage() {
                                                 >
                                                     Read more →
                                                 </Link>
+                                            </div>
+
+                                            <div className="mt-3">
+                                                <ReactionButtons reviewId={review.id} compact />
                                             </div>
                                         </div>
                                     ))}

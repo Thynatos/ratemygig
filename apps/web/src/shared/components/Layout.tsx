@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation } from 'react-router-dom'
-import { Music, Calendar, MapPin, Users, User, LogOut, Menu, X } from 'lucide-react'
+import { Music, Calendar, MapPin, Users, Trophy, User, LogOut, Menu, X, Rss } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { cn } from '@/shared/lib/utils'
@@ -7,7 +7,9 @@ import { cn } from '@/shared/lib/utils'
 const NAV_LINKS = [
     { to: '/', label: 'Discover', icon: Calendar },
     { to: '/venues', label: 'Venues', icon: MapPin },
+    { to: '/venues/top', label: 'Top Venues', icon: Trophy },
     { to: '/artists', label: 'Artists', icon: Users },
+    { to: '/artists/top', label: 'Top Artists', icon: Trophy },
 ]
 
 export function Layout() {
@@ -58,6 +60,16 @@ export function Layout() {
                                 <div className="w-8 h-8 skeleton rounded-full" />
                             ) : user ? (
                                 <>
+                                    <Link
+                                        to="/feed"
+                                        className={cn(
+                                            'hidden md:flex nav-link items-center gap-2',
+                                            isActive('/feed') && 'active'
+                                        )}
+                                    >
+                                        <Rss className="w-4 h-4" />
+                                        Feed
+                                    </Link>
                                     <Link
                                         to="/my-gigs"
                                         className={cn(
@@ -125,19 +137,34 @@ export function Layout() {
                                 </Link>
                             ))}
                             {user && (
-                                <Link
-                                    to="/my-gigs"
-                                    onClick={() => setMobileMenuOpen(false)}
-                                    className={cn(
-                                        'flex items-center gap-3 px-4 py-3 rounded-xl transition-colors',
-                                        isActive('/my-gigs')
-                                            ? 'bg-primary-500/10 text-primary-400'
-                                            : 'text-surface-300 hover:bg-surface-800 hover:text-surface-100'
-                                    )}
-                                >
-                                    <Calendar className="w-5 h-5" />
-                                    My Gigs
-                                </Link>
+                                <>
+                                    <Link
+                                        to="/feed"
+                                        onClick={() => setMobileMenuOpen(false)}
+                                        className={cn(
+                                            'flex items-center gap-3 px-4 py-3 rounded-xl transition-colors',
+                                            isActive('/feed')
+                                                ? 'bg-primary-500/10 text-primary-400'
+                                                : 'text-surface-300 hover:bg-surface-800 hover:text-surface-100'
+                                        )}
+                                    >
+                                        <Rss className="w-5 h-5" />
+                                        Feed
+                                    </Link>
+                                    <Link
+                                        to="/my-gigs"
+                                        onClick={() => setMobileMenuOpen(false)}
+                                        className={cn(
+                                            'flex items-center gap-3 px-4 py-3 rounded-xl transition-colors',
+                                            isActive('/my-gigs')
+                                                ? 'bg-primary-500/10 text-primary-400'
+                                                : 'text-surface-300 hover:bg-surface-800 hover:text-surface-100'
+                                        )}
+                                    >
+                                        <Calendar className="w-5 h-5" />
+                                        My Gigs
+                                    </Link>
+                                </>
                             )}
                         </nav>
                     </div>

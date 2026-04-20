@@ -4,11 +4,19 @@ import { Users, Search } from 'lucide-react'
 import { useArtists } from '../api/artists'
 import { Card, CardContent } from '@/shared/components/ui/Card'
 import { Badge } from '@/shared/components/ui/Badge'
+import { Button } from '@/shared/components/ui/Button'
 import { Skeleton } from '@/shared/components/ui/Loading'
+
+const PAGE_SIZE = 24
 
 export function ArtistsPage() {
     const [searchQuery, setSearchQuery] = useState('')
-    const { data: artists, isLoading } = useArtists(searchQuery || undefined)
+    const [page, setPage] = useState(1)
+
+    const { data, isLoading } = useArtists(searchQuery || undefined, page, PAGE_SIZE)
+
+    const artists = data?.data ?? []
+    const hasMore = data?.hasMore ?? false
 
     return (
         <div className="page-container">
@@ -27,7 +35,7 @@ export function ArtistsPage() {
                     <input
                         type="text"
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={(e) => { setSearchQuery(e.target.value); setPage(1) }}
                         placeholder="Search artists..."
                         className="input-field pl-12"
                     />
@@ -35,7 +43,7 @@ export function ArtistsPage() {
             </div>
 
             {/* Loading */}
-            {isLoading && (
+            {isLoading && page === 1 && (
                 <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                     {Array.from({ length: 8 }).map((_, i) => (
                         <Card key={i}>
@@ -50,7 +58,7 @@ export function ArtistsPage() {
             )}
 
             {/* Empty State */}
-            {!isLoading && (!artists || artists.length === 0) && (
+            {!isLoading && artists.length === 0 && (
                 <Card>
                     <CardContent className="p-12 text-center">
                         <Users className="w-16 h-16 text-surface-600 mx-auto mb-4" />
@@ -65,7 +73,7 @@ export function ArtistsPage() {
             )}
 
             {/* Artists Grid */}
-            {!isLoading && artists && artists.length > 0 && (
+            {(!isLoading || page > 1) && artists.length > 0 && (
                 <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                     {artists.map(artist => (
                         <Link key={artist.id} to={`/artists/${artist.id}`}>
@@ -87,6 +95,19 @@ export function ArtistsPage() {
                             </Card>
                         </Link>
                     ))}
+                </div>
+            )}
+
+            {/* Load More */}
+            {hasMore && (
+                <div className="mt-8 text-center">
+                    <Button
+                        variant="secondary"
+                        onClick={() => setPage(p => p + 1)}
+                        isLoading={isLoading && page > 1}
+                    >
+                        Load More Artists
+                    </Button>
                 </div>
             )}
         </div>

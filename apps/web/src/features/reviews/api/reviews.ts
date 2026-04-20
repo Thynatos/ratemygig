@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/shared/lib/supabase'
 import { sanitizeText } from '@/shared/lib/sanitize'
-import type { Review, ReviewPhoto } from '@core/index'
+import { createRateLimiter } from '@/shared/lib/throttle'
+import type { Review, ReviewPhoto, ReactionType } from '@core/index'
 
 // Query keys
 export const reviewKeys = {
@@ -119,11 +120,16 @@ interface ReviewInput {
     tagIds?: string[]
 }
 
+const reviewCreateLimiter = createRateLimiter(5000)
+
 export function useCreateReview() {
     const queryClient = useQueryClient()
 
     return useMutation({
         mutationFn: async (input: ReviewInput) => {
+            if (!reviewCreateLimiter.allow()) {
+                throw new Error('Please wait before submitting another review')
+            }
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) throw new Error('Not authenticated')
 
@@ -212,12 +218,17 @@ export function useDeleteReview() {
     })
 }
 
+const photoUploadLimiter = createRateLimiter(3000)
+
 // Photo upload
 export function useUploadReviewPhotos() {
     const queryClient = useQueryClient()
 
     return useMutation({
         mutationFn: async ({ reviewId, files }: { reviewId: string; files: File[] }) => {
+            if (!photoUploadLimiter.allow()) {
+                throw new Error('Please wait before uploading more photos')
+            }
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) throw new Error('Not authenticated')
 
@@ -293,6 +304,196 @@ export function useTags() {
             if (error) throw error
             return data
         },
-        staleTime: 1000 * 60 * 60, // 1 hour
+        staleTime: 1000 * 60 * 60,
+    })
+}
+
+// ============================================
+// Review Reaction Hooks
+// ============================================
+
+export const reactionKeys = {
+    all: ['review-reactions'] as const,
+    forReview: (reviewId: string) => [...reactionKeys.all, 'review', reviewId] as const,
+    userReaction: (reviewId: string) => [...reactionKeys.all, 'user', reviewId] as const,
+}
+
+interface ReactionRow {
+    id: string
+    user_id: string
+    review_id: string
+    reaction_type: ReactionType
+    created_at: string
+}
+
+interface ReactionSummary {
+    like: number
+    helpful: number
+    love: number
+}
+
+interface UserReactions {
+    like: boolean
+    helpful: boolean
+    love: boolean
+}
+
+const reactionLimiter = createRateLimiter(1000)
+
+export function useReviewReactions(reviewId: string) {
+    return useQuery({
+        queryKey: reactionKeys.forReview(reviewId),
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('review_reactions')
+                .select('*')
+                .eq('review_id', reviewId)
+
+            if (error) throw error
+
+            const reactions = data as ReactionRow[]
+            const summary: ReactionSummary = { like: 0, helpful: 0, love: 0 }
+            for (const r of reactions) {
+                summary[r.reaction_type] = (summary[r.reaction_type] ?? 0) + 1
+            }
+            return summary
+        },
+        enabled: !!reviewId,
+    })
+}
+
+export function useUserReactions(reviewId: string) {
+    return useQuery({
+        queryKey: reactionKeys.userReaction(reviewId),
+        queryFn: async () => {
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) return { like: false, helpful: false, love: false } as UserReactions
+
+            const { data, error } = await supabase
+                .from('review_reactions')
+                .select('reaction_type')
+                .eq('user_id', user.id)
+                .eq('review_id', reviewId)
+
+            if (error) throw error
+
+            const result: UserReactions = { like: false, helpful: false, love: false }
+            for (const row of (data as { reaction_type: ReactionType }[])) {
+                result[row.reaction_type] = true
+            }
+            return result
+        },
+        enabled: !!reviewId,
+    })
+}
+
+export function useReactToReview(reviewId: string) {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: async (reactionType: ReactionType) => {
+            if (!reactionLimiter.allow()) {
+                throw new Error('Please wait before reacting again')
+            }
+
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) throw new Error('Not authenticated')
+
+            const { error } = await supabase
+                .from('review_reactions')
+                .insert({
+                    user_id: user.id,
+                    review_id: reviewId,
+                    reaction_type: reactionType,
+                })
+
+            if (error) throw error
+        },
+        onMutate: async (reactionType) => {
+            await queryClient.cancelQueries({ queryKey: reactionKeys.forReview(reviewId) })
+            await queryClient.cancelQueries({ queryKey: reactionKeys.userReaction(reviewId) })
+
+            const prevSummary = queryClient.getQueryData<ReactionSummary>(reactionKeys.forReview(reviewId))
+            const prevUser = queryClient.getQueryData<UserReactions>(reactionKeys.userReaction(reviewId))
+
+            if (prevSummary) {
+                const updated = { ...prevSummary }
+                updated[reactionType] = (updated[reactionType] ?? 0) + 1
+                queryClient.setQueryData(reactionKeys.forReview(reviewId), updated)
+            }
+
+            if (prevUser) {
+                queryClient.setQueryData(reactionKeys.userReaction(reviewId), {
+                    ...prevUser,
+                    [reactionType]: true,
+                })
+            }
+
+            return { prevSummary, prevUser }
+        },
+        onError: (_err, _vars, ctx) => {
+            if (ctx?.prevSummary) {
+                queryClient.setQueryData(reactionKeys.forReview(reviewId), ctx.prevSummary)
+            }
+            if (ctx?.prevUser) {
+                queryClient.setQueryData(reactionKeys.userReaction(reviewId), ctx.prevUser)
+            }
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: reactionKeys.all })
+        },
+    })
+}
+
+export function useRemoveReaction(reviewId: string) {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: async (reactionType: ReactionType) => {
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) throw new Error('Not authenticated')
+
+            const { error } = await supabase
+                .from('review_reactions')
+                .delete()
+                .eq('user_id', user.id)
+                .eq('review_id', reviewId)
+                .eq('reaction_type', reactionType)
+
+            if (error) throw error
+        },
+        onMutate: async (reactionType) => {
+            await queryClient.cancelQueries({ queryKey: reactionKeys.forReview(reviewId) })
+            await queryClient.cancelQueries({ queryKey: reactionKeys.userReaction(reviewId) })
+
+            const prevSummary = queryClient.getQueryData<ReactionSummary>(reactionKeys.forReview(reviewId))
+            const prevUser = queryClient.getQueryData<UserReactions>(reactionKeys.userReaction(reviewId))
+
+            if (prevSummary) {
+                const updated = { ...prevSummary }
+                updated[reactionType] = Math.max(0, (updated[reactionType] ?? 0) - 1)
+                queryClient.setQueryData(reactionKeys.forReview(reviewId), updated)
+            }
+
+            if (prevUser) {
+                queryClient.setQueryData(reactionKeys.userReaction(reviewId), {
+                    ...prevUser,
+                    [reactionType]: false,
+                })
+            }
+
+            return { prevSummary, prevUser }
+        },
+        onError: (_err, _vars, ctx) => {
+            if (ctx?.prevSummary) {
+                queryClient.setQueryData(reactionKeys.forReview(reviewId), ctx.prevSummary)
+            }
+            if (ctx?.prevUser) {
+                queryClient.setQueryData(reactionKeys.userReaction(reviewId), ctx.prevUser)
+            }
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: reactionKeys.all })
+        },
     })
 }

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/shared/lib/supabase'
 import { env, isSupabaseConfigured, type EventsProviderMode } from '@/shared/lib/env'
 import { allowsMockFallback, allowsTicketmasterLive, getDatabaseProviderFilter } from '@/shared/lib/provider-policy'
+import { createRateLimiter } from '@/shared/lib/throttle'
 import { mockEventsProvider } from '../providers/mock-provider'
 import type { Event, EventFilters, IEventsProvider, PaginatedResponse, Provider, ProviderEvent, TicketUrl } from '@core/index'
 
@@ -509,11 +510,16 @@ export function useAttendance(eventId: string) {
     })
 }
 
+const attendanceLimiter = createRateLimiter(2000)
+
 export function useToggleAttendance() {
     const queryClient = useQueryClient()
 
     return useMutation({
         mutationFn: async ({ eventId, status }: { eventId: string; status: 'planned' | 'attended' }) => {
+            if (!attendanceLimiter.allow()) {
+                throw new Error('Please wait before updating attendance')
+            }
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) throw new Error('Not authenticated')
 
