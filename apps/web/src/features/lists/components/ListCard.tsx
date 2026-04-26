@@ -4,6 +4,7 @@ import type { List, Event } from '@core/index'
 import { Card, CardContent } from '@/shared/components/ui/Card'
 import { Badge } from '@/shared/components/ui/Badge'
 import { formatRelativeTime } from '@/shared/lib/utils'
+import { sanitizeText } from '@/shared/lib/sanitize'
 
 interface ListWithItemCount extends List {
     item_count: number
@@ -22,7 +23,7 @@ export const ListCard = memo(function ListCard({ list, onClick }: ListCardProps)
                 <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                            <h3 className="font-semibold text-white truncate">{list.name}</h3>
+                            <h3 className="font-semibold text-white truncate">{sanitizeText(list.name)}</h3>
                             {list.is_public ? (
                                 <Globe className="w-3.5 h-3.5 text-surface-500 shrink-0" />
                             ) : (
@@ -32,7 +33,7 @@ export const ListCard = memo(function ListCard({ list, onClick }: ListCardProps)
 
                         {list.description && (
                             <p className="text-sm text-surface-400 mt-1 line-clamp-2">
-                                {list.description}
+                                {sanitizeText(list.description)}
                             </p>
                         )}
 

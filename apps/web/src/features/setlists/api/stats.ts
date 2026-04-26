@@ -1,5 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
+import { z } from 'zod'
 import { supabase } from '@/shared/lib/supabase'
+import { validateRpcResponse } from '@/shared/lib/utils'
+import { artistSongStatsSchema, artistSetlistStatsSchema, songStatsEntrySchema } from '@/shared/validation/schemas'
 import { setlistKeys } from './setlists'
 
 export const setlistStatsKeys = {
@@ -39,7 +42,7 @@ export function useArtistSongStats(artistId: string) {
             })
 
             if (error) throw error
-            return (data || []) as ArtistSongStats[]
+            return validateRpcResponse(z.array(artistSongStatsSchema), data || [], 'get_artist_song_stats') as ArtistSongStats[]
         },
         enabled: !!artistId,
     })
@@ -54,7 +57,8 @@ export function useArtistSetlistStats(artistId: string) {
             })
 
             if (error) throw error
-            return (data?.[0] ?? null) as ArtistSetlistStats | null
+            if (!data || data.length === 0) return null
+            return validateRpcResponse(artistSetlistStatsSchema, data[0], 'get_artist_setlist_stats') as ArtistSetlistStats
         },
         enabled: !!artistId,
     })
@@ -69,7 +73,7 @@ export function useSongStats(songId: string) {
             })
 
             if (error) throw error
-            return (data || []) as SongStatsEntry[]
+            return validateRpcResponse(z.array(songStatsEntrySchema), data || [], 'get_song_stats') as SongStatsEntry[]
         },
         enabled: !!songId,
     })

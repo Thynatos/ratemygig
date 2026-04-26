@@ -1,6 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/shared/lib/supabase'
+import { createRateLimiter } from '@/shared/lib/throttle'
+import { RATE_LIMITS } from '@/shared/lib/constants'
 import { avatarKeys } from '@/features/profile/api/avatar'
+
+const profileUpdateLimiter = createRateLimiter(RATE_LIMITS.PROFILE_UPDATE)
 
 export const profileKeys = {
     all: ['profiles'] as const,
@@ -24,6 +28,9 @@ export function useUpdateProfile() {
             twitter_handle?: string | null
             instagram_handle?: string | null
         }) => {
+            if (!profileUpdateLimiter.allow()) {
+                throw new Error('Please wait before updating your profile again')
+            }
             const sanitized: Record<string, unknown> = {}
             if (updates.username !== undefined) sanitized.username = updates.username || null
             if (updates.display_name !== undefined) sanitized.display_name = updates.display_name || null

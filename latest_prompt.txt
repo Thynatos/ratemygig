@@ -1,0 +1,58 @@
+/gsd-plan-phase Phase A — Social Proof
+
+Project: RateMyGig — concert discovery and rating web app
+Repo: C:\Users\badir\Documents\ratemygig
+
+Architecture summary:
+- Monorepo: apps/web (React 19 + Vite + Tailwind), packages/core (domain types), packages/db (SQL migrations), packages/jobs (Ticketmaster sync)
+- Backend: Supabase (Postgres, Auth, Storage, RLS) — no custom API server
+- State: TanStack React Query + React Hook Form + Zod
+- Events: Pluggable provider (DB → Ticketmaster API → mock fallback)
+- Codebase docs: .planning/codebase/ has STACK.md, ARCHITECTURE.md, STRUCTURE.md, CONVENTIONS.md, INTEGRATIONS.md, TESTING.md, CONCERNS.md
+
+What's done:
+- Auth (magic link + Google OAuth), event discovery, attendance, reviews with photo uploads, venue/artist rating pages, XSS sanitization, leaderboard pages (Top Venues / Top Artists), pagination for venues/artists, E2E tests, client-side rate limiting on mutations, 86 unit tests passing, 0 lint errors
+
+What to build — Phase A: Social Proof (in order):
+
+A1. Artist Follow System
+- New migration 007_artist_follows.sql: artist_follows table (id, user_id FK → auth.users, artist_id FK → artists, created_at), UNIQUE(user_id, artist_id), RLS policies (owner CRUD, public read)
+- API hooks in features/artists/api/artists.ts: useFollowArtist, useUnfollowArtist, useIsFollowingArtist, useFollowedArtists
+- "Track Artist" button on ArtistDetailPage (heart/star toggle, optimistic update)
+- "Tracked Artists" tab on MyGigsPage showing followed artists with upcoming events
+
+A2. Venue Follow System
+- Same migration 007: venue_follows table (id, user_id, venue_id, created_at), same RLS pattern
+- API hooks in features/venues/api/venues.ts: useFollowVenue, useUnfollowVenue, useIsFollowingVenue, useFollowedVenues
+- "Track Venue" button on VenueDetailPage
+- "Tracked Venues" tab on MyGigsPage
+
+A3. User Follow System
+- Same migration 007: user_follows table (id, follower_id, following_id, created_at), UNIQUE(follower_id, following_id), check(follower_id != following_id), RLS policies
+- API hooks in features/profile/api/follows.ts: useFollowUser, useUnfollowUser, useIsFollowingUser, useFollowers, useFollowing
+- Follow/unfollow button on PublicProfilePage
+- Follower and following counts displayed on profile
+
+A4. Review Reactions
+- Same migration 007: review_reactions table (id, user_id, review_id, reaction_type ENUM('like','helpful','love'), created_at), UNIQUE(user_id, review_id, reaction_type), RLS policies
+- API hooks in features/reviews/api/reviews.ts: useReactToReview, useRemoveReaction, useReviewReactions
+- Reaction buttons (👍 Helpful ❤️ Love 🔥 Like) on PublicReviewPage and EventDetailPage review cards with counts
+
+A5. Activity Feed
+- New route /feed with FeedPage component
+- New hook useActivityFeed() that queries: recent public reviews from followed users, recent events from tracked artists/venues (via attendance), recent reviews on tracked venues/artists
+- Paginated feed with cards showing: review summary + rating, event announcement, "X is going to" activity
+- Add "Feed" link to main nav in Layout.tsx
+
+Conventions to follow (see .planning/codebase/CONVENTIONS.md for full details):
+- Feature-based structure: features/{name}/api/, components/, pages/
+- Path aliases: @/ (src), @shared/, @features/, @core/
+- Named exports, function components only
+- Zod validation in shared/validation/schemas.ts
+- Query key factories in api/*.ts files
+- Sanitize all user text with sanitizeText() from shared/lib/sanitize.ts
+- Client-side rate limiting with createRateLimiter() from shared/lib/throttle.ts
+- Run npm run lint, npm run test, npm run build before committing
+- Update .planning/codebase/CONCERNS.md as you complete each task (mark items FIXED or add new concerns found)
+
+Start by reading the planning docs in .planning/codebase/ to understand the full codebase context before planning.

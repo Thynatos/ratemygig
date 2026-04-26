@@ -8,6 +8,7 @@ import { Badge } from '@/shared/components/ui/Badge'
 import { Avatar } from '@/shared/components/ui/Avatar'
 import { LoadingPage } from '@/shared/components/ui/Loading'
 import { formatDate, formatRelativeTime } from '@/shared/lib/utils'
+import { sanitizeText } from '@/shared/lib/sanitize'
 
 export function ListPage() {
     const { listId } = useParams<{ listId: string }>()
@@ -53,7 +54,7 @@ export function ListPage() {
                     <div className="flex items-start justify-between gap-4 mb-4">
                         <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
-                                <h1 className="text-2xl font-display font-bold text-white">{list.name}</h1>
+                                <h1 className="text-2xl font-display font-bold text-white">{sanitizeText(list.name)}</h1>
                                 <Badge variant="surface">
                                     {list.is_public ? (
                                         <><Globe className="w-3 h-3 mr-1" /> Public</>
@@ -64,7 +65,7 @@ export function ListPage() {
                             </div>
 
                             {list.description && (
-                                <p className="text-surface-300">{list.description}</p>
+                                <p className="text-surface-300">{sanitizeText(list.description)}</p>
                             )}
 
                             <div className="flex items-center gap-3 mt-4">
@@ -138,13 +139,13 @@ export function ListPage() {
                                                     {item.event.venue && (
                                                         <span className="flex items-center gap-1">
                                                             <MapPin className="w-3 h-3" />
-                                                            {item.event.venue.name}, {item.event.city}
+                                                            {sanitizeText(item.event.venue.name)}, {sanitizeText(item.event.city)}
                                                         </span>
                                                     )}
                                                 </div>
                                             )}
                                             {item.notes && (
-                                                <p className="text-sm text-surface-300 mt-2">{item.notes}</p>
+                                                <p className="text-sm text-surface-300 mt-2">{sanitizeText(item.notes)}</p>
                                             )}
                                         </div>
                                         <ExternalLink className="w-4 h-4 text-surface-500 shrink-0 mt-1" />

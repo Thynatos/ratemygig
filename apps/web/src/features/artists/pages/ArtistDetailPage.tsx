@@ -13,6 +13,7 @@ import { RatingDisplay } from '@/shared/components/ui/StarRating'
 import { LoadingPage } from '@/shared/components/ui/Loading'
 import { EventCard } from '@/features/events/components/EventCard'
 import { Input } from '@/shared/components/ui/Input'
+import { sanitizeText } from '@/shared/lib/sanitize'
 import { env } from '@/shared/lib/env'
 import { getProviderModeLabel, isTicketmasterMode } from '@/shared/lib/provider-policy'
 
@@ -77,12 +78,12 @@ export function ArtistDetailPage() {
                             <div className="flex items-center gap-6">
                                 {/* Avatar */}
                                 <div className="w-24 h-24 rounded-full bg-gradient-to-br from-accent-500/30 to-primary-500/30 flex items-center justify-center text-4xl font-bold text-white border-4 border-surface-700">
-                                    {artist.name.charAt(0)}
+                                    {sanitizeText(artist.name).charAt(0)}
                                 </div>
 
                                 <div>
                                     <h1 className="text-3xl font-display font-bold text-white mb-2">
-                                        {artist.name}
+                                        {sanitizeText(artist.name)}
                                     </h1>
                                     <p className="flex items-center gap-2 text-surface-400">
                                         <Users className="w-5 h-5" />
@@ -201,7 +202,7 @@ export function ArtistDetailPage() {
                                         <option value="">All venues</option>
                                         {venueList.map(v => (
                                             <option key={v.id} value={v.id}>
-                                                {v.name} — {v.city}
+                                                {sanitizeText(v.name)} — {sanitizeText(v.city)}
                                             </option>
                                         ))}
                                     </select>

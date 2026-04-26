@@ -6,6 +6,7 @@ import { Button } from '@/shared/components/ui/Button'
 import { Card, CardContent } from '@/shared/components/ui/Card'
 import { Skeleton } from '@/shared/components/ui/Loading'
 import { formatRelativeTime } from '@/shared/lib/utils'
+import { sanitizeText } from '@/shared/lib/sanitize'
 
 export function DraftReviewsSection() {
     const { data: drafts = [], isLoading } = useDrafts()
@@ -41,10 +42,10 @@ export function DraftReviewsSection() {
                         >
                             <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium text-white truncate">
-                                    {draft.event?.name || 'Unknown Event'}
+                                    {sanitizeText(draft.event?.name || 'Unknown Event')}
                                 </p>
                                 <p className="text-sm text-surface-400 mt-0.5">
-                                    {draft.title ? `"${draft.title}"` : '(untitled)'}
+                                    {draft.title ? `&ldquo;${sanitizeText(draft.title)}&rdquo;` : '(untitled)'}
                                 </p>
                                 <p className="text-xs text-surface-500 mt-1 flex items-center gap-1">
                                     <Clock className="w-3 h-3" />

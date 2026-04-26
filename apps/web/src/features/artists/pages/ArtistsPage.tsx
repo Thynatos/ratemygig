@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/shared/components/ui/Card'
 import { Badge } from '@/shared/components/ui/Badge'
 import { Button } from '@/shared/components/ui/Button'
 import { Skeleton } from '@/shared/components/ui/Loading'
+import { sanitizeText } from '@/shared/lib/sanitize'
 
 const PAGE_SIZE = 24
 
@@ -81,11 +82,11 @@ export function ArtistsPage() {
                                 <CardContent className="p-5 text-center">
                                     {/* Avatar */}
                                     <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gradient-to-br from-accent-500/30 to-primary-500/30 flex items-center justify-center text-2xl font-bold text-white">
-                                        {artist.name.charAt(0)}
+                                        {sanitizeText(artist.name).charAt(0)}
                                     </div>
 
                                     <h3 className="font-semibold text-white mb-2 line-clamp-1">
-                                        {artist.name}
+                                        {sanitizeText(artist.name)}
                                     </h3>
 
                                     <div className="flex items-center justify-center gap-2">

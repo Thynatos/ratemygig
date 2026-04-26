@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { Layout } from '@/shared/components/Layout'
 import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute'
+import { FeatureErrorBoundary } from '@/shared/components/FeatureErrorBoundary'
 
 // Eagerly loaded (landing / frequently visited)
 import { DiscoverPage } from '@/features/events/pages/DiscoverPage'
@@ -37,19 +38,19 @@ function App() {
             <Routes>
                 {/* Public routes */}
                 <Route element={<Layout />}>
-                    <Route path="/" element={<DiscoverPage />} />
-                    <Route path="/events/:eventId" element={<EventDetailPage />} />
-                    <Route path="/venues" element={<VenuesPage />} />
-                    <Route path="/venues/top" element={<TopVenuesPage />} />
-                    <Route path="/venues/:venueId" element={<VenueDetailPage />} />
-                    <Route path="/artists" element={<ArtistsPage />} />
-                    <Route path="/artists/top" element={<TopArtistsPage />} />
-                    <Route path="/artists/:artistId" element={<ArtistDetailPage />} />
-                    <Route path="/r/:reviewId" element={<PublicReviewPage />} />
-                    <Route path="/u/:username" element={<PublicProfilePage />} />
-                    <Route path="/events/:eventId/setlist" element={<SetlistPage />} />
-                    <Route path="/songs/:songId" element={<SongPage />} />
-                    <Route path="/lists/:listId" element={<ListPage />} />
+                    <Route path="/" element={<FeatureErrorBoundary title="Discover"><DiscoverPage /></FeatureErrorBoundary>} />
+                    <Route path="/events/:eventId" element={<FeatureErrorBoundary title="Event Details"><EventDetailPage /></FeatureErrorBoundary>} />
+                    <Route path="/venues" element={<FeatureErrorBoundary title="Venues"><VenuesPage /></FeatureErrorBoundary>} />
+                    <Route path="/venues/top" element={<FeatureErrorBoundary title="Top Venues"><TopVenuesPage /></FeatureErrorBoundary>} />
+                    <Route path="/venues/:venueId" element={<FeatureErrorBoundary title="Venue Details"><VenueDetailPage /></FeatureErrorBoundary>} />
+                    <Route path="/artists" element={<FeatureErrorBoundary title="Artists"><ArtistsPage /></FeatureErrorBoundary>} />
+                    <Route path="/artists/top" element={<FeatureErrorBoundary title="Top Artists"><TopArtistsPage /></FeatureErrorBoundary>} />
+                    <Route path="/artists/:artistId" element={<FeatureErrorBoundary title="Artist Details"><ArtistDetailPage /></FeatureErrorBoundary>} />
+                    <Route path="/r/:reviewId" element={<FeatureErrorBoundary title="Review"><PublicReviewPage /></FeatureErrorBoundary>} />
+                    <Route path="/u/:username" element={<FeatureErrorBoundary title="Profile"><PublicProfilePage /></FeatureErrorBoundary>} />
+                    <Route path="/events/:eventId/setlist" element={<FeatureErrorBoundary title="Setlist"><SetlistPage /></FeatureErrorBoundary>} />
+                    <Route path="/songs/:songId" element={<FeatureErrorBoundary title="Song"><SongPage /></FeatureErrorBoundary>} />
+                    <Route path="/lists/:listId" element={<FeatureErrorBoundary title="List"><ListPage /></FeatureErrorBoundary>} />
 
                     {/* Legal pages */}
                     <Route path="/about" element={<AboutPage />} />
@@ -58,12 +59,12 @@ function App() {
 
                     {/* Protected routes */}
                     <Route element={<ProtectedRoute />}>
-                        <Route path="/feed" element={<FeedPage />} />
-                        <Route path="/my-gigs" element={<MyGigsPage />} />
-                        <Route path="/notifications" element={<NotificationsPage />} />
-                        <Route path="/review/:eventId" element={<WriteReviewPage />} />
-                        <Route path="/review/:eventId/edit" element={<WriteReviewPage />} />
-                        <Route path="/profile" element={<ProfilePage />} />
+                        <Route path="/feed" element={<FeatureErrorBoundary title="Feed"><FeedPage /></FeatureErrorBoundary>} />
+                        <Route path="/my-gigs" element={<FeatureErrorBoundary title="My Gigs"><MyGigsPage /></FeatureErrorBoundary>} />
+                        <Route path="/notifications" element={<FeatureErrorBoundary title="Notifications"><NotificationsPage /></FeatureErrorBoundary>} />
+                        <Route path="/review/:eventId" element={<FeatureErrorBoundary title="Write Review"><WriteReviewPage /></FeatureErrorBoundary>} />
+                        <Route path="/review/:eventId/edit" element={<FeatureErrorBoundary title="Edit Review"><WriteReviewPage /></FeatureErrorBoundary>} />
+                        <Route path="/profile" element={<FeatureErrorBoundary title="Profile"><ProfilePage /></FeatureErrorBoundary>} />
                     </Route>
                 </Route>
 

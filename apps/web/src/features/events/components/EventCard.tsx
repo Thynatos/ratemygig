@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Calendar, MapPin, Ticket, Users } from 'lucide-react'
 import type { Event } from '@core/index'
 import { formatDate } from '@/shared/lib/utils'
+import { sanitizeText } from '@/shared/lib/sanitize'
 import { Badge } from '@/shared/components/ui/Badge'
 
 interface EventCardProps {
@@ -30,14 +31,14 @@ export const EventCard = memo(function EventCard({ event }: EventCardProps) {
                     {/* Event Info */}
                     <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-white text-lg line-clamp-2 group-hover:text-primary-400 transition-colors">
-                            {event.name}
+                            {sanitizeText(event.name)}
                         </h3>
 
                         <div className="mt-2 space-y-1">
                             <div className="flex items-center gap-2 text-sm text-surface-400">
                                 <MapPin className="w-4 h-4 flex-shrink-0" />
                                 <span className="truncate">
-                                    {event.venue?.name || 'TBA'} • {event.city}
+                                    {sanitizeText(event.venue?.name || 'TBA')} • {sanitizeText(event.city)}
                                 </span>
                             </div>
 
@@ -55,7 +56,7 @@ export const EventCard = memo(function EventCard({ event }: EventCardProps) {
                         {event.lineup.slice(0, 2).map((artist, i) => (
                             <Badge key={i} variant="surface">
                                 <Users className="w-3 h-3 mr-1" />
-                                {artist}
+                                {sanitizeText(artist)}
                             </Badge>
                         ))}
                         {event.lineup.length > 2 && (

@@ -1,6 +1,7 @@
 import { memo } from 'react'
 import { Music } from 'lucide-react'
 import { formatRelativeTime } from '@/shared/lib/utils'
+import { sanitizeText } from '@/shared/lib/sanitize'
 import { Badge } from '@/shared/components/ui/Badge'
 import type { SetlistWithSongs } from '@core/index'
 
@@ -21,7 +22,7 @@ export const SetlistCard = memo(function SetlistCard({ setlist, onClick }: Setli
             <div className="flex items-center justify-between mb-2">
                 <span className="font-medium text-white flex items-center gap-2">
                     <Music className="w-4 h-4 text-primary-400" />
-                    {setlist.profile?.display_name || setlist.profile?.username || 'Unknown'}'s Setlist
+                    {sanitizeText(setlist.profile?.display_name || setlist.profile?.username || 'Unknown')}'s Setlist
                 </span>
                 <Badge variant={setlist.source === 'verified' ? 'success' : 'surface'} className="text-xs">
                     {setlist.source === 'verified' ? 'Verified' : 'Manual'}
@@ -32,7 +33,7 @@ export const SetlistCard = memo(function SetlistCard({ setlist, onClick }: Setli
                 {previewSongs.map(ss => (
                     <div key={ss.id} className="flex items-center gap-2 text-sm text-surface-300">
                         <span className="text-surface-500 font-mono w-5 text-right">{ss.position}</span>
-                        <span>{ss.song?.name ?? 'Unknown'}</span>
+                        <span>{sanitizeText(ss.song?.name ?? 'Unknown')}</span>
                         {ss.is_encore && <Badge variant="accent" className="text-xs px-1.5 py-0.5">E</Badge>}
                         {ss.is_debut && <Badge variant="warning" className="text-xs px-1.5 py-0.5">Debut</Badge>}
                     </div>

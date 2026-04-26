@@ -1,7 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
+import { z } from 'zod'
 import { supabase } from '@/shared/lib/supabase'
 import { env } from '@/shared/lib/env'
 import { useAuth } from '@/features/auth/hooks/useAuth'
+import { validateRpcResponse } from '@/shared/lib/utils'
+import { venueRatingSummarySchema, venueLeaderboardEntrySchema } from '@/shared/validation/schemas'
 import type { VenueRatingSummary } from '@core/index'
 import {
     venueKeys,
@@ -10,14 +13,6 @@ import {
     resolveVenueEvents,
     type VenueRatingQuery,
 } from './resolver'
-
-type VenueLeaderboardEntry = {
-    venue_id: string
-    venue_name: string
-    city: string
-    avg_rating: number
-    count_reviews: number
-}
 
 export function useVenues(city?: string, page?: number, pageSize?: number) {
     return useQuery({
@@ -45,7 +40,8 @@ export function useVenueRatingSummary(venueId: string, filters?: VenueRatingQuer
             })
 
             if (error) throw error
-            return data?.[0] as VenueRatingSummary | null
+            if (!data || data.length === 0) return null
+            return validateRpcResponse(venueRatingSummarySchema, data[0], 'get_venue_rating_summary') as VenueRatingSummary
         },
         enabled: !!venueId,
     })
@@ -69,7 +65,7 @@ export function useTopVenues(city?: string, year?: number) {
                 p_year: year ?? null,
             })
             if (error) throw error
-            return (data || []) as VenueLeaderboardEntry[]
+            return validateRpcResponse(z.array(venueLeaderboardEntrySchema), data || [], 'get_venue_rating_summary leaderboard')
         },
     })
 }

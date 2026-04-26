@@ -1,6 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/shared/lib/supabase'
 import { useAuth } from '@/features/auth/hooks/useAuth'
+import { createRateLimiter } from '@/shared/lib/throttle'
+import { RATE_LIMITS } from '@/shared/lib/constants'
+
+const followLimiter = createRateLimiter(RATE_LIMITS.FOLLOW)
 
 export const userFollowKeys = {
     all: ['user-follows'] as const,
@@ -103,6 +107,10 @@ export function useFollowUser(userId: string) {
 
     return useMutation({
         mutationFn: async () => {
+            if (!followLimiter.allow()) {
+                throw new Error('Please wait before following again')
+            }
+
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) throw new Error('Not authenticated')
 
@@ -134,6 +142,10 @@ export function useUnfollowUser(userId: string) {
 
     return useMutation({
         mutationFn: async () => {
+            if (!followLimiter.allow()) {
+                throw new Error('Please wait before unfollowing again')
+            }
+
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) throw new Error('Not authenticated')
 

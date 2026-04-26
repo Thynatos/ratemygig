@@ -155,3 +155,80 @@ export const ticketUrlsArraySchema = z
 export const lineupArraySchema = z
     .array(z.string())
     .catch([])
+
+// ============================================
+// RPC Response Schemas
+// ============================================
+
+export const venueRatingSummarySchema = z.object({
+    venue_id: z.string().uuid(),
+    avg_rating: z.number().nullable(),
+    count_reviews: z.number().int(),
+    count_ratings: z.number().int(),
+})
+
+export const venueLeaderboardEntrySchema = z.object({
+    venue_id: z.string().uuid(),
+    venue_name: z.string(),
+    city: z.string(),
+    avg_rating: z.number(),
+    count_reviews: z.number().int(),
+})
+
+export const artistRatingSummarySchema = z.object({
+    artist_id: z.string().uuid(),
+    avg_rating: z.number().nullable(),
+    count_reviews: z.number().int(),
+    count_ratings: z.number().int(),
+})
+
+export const artistLeaderboardEntrySchema = z.object({
+    artist_id: z.string().uuid(),
+    artist_name: z.string(),
+    avg_rating: z.number(),
+    count_reviews: z.number().int(),
+})
+
+export const recommendedEventSchema = z.object({
+    event_id: z.string().uuid(),
+    reason: z.enum(['followed_artist', 'followed_venue', 'attended_venue', 'popular', 'similar_taste']),
+    priority: z.number(),
+})
+
+export const nearbyVenueSchema = z.object({
+    id: z.string().uuid(),
+    name: z.string(),
+    city: z.string(),
+    country: z.string(),
+    lat: z.number().nullable(),
+    lng: z.number().nullable(),
+    distance_km: z.number(),
+})
+
+export const trendingEventSchema = z.object({
+    event_id: z.string().uuid(),
+    attendance_count: z.number().int(),
+    review_count: z.number().int(),
+    trending_score: z.number(),
+})
+
+export const artistSongStatsSchema = z.object({
+    song_id: z.string().uuid(),
+    song_name: z.string(),
+    play_count: z.number().int(),
+    last_played: z.string().datetime(),
+})
+
+export const artistSetlistStatsSchema = z.object({
+    setlist_count: z.number().int(),
+    avg_song_count: z.number(),
+    total_unique_songs: z.number().int(),
+})
+
+export const songStatsEntrySchema = z.object({
+    artist_id: z.string().uuid(),
+    artist_name: z.string(),
+    play_count: z.number().int(),
+    first_played: z.string().datetime(),
+    last_played: z.string().datetime(),
+})

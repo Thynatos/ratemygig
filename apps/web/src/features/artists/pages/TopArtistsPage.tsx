@@ -5,6 +5,7 @@ import { useTopArtists } from '../api/artists'
 import { Card, CardContent } from '@/shared/components/ui/Card'
 import { Skeleton } from '@/shared/components/ui/Loading'
 import { RatingDisplay } from '@/shared/components/ui/StarRating'
+import { sanitizeText } from '@/shared/lib/sanitize'
 
 export function TopArtistsPage() {
     const yearChoices = useMemo(
@@ -92,11 +93,11 @@ export function TopArtistsPage() {
                                             </div>
                                             <div className="flex items-center gap-3">
                                                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-accent-500/30 to-primary-500/30 flex items-center justify-center text-xl font-bold text-white">
-                                                    {artist.artist_name.charAt(0)}
+                                                    {sanitizeText(artist.artist_name).charAt(0)}
                                                 </div>
                                                 <div>
                                                     <h3 className="font-semibold text-lg text-white">
-                                                        {artist.artist_name}
+                                                        {sanitizeText(artist.artist_name)}
                                                     </h3>
                                                 </div>
                                             </div>

@@ -1,9 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
+import { z } from 'zod'
 import { supabase } from '@/shared/lib/supabase'
 import { isSupabaseConfigured } from '@/shared/lib/env'
+import { validateRpcResponse } from '@/shared/lib/utils'
 import { mapEventRow } from '@/features/events/api/events'
 import type { EventRow } from '@/features/events/api/events'
 import type { RecommendationReason } from '@core/index'
+import { recommendedEventSchema, nearbyVenueSchema, trendingEventSchema } from '@/shared/validation/schemas'
 
 export const discoveryKeys = {
     all: ['discovery'] as const,
@@ -26,7 +29,11 @@ export function useRecommendedEvents(limit: number = 12) {
 
             if (error) throw error
 
-            const recommendations = (data || []) as { event_id: string; reason: RecommendationReason; priority: number }[]
+            const recommendations = validateRpcResponse(
+                z.array(recommendedEventSchema),
+                data || [],
+                'get_recommended_events'
+            ) as { event_id: string; reason: RecommendationReason; priority: number }[]
 
             if (recommendations.length === 0) return []
 
@@ -68,10 +75,11 @@ export function useNearbyVenues(lat: number | null, lng: number | null, radiusKm
 
             if (error) throw error
 
-            return ((data || []) as (Omit<Venue, 'created_at' | 'provider_venue_id'> & { distance_km: number })[]).map(v => ({
+            const venues = validateRpcResponse(z.array(nearbyVenueSchema), data || [], 'get_nearby_venues')
+            return venues.map(v => ({
                 ...v,
                 provider_venue_id: null,
-                distance_km: Number(v.distance_km),
+                created_at: new Date().toISOString(),
             }))
         },
         enabled: lat !== null && lng !== null && isSupabaseConfigured(),
@@ -88,7 +96,11 @@ export function useTrendingEvents(limit: number = 10) {
 
             if (error) throw error
 
-            const trending = (data || []) as { event_id: string; attendance_count: number; review_count: number; trending_score: number }[]
+            const trending = validateRpcResponse(
+                z.array(trendingEventSchema),
+                data || [],
+                'get_trending_events'
+            ) as { event_id: string; attendance_count: number; review_count: number; trending_score: number }[]
 
             if (trending.length === 0) return []
 

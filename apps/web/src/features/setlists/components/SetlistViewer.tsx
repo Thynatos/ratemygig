@@ -1,6 +1,7 @@
 import { Music, Star, Trash2, Edit3 } from 'lucide-react'
 import { formatRelativeTime } from '@/shared/lib/utils'
 import { Badge } from '@/shared/components/ui/Badge'
+import { sanitizeText } from '@/shared/lib/sanitize'
 import type { SetlistWithSongs } from '@core/index'
 
 interface SetlistViewerProps {
@@ -19,11 +20,11 @@ export function SetlistViewer({ setlist, isOwner, onEdit, onDelete }: SetlistVie
             <span className="text-surface-500 font-mono text-sm w-6 text-right shrink-0">{displayPosition}</span>
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-white font-medium">{ss.song?.name ?? 'Unknown Song'}</span>
+                    <span className="text-white font-medium">{sanitizeText(ss.song?.name ?? 'Unknown Song')}</span>
                     {ss.is_debut && <Badge variant="accent" className="text-xs px-2 py-0.5">Debut</Badge>}
                 </div>
                 {ss.notes && (
-                    <p className="text-surface-400 text-sm italic mt-0.5">{ss.notes}</p>
+                    <p className="text-surface-400 text-sm italic mt-0.5">{sanitizeText(ss.notes)}</p>
                 )}
             </div>
         </div>
@@ -37,7 +38,7 @@ export function SetlistViewer({ setlist, isOwner, onEdit, onDelete }: SetlistVie
                 <div className="flex items-center gap-3">
                     <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                         <Music className="w-5 h-5 text-primary-400" />
-                        Setlist by {setlist.profile?.display_name || setlist.profile?.username || 'Unknown'}
+                        Setlist by {sanitizeText(setlist.profile?.display_name || setlist.profile?.username || 'Unknown')}
                     </h3>
                     <Badge variant={setlist.source === 'verified' ? 'success' : 'surface'}>
                         {setlist.source === 'verified' ? 'Verified' : 'Manual'}
@@ -68,7 +69,7 @@ export function SetlistViewer({ setlist, isOwner, onEdit, onDelete }: SetlistVie
             </div>
 
             {setlist.notes && (
-                <p className="text-surface-300 text-sm italic">{setlist.notes}</p>
+                <p className="text-surface-300 text-sm italic">{sanitizeText(setlist.notes)}</p>
             )}
 
             <div className="space-y-0.5">

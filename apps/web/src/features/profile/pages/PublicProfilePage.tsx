@@ -107,18 +107,18 @@ export function PublicProfilePage() {
                     <div className="flex flex-col md:flex-row items-center gap-6">
                         <Avatar
                             src={profile.avatar_url}
-                            name={profile.display_name || profile.username}
+                            name={sanitizeText(profile.display_name || profile.username)}
                             size="xl"
                         />
                         <div className="text-center md:text-left flex-1">
                             <h1 className="text-3xl font-display font-bold text-white mb-1">
-                                {profile.display_name || profile.username}
+                                {sanitizeText(profile.display_name || profile.username)}
                             </h1>
                             {profile.username && (
-                                <p className="text-surface-400 mb-3">@{profile.username}</p>
+                                <p className="text-surface-400 mb-3">@{sanitizeText(profile.username)}</p>
                             )}
                             {profile.bio && (
-                                <p className="text-surface-300 max-w-xl">{profile.bio}</p>
+                                <p className="text-surface-300 max-w-xl">{sanitizeText(profile.bio)}</p>
                             )}
 
                             {(profile.website_url || profile.twitter_handle || profile.instagram_handle) && (
@@ -141,7 +141,7 @@ export function PublicProfilePage() {
                                             rel="noopener noreferrer"
                                             className="text-sm text-sky-400 hover:text-sky-300 transition-colors"
                                         >
-                                            @{profile.twitter_handle}
+                                            @{sanitizeText(profile.twitter_handle)}
                                         </a>
                                     )}
                                     {profile.instagram_handle && (
@@ -151,7 +151,7 @@ export function PublicProfilePage() {
                                             rel="noopener noreferrer"
                                             className="text-sm text-pink-400 hover:text-pink-300 transition-colors"
                                         >
-                                            @{profile.instagram_handle}
+                                            @{sanitizeText(profile.instagram_handle)}
                                         </a>
                                     )}
                                 </div>
@@ -286,9 +286,9 @@ export function PublicProfilePage() {
                                 <Link key={list.id} to={`/lists/${list.id}`}>
                                     <Card hoverable>
                                         <CardContent className="p-5">
-                                            <h3 className="font-semibold text-white">{list.name}</h3>
+                                            <h3 className="font-semibold text-white">{sanitizeText(list.name)}</h3>
                                             {list.description && (
-                                                <p className="text-sm text-surface-400 mt-1">{list.description}</p>
+                                                <p className="text-sm text-surface-400 mt-1">{sanitizeText(list.description)}</p>
                                             )}
                                             <div className="flex items-center gap-3 mt-3">
                                                 <Badge variant="surface">

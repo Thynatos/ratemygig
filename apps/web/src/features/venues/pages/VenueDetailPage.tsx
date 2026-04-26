@@ -11,6 +11,7 @@ import { EventCard } from '@/features/events/components/EventCard'
 import { Input } from '@/shared/components/ui/Input'
 import { env } from '@/shared/lib/env'
 import { getProviderModeLabel, isTicketmasterMode } from '@/shared/lib/provider-policy'
+import { sanitizeText } from '@/shared/lib/sanitize'
 
 export function VenueDetailPage() {
     const { venueId } = useParams<{ venueId: string }>()
@@ -67,11 +68,11 @@ export function VenueDetailPage() {
                     <Card>
                         <CardContent className="p-6">
                             <h1 className="text-3xl font-display font-bold text-white mb-2">
-                                {venue.name}
+                                {sanitizeText(venue.name)}
                             </h1>
                             <p className="flex items-center gap-2 text-lg text-surface-300 mb-4">
                                 <MapPin className="w-5 h-5 text-primary-400" />
-                                {venue.city}, {venue.country}
+                                {sanitizeText(venue.city)}, {sanitizeText(venue.country)}
                             </p>
 
                             {/* Map Link */}

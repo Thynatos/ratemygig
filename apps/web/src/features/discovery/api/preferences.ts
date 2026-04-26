@@ -1,8 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/shared/lib/supabase'
 import { useAuth } from '@/features/auth/hooks/useAuth'
+import { createRateLimiter } from '@/shared/lib/throttle'
+import { RATE_LIMITS } from '@/shared/lib/constants'
 import { discoveryKeys } from './discovery'
 import type { UserPreferences } from '@core/index'
+
+const preferenceLimiter = createRateLimiter(RATE_LIMITS.PREFERENCE_UPDATE)
 
 export const preferenceKeys = {
     all: ['preferences'] as const,
@@ -36,6 +40,10 @@ export function useUpdatePreferences() {
 
     return useMutation({
         mutationFn: async (prefs: Partial<Pick<UserPreferences, 'preferred_city' | 'preferred_lat' | 'preferred_lng'>>) => {
+            if (!preferenceLimiter.allow()) {
+                throw new Error('Please wait before updating preferences again')
+            }
+
             const { data: { user: authUser } } = await supabase.auth.getUser()
             if (!authUser) throw new Error('Not authenticated')
 
@@ -68,6 +76,10 @@ export function useClearPreferences() {
 
     return useMutation({
         mutationFn: async () => {
+            if (!preferenceLimiter.allow()) {
+                throw new Error('Please wait before updating preferences again')
+            }
+
             const { data: { user: authUser } } = await supabase.auth.getUser()
             if (!authUser) throw new Error('Not authenticated')
 

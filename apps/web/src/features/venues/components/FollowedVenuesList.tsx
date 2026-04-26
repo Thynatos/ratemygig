@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/shared/components/ui/Card'
 import { Button } from '@/shared/components/ui/Button'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { EventCardSkeleton } from '@/shared/components/ui/Loading'
+import { sanitizeText } from '@/shared/lib/sanitize'
 
 export function FollowedVenuesList() {
     const { user } = useAuth()
@@ -61,8 +62,8 @@ export function FollowedVenuesList() {
                                         <MapPin className="w-5 h-5 text-primary-400" />
                                     </div>
                                     <div>
-                                        <p className="font-semibold text-white">{venue.name}</p>
-                                        <p className="text-sm text-surface-400">{venue.city}</p>
+                                        <p className="font-semibold text-white">{sanitizeText(venue.name)}</p>
+                                        <p className="text-sm text-surface-400">{sanitizeText(venue.city)}</p>
                                     </div>
                                 </div>
                             </CardContent>

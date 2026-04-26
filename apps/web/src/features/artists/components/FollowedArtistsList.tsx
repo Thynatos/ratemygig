@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/shared/components/ui/Card'
 import { Button } from '@/shared/components/ui/Button'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { EventCardSkeleton } from '@/shared/components/ui/Loading'
+import { sanitizeText } from '@/shared/lib/sanitize'
 
 export function FollowedArtistsList() {
     const { user } = useAuth()
@@ -58,10 +59,10 @@ export function FollowedArtistsList() {
                             <CardContent className="p-4">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent-500/30 to-primary-500/30 flex items-center justify-center text-sm font-bold text-white border-2 border-surface-700">
-                                        {artist.name.charAt(0)}
+                                        {sanitizeText(artist.name).charAt(0)}
                                     </div>
                                     <div>
-                                        <p className="font-semibold text-white">{artist.name}</p>
+                                        <p className="font-semibold text-white">{sanitizeText(artist.name)}</p>
                                         <p className="text-sm text-surface-400">View upcoming shows</p>
                                     </div>
                                 </div>

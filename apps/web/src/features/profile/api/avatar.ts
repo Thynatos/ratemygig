@@ -1,6 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/shared/lib/supabase'
+import { createRateLimiter } from '@/shared/lib/throttle'
+import { RATE_LIMITS } from '@/shared/lib/constants'
 import { uploadAvatar, deleteAvatar } from '@/shared/lib/avatar-storage'
+
+const avatarUploadLimiter = createRateLimiter(RATE_LIMITS.PHOTO_UPLOAD)
 
 export const avatarKeys = {
     all: ['avatars'] as const,
@@ -12,6 +16,10 @@ export function useUploadAvatar() {
 
     return useMutation({
         mutationFn: async ({ userId, file }: { userId: string; file: File }) => {
+            if (!avatarUploadLimiter.allow()) {
+                throw new Error('Please wait before uploading another photo')
+            }
+
             const publicUrl = await uploadAvatar(userId, file)
 
             const { error } = await supabase

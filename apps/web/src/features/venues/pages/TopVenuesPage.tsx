@@ -5,6 +5,7 @@ import { useTopVenues } from '../api/venues'
 import { Card, CardContent } from '@/shared/components/ui/Card'
 import { Skeleton } from '@/shared/components/ui/Loading'
 import { RatingDisplay } from '@/shared/components/ui/StarRating'
+import { sanitizeText } from '@/shared/lib/sanitize'
 
 export function TopVenuesPage() {
     const yearChoices = useMemo(
@@ -92,11 +93,11 @@ export function TopVenuesPage() {
                                             </div>
                                             <div>
                                                 <h3 className="font-semibold text-lg text-white">
-                                                    {venue.venue_name}
+                                                    {sanitizeText(venue.venue_name)}
                                                 </h3>
                                                 <p className="text-surface-400 flex items-center gap-1">
                                                     <MapPin className="w-4 h-4" />
-                                                    {venue.city}
+                                                    {sanitizeText(venue.city)}
                                                 </p>
                                             </div>
                                         </div>

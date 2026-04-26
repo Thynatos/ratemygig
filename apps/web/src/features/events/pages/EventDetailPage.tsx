@@ -68,7 +68,7 @@ export function EventDetailPage() {
         if (navigator.share) {
             await navigator.share({
                 title: event.name,
-                text: `Check out ${event.name} at ${event.venue?.name}`,
+                text: `Check out ${sanitizeText(event.name)} at ${sanitizeText(event.venue?.name || '')}`,
                 url: window.location.href,
             })
         } else {
@@ -99,13 +99,13 @@ export function EventDetailPage() {
                                 {event.lineup.map((artist, i) => (
                                     <Badge key={i} variant="primary">
                                         <Users className="w-3 h-3 mr-1" />
-                                        {artist}
+                                        {sanitizeText(artist)}
                                     </Badge>
                                 ))}
                             </div>
 
                             <h1 className="text-3xl md:text-4xl font-display font-bold text-white mb-4">
-                                {event.name}
+                                {sanitizeText(event.name)}
                             </h1>
 
                             <div className="space-y-3 text-surface-300">
@@ -129,10 +129,10 @@ export function EventDetailPage() {
                                     </div>
                                     <div>
                                         <div className="font-medium text-white">
-                                            {event.venue?.name || 'Venue TBA'}
+                                            {sanitizeText(event.venue?.name || 'Venue TBA')}
                                         </div>
                                         <div className="text-sm text-surface-400">
-                                            {event.city}, {event.country}
+                                            {sanitizeText(event.city)}, {sanitizeText(event.country)}
                                         </div>
                                     </div>
                                 </div>
@@ -381,7 +381,7 @@ export function EventDetailPage() {
                                                 className="flex items-center justify-between p-3 rounded-xl bg-surface-800 border border-surface-700 hover:border-accent-500/50 hover:bg-surface-700 transition-all group"
                                             >
                                                 <span className="font-medium text-white group-hover:text-accent-400">
-                                                    {ticket.label}
+                                                    {sanitizeText(ticket.label)}
                                                 </span>
                                                 <ExternalLink className="w-4 h-4 text-surface-400 group-hover:text-accent-400" />
                                             </a>
@@ -430,7 +430,7 @@ export function EventDetailPage() {
                                             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-500/30 to-accent-500/30 flex items-center justify-center text-sm font-semibold text-white">
                                                 {i + 1}
                                             </div>
-                                            <span className="text-white">{artist}</span>
+                                            <span className="text-white">{sanitizeText(artist)}</span>
                                         </div>
                                     ))}
                                 </div>

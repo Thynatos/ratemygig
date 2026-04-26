@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/shared/components/ui/Card'
 import { Badge } from '@/shared/components/ui/Badge'
 import { Button } from '@/shared/components/ui/Button'
 import { Skeleton } from '@/shared/components/ui/Loading'
+import { sanitizeText } from '@/shared/lib/sanitize'
 
 const PAGE_SIZE = 24
 
@@ -101,11 +102,11 @@ export function VenuesPage() {
                             <Card hoverable>
                                 <CardContent className="p-5">
                                     <h3 className="font-semibold text-lg text-white mb-1">
-                                        {venue.name}
+                                        {sanitizeText(venue.name)}
                                     </h3>
                                     <p className="text-surface-400 flex items-center gap-1 mb-4">
                                         <MapPin className="w-4 h-4" />
-                                        {venue.city}, {venue.country}
+                                        {sanitizeText(venue.city)}, {sanitizeText(venue.country)}
                                     </p>
 
                                     <div className="flex items-center justify-between">

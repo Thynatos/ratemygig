@@ -1,6 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/shared/lib/supabase'
+import { createRateLimiter } from '@/shared/lib/throttle'
+import { RATE_LIMITS } from '@/shared/lib/constants'
 import type { Song } from '@core/index'
+
+const songCreateLimiter = createRateLimiter(RATE_LIMITS.SONG_CREATE)
 
 export const songKeys = {
     all: ['songs'] as const,
@@ -38,6 +42,10 @@ export function useCreateSong() {
 
     return useMutation({
         mutationFn: async ({ name, artistId }: { name: string; artistId?: string }) => {
+            if (!songCreateLimiter.allow()) {
+                throw new Error('Please wait before creating another song')
+            }
+
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) throw new Error('Not authenticated')
 

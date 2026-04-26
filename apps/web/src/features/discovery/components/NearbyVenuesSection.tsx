@@ -5,6 +5,7 @@ import { useGeolocation } from '@/shared/hooks/useGeolocation'
 import { Card, CardContent } from '@/shared/components/ui/Card'
 import { Button } from '@/shared/components/ui/Button'
 import { Skeleton } from '@/shared/components/ui/Loading'
+import { sanitizeText } from '@/shared/lib/sanitize'
 
 export function NearbyVenuesSection() {
     const { latitude, longitude, error, isLoading: geoLoading, isSupported, requestLocation } = useGeolocation()
@@ -69,8 +70,8 @@ export function NearbyVenuesSection() {
                             className="flex items-center justify-between p-2 rounded-lg hover:bg-surface-800 transition-colors"
                         >
                             <div>
-                                <div className="font-medium text-white text-sm">{venue.name}</div>
-                                <div className="text-xs text-surface-400">{venue.city}</div>
+                                <div className="font-medium text-white text-sm">{sanitizeText(venue.name)}</div>
+                                <div className="text-xs text-surface-400">{sanitizeText(venue.city)}</div>
                             </div>
                             <span className="text-xs text-surface-500">{venue.distance_km.toFixed(1)} km</span>
                         </Link>

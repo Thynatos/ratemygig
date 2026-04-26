@@ -102,6 +102,7 @@ export function useEventLists(eventId: string) {
 }
 
 const listCreateLimiter = createRateLimiter(RATE_LIMITS.LIST_CREATE)
+const listMutationLimiter = createRateLimiter(RATE_LIMITS.LIST_CREATE)
 
 export function useCreateList() {
     const queryClient = useQueryClient()
@@ -145,6 +146,10 @@ export function useUpdateList() {
             description?: string
             is_public?: boolean
         }) => {
+            if (!listMutationLimiter.allow()) {
+                throw new Error('Please wait before updating lists again')
+            }
+
             const updates: Record<string, unknown> = {}
             if (input.name !== undefined) updates.name = sanitizeText(input.name)
             if (input.description !== undefined) updates.description = sanitizeText(input.description)
@@ -172,6 +177,10 @@ export function useDeleteList() {
 
     return useMutation({
         mutationFn: async (listId: string) => {
+            if (!listMutationLimiter.allow()) {
+                throw new Error('Please wait before deleting lists again')
+            }
+
             const { error } = await supabase
                 .from('lists')
                 .delete()
@@ -190,6 +199,10 @@ export function useAddEventToList() {
 
     return useMutation({
         mutationFn: async ({ listId, eventId }: { listId: string; eventId: string }) => {
+            if (!listMutationLimiter.allow()) {
+                throw new Error('Please wait before modifying lists again')
+            }
+
             const { count } = await supabase
                 .from('list_items')
                 .select('id', { count: 'exact', head: true })
@@ -221,6 +234,10 @@ export function useRemoveEventFromList() {
 
     return useMutation({
         mutationFn: async ({ listId, eventId }: { listId: string; eventId: string }) => {
+            if (!listMutationLimiter.allow()) {
+                throw new Error('Please wait before modifying lists again')
+            }
+
             const { error } = await supabase
                 .from('list_items')
                 .delete()
@@ -245,6 +262,10 @@ export function useReorderListItems() {
             listId: string
             items: { id: string; position: number }[]
         }) => {
+            if (!listMutationLimiter.allow()) {
+                throw new Error('Please wait before reordering lists again')
+            }
+
             const updates = items.map((item) =>
                 supabase
                     .from('list_items')

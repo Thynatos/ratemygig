@@ -4,6 +4,7 @@ import { useAuth } from '@/features/auth/hooks/useAuth'
 import { useUserLists, useEventLists, useAddEventToList, useRemoveEventFromList } from '@/features/lists/api/lists'
 import { CreateListModal } from './CreateListModal'
 import { cn } from '@/shared/lib/utils'
+import { sanitizeText } from '@/shared/lib/sanitize'
 
 interface AddToListButtonProps {
     eventId: string
@@ -77,7 +78,7 @@ export function AddToListButton({ eventId }: AddToListButtonProps) {
                                                         <Check className="w-3.5 h-3.5 text-white" />
                                                     )}
                                                 </div>
-                                                <span className="text-sm text-white truncate">{list.name}</span>
+                                                <span className="text-sm text-white truncate">{sanitizeText(list.name)}</span>
                                                 <span className="text-xs text-surface-500 ml-auto">{list.item_count}</span>
                                             </button>
                                         ))}

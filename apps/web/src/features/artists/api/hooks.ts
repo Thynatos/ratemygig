@@ -1,7 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
+import { z } from 'zod'
 import { supabase } from '@/shared/lib/supabase'
 import { env } from '@/shared/lib/env'
 import { useAuth } from '@/features/auth/hooks/useAuth'
+import { validateRpcResponse } from '@/shared/lib/utils'
+import { artistRatingSummarySchema, artistLeaderboardEntrySchema } from '@/shared/validation/schemas'
 import type { ArtistRatingSummary } from '@core/index'
 import {
     artistKeys,
@@ -10,13 +13,6 @@ import {
     resolveArtistEvents,
     type ArtistRatingQuery,
 } from './resolver'
-
-type ArtistLeaderboardEntry = {
-    artist_id: string
-    artist_name: string
-    avg_rating: number
-    count_reviews: number
-}
 
 export function useArtists(query?: string, page?: number, pageSize?: number) {
     return useQuery({
@@ -45,7 +41,8 @@ export function useArtistRatingSummary(artistId: string, filters?: ArtistRatingQ
             })
 
             if (error) throw error
-            return data?.[0] as ArtistRatingSummary | null
+            if (!data || data.length === 0) return null
+            return validateRpcResponse(artistRatingSummarySchema, data[0], 'get_artist_rating_summary') as ArtistRatingSummary
         },
         enabled: !!artistId,
     })
@@ -70,7 +67,7 @@ export function useTopArtists(city?: string, year?: number) {
                 p_venue_id: null,
             })
             if (error) throw error
-            return (data || []) as ArtistLeaderboardEntry[]
+            return validateRpcResponse(z.array(artistLeaderboardEntrySchema), data || [], 'get_artist_rating_summary leaderboard')
         },
     })
 }

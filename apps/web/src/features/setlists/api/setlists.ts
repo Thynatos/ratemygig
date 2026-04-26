@@ -107,6 +107,7 @@ export function useMySetlists() {
 }
 
 const setlistCreateLimiter = createRateLimiter(RATE_LIMITS.SETLIST_CREATE)
+const setlistMutationLimiter = createRateLimiter(RATE_LIMITS.SETLIST_CREATE)
 
 interface SetlistSongInput {
     songId?: string
@@ -214,6 +215,10 @@ export function useUpdateSetlist() {
 
     return useMutation({
         mutationFn: async ({ setlistId, notes, source }: UpdateSetlistInput) => {
+            if (!setlistMutationLimiter.allow()) {
+                throw new Error('Please wait before updating setlists again')
+            }
+
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) throw new Error('Not authenticated')
 
@@ -246,6 +251,10 @@ export function useDeleteSetlist() {
 
     return useMutation({
         mutationFn: async ({ setlistId }: { setlistId: string; eventId: string }) => {
+            if (!setlistMutationLimiter.allow()) {
+                throw new Error('Please wait before deleting setlists again')
+            }
+
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) throw new Error('Not authenticated')
 
@@ -281,6 +290,10 @@ export function useAddSong() {
 
     return useMutation({
         mutationFn: async (input: AddSongInput) => {
+            if (!setlistMutationLimiter.allow()) {
+                throw new Error('Please wait before modifying setlists again')
+            }
+
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) throw new Error('Not authenticated')
 
@@ -339,6 +352,10 @@ export function useRemoveSong() {
 
     return useMutation({
         mutationFn: async ({ setlistSongId, setlistId }: { setlistSongId: string; setlistId: string }) => {
+            if (!setlistMutationLimiter.allow()) {
+                throw new Error('Please wait before modifying setlists again')
+            }
+
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) throw new Error('Not authenticated')
 
@@ -384,6 +401,10 @@ export function useReorderSongs() {
 
     return useMutation({
         mutationFn: async ({ songs }: ReorderInput) => {
+            if (!setlistMutationLimiter.allow()) {
+                throw new Error('Please wait before reordering setlists again')
+            }
+
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) throw new Error('Not authenticated')
 

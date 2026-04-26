@@ -1,8 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/shared/lib/supabase'
 import { useAuth } from '@/features/auth/hooks/useAuth'
-import { NOTIFICATION_REFETCH_INTERVAL } from '@/shared/lib/constants'
+import { createRateLimiter } from '@/shared/lib/throttle'
+import { NOTIFICATION_REFETCH_INTERVAL, RATE_LIMITS } from '@/shared/lib/constants'
 import type { Notification as NotificationType } from '@core/index'
+
+const notificationLimiter = createRateLimiter(RATE_LIMITS.NOTIFICATION_MARK_READ)
 
 export const notificationKeys = {
     all: ['notifications'] as const,
@@ -59,6 +62,10 @@ export function useMarkNotificationRead() {
 
     return useMutation({
         mutationFn: async (notificationId: string) => {
+            if (!notificationLimiter.allow()) {
+                throw new Error('Please wait before marking notifications as read')
+            }
+
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) throw new Error('Not authenticated')
 
@@ -82,6 +89,10 @@ export function useMarkAllNotificationsRead() {
 
     return useMutation({
         mutationFn: async () => {
+            if (!notificationLimiter.allow()) {
+                throw new Error('Please wait before marking notifications as read')
+            }
+
             const { data: { user: authUser } } = await supabase.auth.getUser()
             if (!authUser) throw new Error('Not authenticated')
 

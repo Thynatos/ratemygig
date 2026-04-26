@@ -1,4 +1,5 @@
 import { format, formatDistanceToNow, parseISO, isValid } from 'date-fns'
+import { z } from 'zod'
 
 /**
  * Format a date string for display
@@ -132,4 +133,18 @@ export function getRatingColor(rating: number): string {
     if (rating >= 2.5) return 'text-yellow-400'
     if (rating >= 1.5) return 'text-orange-400'
     return 'text-red-400'
+}
+
+/**
+ * Validate Supabase RPC response with a Zod schema.
+ * Returns parsed data or throws a descriptive error.
+ */
+export function validateRpcResponse<T>(schema: z.ZodType<T>, data: unknown, context?: string): T {
+    const result = schema.safeParse(data)
+    if (!result.success) {
+        const ctx = context ? ` (${context})` : ''
+        console.error(`RPC response validation failed${ctx}:`, result.error.flatten())
+        throw new Error(`Invalid response from server${ctx}`)
+    }
+    return result.data
 }

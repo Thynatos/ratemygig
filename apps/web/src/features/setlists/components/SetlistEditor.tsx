@@ -5,6 +5,7 @@ import { useCreateSetlist, useUpdateSetlist } from '../api/setlists'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { Button } from '@/shared/components/ui/Button'
 import { Input } from '@/shared/components/ui/Input'
+import { sanitizeText } from '@/shared/lib/sanitize'
 import type { SetlistWithSongs } from '@core/index'
 
 interface SetlistEditorProps {
@@ -180,7 +181,7 @@ export function SetlistEditor({ eventId, existingSetlist, onClose, artistId }: S
                                 onClick={() => handleAddSong(song.id, song.name)}
                                 className="w-full text-left px-4 py-2 text-white hover:bg-surface-700 transition-colors"
                             >
-                                {song.name}
+                                {sanitizeText(song.name)}
                             </button>
                         ))}
                         {searchQuery.trim() && !searchResults.some(s => s.name.toLowerCase() === searchQuery.trim().toLowerCase()) && (
@@ -189,7 +190,7 @@ export function SetlistEditor({ eventId, existingSetlist, onClose, artistId }: S
                                 className="w-full text-left px-4 py-2 text-primary-400 hover:bg-surface-700 transition-colors"
                             >
                                 <Plus className="w-4 h-4 inline mr-2" />
-                                Create &quot;{searchQuery.trim()}&quot;
+                                Create &ldquo;{sanitizeText(searchQuery.trim())}&rdquo;
                             </button>
                         )}
                     </div>
@@ -209,7 +210,7 @@ export function SetlistEditor({ eventId, existingSetlist, onClose, artistId }: S
                             )}
                             <div className="flex items-center gap-2 p-2 rounded-lg bg-surface-800/50 border border-surface-700">
                                 <span className="text-surface-500 font-mono text-sm w-5 text-right">{index + 1}</span>
-                                <span className="flex-1 text-white text-sm font-medium truncate">{song.name}</span>
+                                <span className="flex-1 text-white text-sm font-medium truncate">{sanitizeText(song.name)}</span>
                                 <button
                                     onClick={() => handleToggleEncore(index)}
                                     className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${song.isEncore ? 'bg-accent-500/20 text-accent-300 border-accent-500/30' : 'bg-surface-700/50 text-surface-400 border-surface-600'}`}

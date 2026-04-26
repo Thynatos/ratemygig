@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Search } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/shared/lib/supabase'
+import { sanitizeText } from '@/shared/lib/sanitize'
 
 function useDebouncedValue<T>(value: T, delay: number): T {
     const [debouncedValue, setDebouncedValue] = useState(value)
@@ -114,8 +115,8 @@ export function EnhancedSearch() {
                                     onClick={() => { setIsOpen(false); setQuery('') }}
                                     className="flex items-center gap-3 px-4 py-2 hover:bg-surface-700 transition-colors"
                                 >
-                                    <span className="text-white text-sm">{event.name}</span>
-                                    <span className="text-surface-500 text-xs ml-auto">{event.city}</span>
+                                    <span className="text-white text-sm">{sanitizeText(event.name)}</span>
+                                    <span className="text-surface-500 text-xs ml-auto">{sanitizeText(event.city)}</span>
                                 </Link>
                             ))}
                         </div>
@@ -131,7 +132,7 @@ export function EnhancedSearch() {
                                     onClick={() => { setIsOpen(false); setQuery('') }}
                                     className="flex items-center gap-3 px-4 py-2 hover:bg-surface-700 transition-colors"
                                 >
-                                    <span className="text-white text-sm">{artist.name}</span>
+                                    <span className="text-white text-sm">{sanitizeText(artist.name)}</span>
                                 </Link>
                             ))}
                         </div>
@@ -147,8 +148,8 @@ export function EnhancedSearch() {
                                     onClick={() => { setIsOpen(false); setQuery('') }}
                                     className="flex items-center gap-3 px-4 py-2 hover:bg-surface-700 transition-colors"
                                 >
-                                    <span className="text-white text-sm">{venue.name}</span>
-                                    <span className="text-surface-500 text-xs ml-auto">{venue.city}</span>
+                                    <span className="text-white text-sm">{sanitizeText(venue.name)}</span>
+                                    <span className="text-surface-500 text-xs ml-auto">{sanitizeText(venue.city)}</span>
                                 </Link>
                             ))}
                         </div>

@@ -1,4 +1,5 @@
 import { Calendar, Star, Users, MapPin } from 'lucide-react'
+import { sanitizeText } from '@/shared/lib/sanitize'
 import type { Notification as NotificationType } from '@core/index'
 
 const typeIcons: Record<string, typeof Calendar> = {
@@ -42,14 +43,14 @@ export function NotificationItem({ notification, onMarkRead }: NotificationItemP
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                     <span className={`text-sm font-medium ${notification.is_read ? 'text-surface-300' : 'text-white'}`}>
-                        {notification.title}
+                        {sanitizeText(notification.title)}
                     </span>
                     {!notification.is_read && (
                         <span className="w-2 h-2 rounded-full bg-primary-500 shrink-0" />
                     )}
                 </div>
                 {notification.body && (
-                    <p className="text-xs text-surface-400 mt-0.5 line-clamp-2">{notification.body}</p>
+                    <p className="text-xs text-surface-400 mt-0.5 line-clamp-2">{sanitizeText(notification.body)}</p>
                 )}
             </div>
             <span className="text-xs text-surface-500 shrink-0">{timeAgo}</span>

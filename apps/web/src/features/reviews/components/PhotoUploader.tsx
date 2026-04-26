@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { Upload, X, Image as ImageIcon } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
+import { sanitizeText } from '@/shared/lib/sanitize'
 
 interface PhotoUploaderProps {
     photos: { id?: string; url: string; file?: File }[]
@@ -31,11 +32,11 @@ export function PhotoUploader({
 
         for (const file of files) {
             if (!ACCEPTED_TYPES.includes(file.type)) {
-                setError(`Invalid file type: ${file.name}. Use JPG, PNG, or WebP.`)
+                setError(`Invalid file type: ${sanitizeText(file.name)}. Use JPG, PNG, or WebP.`)
                 continue
             }
             if (file.size > maxSizeMB * 1024 * 1024) {
-                setError(`File too large: ${file.name}. Max size is ${maxSizeMB}MB.`)
+                setError(`File too large: ${sanitizeText(file.name)}. Max size is ${maxSizeMB}MB.`)
                 continue
             }
             if (photos.length + valid.length >= maxPhotos) {

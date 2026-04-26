@@ -7,6 +7,7 @@ import { Button } from '@/shared/components/ui/Button'
 import { Card, CardContent } from '@/shared/components/ui/Card'
 import { LoadingPage } from '@/shared/components/ui/Loading'
 import { formatDate } from '@/shared/lib/utils'
+import { sanitizeText } from '@/shared/lib/sanitize'
 import type { Song } from '@core/index'
 
 export function SongPage() {
@@ -69,13 +70,13 @@ export function SongPage() {
                                     <Music className="w-8 h-8 text-primary-400" />
                                 </div>
                                 <div>
-                                    <h1 className="text-2xl font-display font-bold text-white">{song.name}</h1>
+                                    <h1 className="text-2xl font-display font-bold text-white">{sanitizeText(song.name)}</h1>
                                     {song.artist_id && stats.length > 0 && (
                                         <Link
                                             to={`/artists/${song.artist_id}`}
                                             className="text-primary-400 hover:text-primary-300 transition-colors"
                                         >
-                                            {stats[0].artist_name}
+                                            {sanitizeText(stats[0].artist_name)}
                                         </Link>
                                     )}
                                 </div>

@@ -10,6 +10,7 @@ import { Card, CardContent } from '@/shared/components/ui/Card'
 import { Badge } from '@/shared/components/ui/Badge'
 import { EventCardSkeleton } from '@/shared/components/ui/Loading'
 import { cn } from '@/shared/lib/utils'
+import { sanitizeText } from '@/shared/lib/sanitize'
 
 type TabType = 'all' | 'planned' | 'attended' | 'tracked-artists' | 'tracked-venues'
 
@@ -132,10 +133,10 @@ export function MyGigsPage() {
                                                         to={`/events/${event.id}`}
                                                         className="font-semibold text-white hover:text-primary-400 transition-colors line-clamp-1"
                                                     >
-                                                        {event.name}
+                                                        {sanitizeText(event.name)}
                                                     </Link>
                                                     <p className="text-sm text-surface-400 mt-1">
-                                                        {event.venue?.name} • {event.city}
+                                                        {sanitizeText(event.venue?.name)} • {sanitizeText(event.city)}
                                                     </p>
 
                                                     <div className="flex items-center gap-2 mt-2">

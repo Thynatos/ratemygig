@@ -1,7 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/shared/lib/supabase'
 import { sanitizeText } from '@/shared/lib/sanitize'
+import { createRateLimiter } from '@/shared/lib/throttle'
+import { RATE_LIMITS } from '@/shared/lib/constants'
 import type { Review } from '@core/index'
+
+const draftSaveLimiter = createRateLimiter(RATE_LIMITS.REVIEW_CREATE)
 
 export const draftKeys = {
     all: ['drafts'] as const,
@@ -43,6 +47,10 @@ export function useSaveDraft() {
             isPublic?: boolean
             tagIds?: string[]
         }) => {
+            if (!draftSaveLimiter.allow()) {
+                throw new Error('Please wait before saving another draft')
+            }
+
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) throw new Error('Not authenticated')
 

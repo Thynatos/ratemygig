@@ -73,7 +73,7 @@ export function PublicReviewPage() {
                                 to={`/events/${event.id}`}
                                 className="font-semibold text-lg text-white hover:text-primary-400 transition-colors"
                             >
-                                {event.name}
+                                {sanitizeText(event.name)}
                             </Link>
                             <div className="flex flex-wrap gap-4 mt-2 text-sm text-surface-400">
                                 <span className="flex items-center gap-1">
@@ -82,7 +82,7 @@ export function PublicReviewPage() {
                                 </span>
                                 <span className="flex items-center gap-1">
                                     <MapPin className="w-4 h-4" />
-                                    {event.venue?.name}, {event.city}
+                                    {sanitizeText(event.venue?.name)}, {sanitizeText(event.city)}
                                 </span>
                             </div>
                         </div>
@@ -150,14 +150,14 @@ export function PublicReviewPage() {
                                 <Link to={`/u/${profile.username}`}>
                                     <Avatar
                                         src={profile.avatar_url}
-                                        name={profile.display_name}
+                                        name={sanitizeText(profile.display_name)}
                                         size="md"
                                     />
                                 </Link>
                             ) : (
                                 <Avatar
                                     src={profile?.avatar_url}
-                                    name={profile?.display_name}
+                                        name={sanitizeText(profile?.display_name || '')}
                                     size="md"
                                 />
                             )}
@@ -167,11 +167,11 @@ export function PublicReviewPage() {
                                         to={`/u/${profile.username}`}
                                         className="font-medium text-white hover:text-primary-400 transition-colors"
                                     >
-                                        {profile.display_name || profile.username}
+                                        {sanitizeText(profile.display_name || profile.username)}
                                     </Link>
                                 ) : (
                                     <span className="font-medium text-white">
-                                        {profile?.display_name || 'Anonymous'}
+                                        {sanitizeText(profile?.display_name || 'Anonymous')}
                                     </span>
                                 )}
                                 <p className="text-sm text-surface-500">

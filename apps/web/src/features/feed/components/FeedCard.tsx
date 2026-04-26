@@ -33,7 +33,7 @@ function ReviewCard({ item }: { item: ReviewFeedItem }) {
                 <div className="flex items-center gap-3 mb-3">
                     {author ? (
                         <Link to={author.username ? `/u/${author.username}` : '#'}>
-                            <Avatar src={author.avatar_url} name={author.display_name || 'User'} size="sm" />
+                            <Avatar src={author.avatar_url} name={sanitizeText(author.display_name || 'User')} size="sm" />
                         </Link>
                     ) : (
                         <div className="w-8 h-8 rounded-full bg-surface-700 flex items-center justify-center">
@@ -43,15 +43,15 @@ function ReviewCard({ item }: { item: ReviewFeedItem }) {
                     <div>
                         {author?.username ? (
                             <Link to={`/u/${author.username}`} className="font-medium text-white hover:text-primary-400 transition-colors">
-                                {author.display_name || author.username}
+                                {sanitizeText(author.display_name || author.username)}
                             </Link>
                         ) : (
-                            <span className="font-medium text-white">{author?.display_name || 'Anonymous'}</span>
+                            <span className="font-medium text-white">{sanitizeText(author?.display_name || 'Anonymous')}</span>
                         )}
                         <span className="text-surface-500 mx-2">reviewed</span>
                         {item.event && (
                             <Link to={`/events/${item.event.id}`} className="font-medium text-primary-400 hover:text-primary-300">
-                                {item.event.name}
+                                {sanitizeText(item.event.name)}
                             </Link>
                         )}
                         <p className="text-xs text-surface-500">{formatRelativeTime(item.created_at)}</p>
@@ -98,7 +98,7 @@ function EventCard({ item }: { item: EventFeedItem }) {
                     {item.venue && (
                         <span className="flex items-center gap-1">
                             <MapPin className="w-3.5 h-3.5" />
-                            {item.venue.name}, {item.venue.city}
+                            {sanitizeText(item.venue.name)}, {sanitizeText(item.venue.city)}
                         </span>
                     )}
                 </div>
@@ -116,7 +116,7 @@ function AttendanceCard({ item }: { item: AttendanceFeedItem }) {
                 <div className="flex items-center gap-3 mb-3">
                     {user ? (
                         <Link to={user.username ? `/u/${user.username}` : '#'}>
-                            <Avatar src={user.avatar_url} name={user.display_name || 'User'} size="sm" />
+                            <Avatar src={user.avatar_url} name={sanitizeText(user.display_name || 'User')} size="sm" />
                         </Link>
                     ) : (
                         <div className="w-8 h-8 rounded-full bg-surface-700 flex items-center justify-center">
@@ -126,10 +126,10 @@ function AttendanceCard({ item }: { item: AttendanceFeedItem }) {
                     <div>
                         {user?.username ? (
                             <Link to={`/u/${user.username}`} className="font-medium text-white hover:text-primary-400 transition-colors">
-                                {user.display_name || user.username}
+                                {sanitizeText(user.display_name || user.username)}
                             </Link>
                         ) : (
-                            <span className="font-medium text-white">{user?.display_name || 'Someone'}</span>
+                            <span className="font-medium text-white">{sanitizeText(user?.display_name || 'Someone')}</span>
                         )}
                         <span className="text-surface-400"> is {item.status === 'attended' ? 'going to' : 'planning to attend'}</span>
                         <p className="text-xs text-surface-500">{formatRelativeTime(item.created_at)}</p>
@@ -138,7 +138,7 @@ function AttendanceCard({ item }: { item: AttendanceFeedItem }) {
 
                 {item.event && (
                     <Link to={`/events/${item.event.id}`} className="text-base font-semibold text-white hover:text-primary-400 transition-colors">
-                        {item.event.name}
+                        {sanitizeText(item.event.name)}
                     </Link>
                 )}
 
@@ -152,7 +152,7 @@ function AttendanceCard({ item }: { item: AttendanceFeedItem }) {
                     {item.venue && (
                         <span className="flex items-center gap-1">
                             <MapPin className="w-3.5 h-3.5" />
-                            {item.venue.name}, {item.venue.city}
+                            {sanitizeText(item.venue.name)}, {sanitizeText(item.venue.city)}
                         </span>
                     )}
                 </div>

@@ -14,6 +14,7 @@ import {
     useTags
 } from '../api/reviews'
 import { usePhotoUrls } from '@/shared/hooks'
+import { sanitizeText } from '@/shared/lib/sanitize'
 import { Button } from '@/shared/components/ui/Button'
 import { Input } from '@/shared/components/ui/Input'
 import { Textarea } from '@/shared/components/ui/Textarea'
@@ -202,7 +203,7 @@ export function WriteReviewPage() {
                         {isEditing ? 'Edit Review' : 'Write a Review'}
                     </h1>
                     <p className="text-surface-400 mb-6">
-                        {event.name} • {formatDate(event.start_at, 'MMM d, yyyy')}
+                        {sanitizeText(event.name)} • {formatDate(event.start_at, 'MMM d, yyyy')}
                     </p>
 
                     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -253,7 +254,7 @@ export function WriteReviewPage() {
                                                     : 'bg-surface-800 text-surface-400 border border-surface-700 hover:border-surface-600'
                                             )}
                                         >
-                                            {tag.name}
+                                            {sanitizeText(tag.name)}
                                         </button>
                                     ))}
                                 </div>

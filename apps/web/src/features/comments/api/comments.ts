@@ -84,6 +84,10 @@ export function useDeleteComment() {
 
     return useMutation({
         mutationFn: async ({ commentId }: { commentId: string; reviewId: string }) => {
+            if (!commentCreateLimiter.allow()) {
+                throw new Error('Please wait before deleting comments again')
+            }
+
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) throw new Error('Not authenticated')
 
