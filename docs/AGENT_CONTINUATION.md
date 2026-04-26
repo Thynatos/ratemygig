@@ -8,7 +8,7 @@ Use this at the **start of each agent session** when continuing build-out agains
 
 ## One-line state (copy into next agent message)
 
-ratemygig M1–M4 complete: refactored APIs, split types, 196 tests, React.memo on cards, ARIA/focus management, rate limiting on 19 mutations, Zod validation on 8 RPC endpoints, sanitizeText on 50+ rendered fields, per-feature ErrorBoundaries on all 16 routes. Build clean, 0 lint errors. Next: M5 features (CSV export, thumbnails) or polish.
+ratemygig M1–M5 complete: refactored APIs, split types, 196 tests, React.memo on cards, ARIA/focus management, rate limiting on 19 mutations, Zod validation on 8 RPC endpoints, sanitizeText on 50+ rendered fields, per-feature ErrorBoundaries on all 16 routes, CSV export from My Gigs, client-side image resize + thumbnail generation for review photos. Build clean, 0 lint errors.
 
 ---
 

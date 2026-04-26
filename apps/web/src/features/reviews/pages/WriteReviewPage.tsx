@@ -54,7 +54,8 @@ export function WriteReviewPage() {
     const isEditing = !!existingReview
 
     const existingPaths = existingReview?.photos?.map((p: { storage_path: string }) => p.storage_path) ?? []
-    const { urls: existingPhotoUrls } = usePhotoUrls(existingPaths)
+    const existingThumbPaths = existingReview?.photos?.map((p: { thumbnail_path: string | null }) => p.thumbnail_path) ?? []
+    const { urls: existingPhotoUrls, thumbUrls: existingThumbUrls } = usePhotoUrls(existingPaths, existingThumbPaths)
 
     const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<ReviewFormData>({
         resolver: zodResolver(reviewSchema),
@@ -79,15 +80,19 @@ export function WriteReviewPage() {
         }
     }, [existingReview, setValue])
 
-    // Load existing photos with signed URLs
+    // Load existing photos with signed URLs (prefer thumbnails for editor preview)
     useEffect(() => {
         if (existingReview?.photos && existingPhotoUrls.size > 0) {
-            setPhotos(existingReview.photos.map((p: { id: string; storage_path: string }) => ({
-                id: p.id,
-                url: existingPhotoUrls.get(p.storage_path) || '',
-            })))
+            setPhotos(existingReview.photos.map((p: { id: string; storage_path: string; thumbnail_path: string | null }) => {
+                const thumbUrl = p.thumbnail_path ? existingThumbUrls.get(p.thumbnail_path) : null
+                const fullUrl = existingPhotoUrls.get(p.storage_path) || ''
+                return {
+                    id: p.id,
+                    url: thumbUrl || fullUrl,
+                }
+            }))
         }
-    }, [existingReview, existingPhotoUrls])
+    }, [existingReview, existingPhotoUrls, existingThumbUrls])
 
     const onSubmit = async (data: ReviewFormData) => {
         try {

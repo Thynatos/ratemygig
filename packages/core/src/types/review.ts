@@ -23,9 +23,11 @@ export interface ReviewPhoto {
   id: string
   review_id: string
   storage_path: string
+  thumbnail_path: string | null
   blurhash: string | null
   created_at: string
   url?: string
+  thumbnail_url?: string
 }
 
 export interface Tag {

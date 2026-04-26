@@ -16,7 +16,8 @@ export function PublicReviewPage() {
     const { reviewId } = useParams<{ reviewId: string }>()
     const { data: review, isLoading, error } = useReview(reviewId!)
     const storagePaths = review?.photos?.map((p: { storage_path: string }) => p.storage_path) ?? []
-    const { urls: photoUrls, isLoading: photosLoading } = usePhotoUrls(storagePaths)
+    const thumbPaths = review?.photos?.map((p: { thumbnail_path: string | null }) => p.thumbnail_path) ?? []
+    const { urls: photoUrls, thumbUrls, isLoading: photosLoading } = usePhotoUrls(storagePaths, thumbPaths)
 
     const handleShare = async () => {
         if (navigator.share) {
@@ -114,15 +115,17 @@ export function PublicReviewPage() {
                     {review.photos && review.photos.length > 0 && (
                         <div className="mb-6">
                             <div className="photo-grid">
-                                {review.photos.map((photo: { id: string; storage_path: string }) => {
-                                    const url = photoUrls.get(photo.storage_path)
+                                {review.photos.map((photo: { id: string; storage_path: string; thumbnail_path: string | null }) => {
+                                    const thumbUrl = photo.thumbnail_path ? thumbUrls.get(photo.thumbnail_path) : null
+                                    const fullUrl = photoUrls.get(photo.storage_path)
+                                    const displayUrl = thumbUrl || fullUrl
                                     return (
                                         <div key={photo.id} className="photo-item">
-                                            {photosLoading || !url ? (
+                                            {photosLoading || !displayUrl ? (
                                                 <div className="w-full h-full bg-surface-700 animate-pulse" />
                                             ) : (
                                                 <img
-                                                    src={url}
+                                                    src={displayUrl}
                                                     alt="Review photo"
                                                     className="w-full h-full object-cover rounded-lg"
                                                     loading="lazy"

@@ -195,15 +195,27 @@ Isolated test utilities. Could be moved to a shared test helpers file.
 
 ---
 
-## Milestone 5: Feature Completion
+## Milestone 5: Feature Completion — COMPLETE
 
-### Milestone 5: Feature Completion
-| # | Task | Effort | Status |
-|---|------|--------|--------|
-| 5.1 | Export gig history as CSV | 1.5h | Pending — needs requirements (columns, UI location) |
-| 5.2 | Image thumbnails generation | 2h | Pending — needs requirements (dimensions, storage strategy) |
-| 5.3 | Leaderboard time-range filters | 1h | ✅ Done — year + city filters on TopVenues/TopArtists |
-| 5.4 | Missing loading skeleton states | 1h | ✅ Done — Skeleton/EventCardSkeleton throughout app |
+### Completed Items
+| # | Task | Effort | Status | Details |
+|---|------|--------|--------|---------|
+| 5.1 | Export gig history as CSV | 1.5h | Done | `exportToCsv()` utility; button on My Gigs page; columns: Date, Event Name, Artist, Venue, City, Country, Status, Rating, Review Title, Review Body |
+| 5.2 | Image thumbnails generation | 2h | Done | Client-side canvas resize (max 1200px original + 300px thumbnail); reused existing `resizeImage()` from avatar-storage; updated `useUploadReviewPhotos`, `usePhotoUrls`, `PublicReviewPage`, `WriteReviewPage` |
+| 5.3 | Leaderboard time-range filters | 1h | ✅ Done | year + city filters on TopVenues/TopArtists |
+| 5.4 | Missing loading skeleton states | 1h | ✅ Done | Skeleton/EventCardSkeleton throughout app |
+
+### Verification
+- **Lint**: 0 errors, 2 pre-existing warnings (react-hook-form)
+- **Tests**: 196/196 passing
+- **Build**: Success
+- **New migration**: `007_review_photos_thumbnail.sql` (adds `thumbnail_path` to `review_photos`)
+
+---
+
+## All Milestones Complete ✅
+
+M1 (Refactoring) → M2 (Tests) → M3 (Perf/A11y) → M4 (Security) → M5 (Features) ✓
 
 ### Dependency Graph
 ```
@@ -260,9 +272,9 @@ M1 (Refactoring) → M2 (Tests) → M3 (Perf/A11y) ✓
 |-----------|-------|-------|
 | Code organization | 8/10 | Feature-based structure, barrel exports, clean split files |
 | Test coverage | 8/10 | 192 tests, good component + integration coverage |
-| Performance | 6/10 | React.memo on cards, but large bundle and no lazy loading analysis |
+| Performance | 7/10 | React.memo on cards, client-side image resize, thumbnails. Large bundle remains (638KB). |
 | Accessibility | 6/10 | ARIA landmarks, focus trap, skip-link added. Needs axe-core automation. |
 | Security | 8/10 | Rate limiting on 19 mutations, Zod on 8 RPC endpoints, sanitizeText on 50+ fields, per-feature ErrorBoundaries |
 | Maintainability | 7/10 | Constants extracted, types split, but Supabase coupling remains |
 
-**Overall: 7.3/10** — Solid foundation. M5 features (CSV export, thumbnails) are the remaining gaps.
+**Overall: 7.5/10** — Production-ready MVP. All core features implemented. Remaining: axe-core automation, bundle splitting, Supabase Edge Functions for scheduled sync.

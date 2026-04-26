@@ -3,6 +3,7 @@ import { supabase } from '@/shared/lib/supabase'
 import { sanitizeText } from '@/shared/lib/sanitize'
 import { createRateLimiter } from '@/shared/lib/throttle'
 import { STALE_TIMES, RATE_LIMITS } from '@/shared/lib/constants'
+import { resizeImage } from '@/shared/lib/avatar-storage'
 import type { Review, ReviewPhoto, ReactionType } from '@core/index'
 
 // Query keys
@@ -222,7 +223,7 @@ export function useDeleteReview() {
 
 const photoUploadLimiter = createRateLimiter(RATE_LIMITS.PHOTO_UPLOAD)
 
-// Photo upload
+// Photo upload with client-side resize + thumbnail generation
 export function useUploadReviewPhotos() {
     const queryClient = useQueryClient()
 
@@ -238,19 +239,37 @@ export function useUploadReviewPhotos() {
 
             for (const file of files) {
                 const ext = file.name.split('.').pop()
-                const path = `${user.id}/${reviewId}/${crypto.randomUUID()}.${ext}`
+                const uuid = crypto.randomUUID()
+                const path = `${user.id}/${reviewId}/${uuid}.${ext}`
+                const thumbPath = `${user.id}/${reviewId}/thumbs/${uuid}.${ext}`
 
+                // Resize original to max 1200px
+                const resizedOriginal = await resizeImage(file, 1200)
+                // Generate 300px thumbnail
+                const thumbnail = await resizeImage(file, 300)
+
+                // Upload original
                 const { error: uploadError } = await supabase.storage
                     .from('review-photos')
-                    .upload(path, file)
-
+                    .upload(path, resizedOriginal, {
+                        contentType: file.type,
+                    })
                 if (uploadError) throw uploadError
+
+                // Upload thumbnail
+                const { error: thumbError } = await supabase.storage
+                    .from('review-photos')
+                    .upload(thumbPath, thumbnail, {
+                        contentType: file.type,
+                    })
+                if (thumbError) throw thumbError
 
                 const { data, error } = await supabase
                     .from('review_photos')
                     .insert({
                         review_id: reviewId,
                         storage_path: path,
+                        thumbnail_path: thumbPath,
                     })
                     .select()
                     .single()
@@ -271,11 +290,14 @@ export function useDeleteReviewPhoto() {
     const queryClient = useQueryClient()
 
     return useMutation({
-        mutationFn: async ({ photoId, storagePath }: { photoId: string; storagePath: string }) => {
-            // Delete from storage
+        mutationFn: async ({ photoId, storagePath, thumbnailPath }: { photoId: string; storagePath: string; thumbnailPath?: string | null }) => {
+            // Delete from storage (original + thumbnail)
+            const pathsToRemove = [storagePath]
+            if (thumbnailPath) pathsToRemove.push(thumbnailPath)
+
             const { error: storageError } = await supabase.storage
                 .from('review-photos')
-                .remove([storagePath])
+                .remove(pathsToRemove)
 
             if (storageError) console.error('Failed to delete from storage:', storageError)
 

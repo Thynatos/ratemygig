@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Calendar, Check, Edit, Star, Plus, Music, MapPin } from 'lucide-react'
+import { Calendar, Check, Edit, Star, Plus, Music, MapPin, Download } from 'lucide-react'
 import { useMyGigs } from '../api/reviews'
+import { exportToCsv, formatDate } from '@/shared/lib/utils'
 import { DraftReviewsSection } from '../components/DraftReviewsSection'
 import { FollowedArtistsList } from '@/features/artists/components/FollowedArtistsList'
 import { FollowedVenuesList } from '@/features/venues/components/FollowedVenuesList'
@@ -19,6 +20,29 @@ export function MyGigsPage() {
     const statusFilter = activeTab === 'planned' ? 'planned' : activeTab === 'attended' ? 'attended' : undefined
     const showGigs = activeTab === 'all' || activeTab === 'planned' || activeTab === 'attended'
     const { data: gigs, isLoading } = useMyGigs(showGigs ? statusFilter : undefined)
+
+    const handleExportCsv = () => {
+        if (!gigs || gigs.length === 0) return
+        const rows = gigs
+            .filter(gig => gig.event)
+            .map(gig => {
+                const event = gig.event!
+                const review = gig.review && gig.review.length > 0 ? gig.review[0] : null
+                return {
+                    Date: formatDate(event.start_at, 'yyyy-MM-dd'),
+                    'Event Name': event.name,
+                    Artist: event.lineup?.join(', ') ?? '',
+                    Venue: event.venue?.name ?? '',
+                    City: event.city,
+                    Country: event.country ?? '',
+                    Status: gig.status,
+                    Rating: review?.rating ?? '',
+                    'Review Title': review?.title ?? '',
+                    'Review Body': review?.body ?? '',
+                }
+            })
+        exportToCsv(rows, `my-gigs-${new Date().toISOString().split('T')[0]}.csv`)
+    }
 
     const tabs: { id: TabType; label: string; icon: typeof Calendar }[] = [
         { id: 'all', label: 'All', icon: Calendar },
@@ -38,6 +62,12 @@ export function MyGigsPage() {
                     </h1>
                     <p className="section-subtitle">Your concert history and upcoming shows</p>
                 </div>
+                {showGigs && gigs && gigs.length > 0 && (
+                    <Button variant="secondary" size="sm" onClick={handleExportCsv}>
+                        <Download className="w-4 h-4 mr-2" />
+                        Export CSV
+                    </Button>
+                )}
             </div>
 
             {/* Draft Reviews */}

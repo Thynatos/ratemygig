@@ -136,7 +136,7 @@ export function getRatingColor(rating: number): string {
 }
 
 /**
- * Validate Supabase RPC response with a Zod schema.
+ * Validate RPC response with a Zod schema.
  * Returns parsed data or throws a descriptive error.
  */
 export function validateRpcResponse<T>(schema: z.ZodType<T>, data: unknown, context?: string): T {
@@ -147,4 +147,38 @@ export function validateRpcResponse<T>(schema: z.ZodType<T>, data: unknown, cont
         throw new Error(`Invalid response from server${ctx}`)
     }
     return result.data
+}
+
+interface CsvRow {
+    [key: string]: string | number | boolean | null | undefined
+}
+
+/**
+ * Export data array as CSV and trigger browser download
+ */
+export function exportToCsv(rows: CsvRow[], filename: string): void {
+    if (rows.length === 0) return
+
+    const headers = Object.keys(rows[0])
+    const escape = (val: unknown): string => {
+        const str = String(val ?? '')
+        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+            return `"${str.replace(/"/g, '""')}"`
+        }
+        return str
+    }
+
+    const csv = [
+        headers.join(','),
+        ...rows.map(row => headers.map(h => escape(row[h])).join(',')),
+    ].join('\n')
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(link.href)
 }
