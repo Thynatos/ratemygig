@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Globe, Lock, ListMusic } from 'lucide-react'
 import type { List, Event } from '@core/index'
 import { Card, CardContent } from '@/shared/components/ui/Card'
@@ -14,7 +15,7 @@ interface ListCardProps {
     onClick: () => void
 }
 
-export function ListCard({ list, onClick }: ListCardProps) {
+export const ListCard = memo(function ListCard({ list, onClick }: ListCardProps) {
     return (
         <Card hoverable onClick={onClick}>
             <CardContent className="p-5">
@@ -49,4 +50,4 @@ export function ListCard({ list, onClick }: ListCardProps) {
             </CardContent>
         </Card>
     )
-}
+})

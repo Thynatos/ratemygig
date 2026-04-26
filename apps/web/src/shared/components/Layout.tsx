@@ -25,6 +25,14 @@ export function Layout() {
 
     return (
         <div className="min-h-screen flex flex-col">
+            {/* Skip to content */}
+            <a
+                href="#main-content"
+                className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary-500 focus:text-white focus:rounded-lg"
+            >
+                Skip to content
+            </a>
+
             {/* Header */}
             <header className="sticky top-0 z-40 bg-surface-900/80 backdrop-blur-xl border-b border-surface-800">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -33,13 +41,14 @@ export function Layout() {
                         <Link
                             to="/"
                             className="flex items-center gap-2 text-xl font-display font-bold text-white hover:text-primary-400 transition-colors"
+                            aria-label="ratemygig home"
                         >
-                            <Music className="w-7 h-7 text-accent-500" />
+                            <Music className="w-7 h-7 text-accent-500" aria-hidden="true" />
                             <span className="text-gradient">ratemygig</span>
                         </Link>
 
                         {/* Desktop Navigation */}
-                        <nav className="hidden md:flex items-center gap-1">
+                        <nav className="hidden md:flex items-center gap-1" aria-label="Main navigation">
                             {NAV_LINKS.map(({ to, label, icon: Icon }) => (
                                 <Link
                                     key={to}
@@ -48,8 +57,9 @@ export function Layout() {
                                         'nav-link flex items-center gap-2',
                                         isActive(to) && 'active'
                                     )}
+                                    aria-current={isActive(to) ? 'page' : undefined}
                                 >
-                                    <Icon className="w-4 h-4" />
+                                    <Icon className="w-4 h-4" aria-hidden="true" />
                                     {label}
                                 </Link>
                             ))}
@@ -58,7 +68,7 @@ export function Layout() {
                         {/* User Menu */}
                         <div className="flex items-center gap-4">
                             {isLoading ? (
-                                <div className="w-8 h-8 skeleton rounded-full" />
+                                <div className="w-8 h-8 skeleton rounded-full" aria-hidden="true" />
                             ) : user ? (
                                 <>
                                     <Link
@@ -67,8 +77,9 @@ export function Layout() {
                                             'hidden md:flex nav-link items-center gap-2',
                                             isActive('/feed') && 'active'
                                         )}
+                                        aria-current={isActive('/feed') ? 'page' : undefined}
                                     >
-                                        <Rss className="w-4 h-4" />
+                                        <Rss className="w-4 h-4" aria-hidden="true" />
                                         Feed
                                     </Link>
                                     <Link
@@ -77,8 +88,9 @@ export function Layout() {
                                             'hidden md:flex nav-link items-center gap-2',
                                             isActive('/my-gigs') && 'active'
                                         )}
+                                        aria-current={isActive('/my-gigs') ? 'page' : undefined}
                                     >
-                                        <Calendar className="w-4 h-4" />
+                                        <Calendar className="w-4 h-4" aria-hidden="true" />
                                         My Gigs
                                     </Link>
                                     <NotificationBell />
@@ -86,15 +98,17 @@ export function Layout() {
                                         to="/profile"
                                         className="btn-icon"
                                         title="Profile"
+                                        aria-label="Profile"
                                     >
-                                        <User className="w-5 h-5" />
+                                        <User className="w-5 h-5" aria-hidden="true" />
                                     </Link>
                                     <button
                                         onClick={() => signOut()}
                                         className="btn-icon"
                                         title="Sign out"
+                                        aria-label="Sign out"
                                     >
-                                        <LogOut className="w-5 h-5" />
+                                        <LogOut className="w-5 h-5" aria-hidden="true" />
                                     </button>
                                 </>
                             ) : (
@@ -107,11 +121,14 @@ export function Layout() {
                             <button
                                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                                 className="md:hidden btn-icon"
+                                aria-expanded={mobileMenuOpen}
+                                aria-controls="mobile-menu"
+                                aria-label="Toggle menu"
                             >
                                 {mobileMenuOpen ? (
-                                    <X className="w-6 h-6" />
+                                    <X className="w-6 h-6" aria-hidden="true" />
                                 ) : (
-                                    <Menu className="w-6 h-6" />
+                                    <Menu className="w-6 h-6" aria-hidden="true" />
                                 )}
                             </button>
                         </div>
@@ -120,8 +137,8 @@ export function Layout() {
 
                 {/* Mobile Navigation */}
                 {mobileMenuOpen && (
-                    <div className="md:hidden border-t border-surface-800 bg-surface-900/95 animate-slide-down">
-                        <nav className="px-4 py-4 space-y-2">
+                    <div id="mobile-menu" className="md:hidden border-t border-surface-800 bg-surface-900/95 animate-slide-down">
+                        <nav className="px-4 py-4 space-y-2" aria-label="Mobile navigation">
                             {NAV_LINKS.map(({ to, label, icon: Icon }) => (
                                 <Link
                                     key={to}
@@ -133,8 +150,9 @@ export function Layout() {
                                             ? 'bg-primary-500/10 text-primary-400'
                                             : 'text-surface-300 hover:bg-surface-800 hover:text-surface-100'
                                     )}
+                                    aria-current={isActive(to) ? 'page' : undefined}
                                 >
-                                    <Icon className="w-5 h-5" />
+                                    <Icon className="w-5 h-5" aria-hidden="true" />
                                     {label}
                                 </Link>
                             ))}
@@ -149,8 +167,9 @@ export function Layout() {
                                                 ? 'bg-primary-500/10 text-primary-400'
                                                 : 'text-surface-300 hover:bg-surface-800 hover:text-surface-100'
                                         )}
+                                        aria-current={isActive('/feed') ? 'page' : undefined}
                                     >
-                                        <Rss className="w-5 h-5" />
+                                        <Rss className="w-5 h-5" aria-hidden="true" />
                                         Feed
                                     </Link>
                                     <Link
@@ -162,8 +181,9 @@ export function Layout() {
                                                 ? 'bg-primary-500/10 text-primary-400'
                                                 : 'text-surface-300 hover:bg-surface-800 hover:text-surface-100'
                                         )}
+                                        aria-current={isActive('/my-gigs') ? 'page' : undefined}
                                     >
-                                        <Calendar className="w-5 h-5" />
+                                        <Calendar className="w-5 h-5" aria-hidden="true" />
                                         My Gigs
                                     </Link>
                                     <Link
@@ -171,7 +191,7 @@ export function Layout() {
                                         onClick={() => setMobileMenuOpen(false)}
                                         className="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-surface-300 hover:bg-surface-800 hover:text-surface-100"
                                     >
-                                        <Rss className="w-5 h-5" />
+                                        <Rss className="w-5 h-5" aria-hidden="true" />
                                         Notifications
                                     </Link>
                                 </>
@@ -182,7 +202,7 @@ export function Layout() {
             </header>
 
             {/* Main Content */}
-            <main className="flex-1">
+            <main id="main-content" className="flex-1" tabIndex={-1}>
                 <Outlet />
             </main>
 
@@ -191,7 +211,7 @@ export function Layout() {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                     <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                         <div className="flex items-center gap-2 text-surface-400">
-                            <Music className="w-5 h-5 text-accent-500" />
+                            <Music className="w-5 h-5 text-accent-500" aria-hidden="true" />
                             <span className="font-display font-medium">ratemygig</span>
                             <span className="text-surface-600">•</span>
                             <span className="text-sm">Discover, attend, rate</span>

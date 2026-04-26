@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Music } from 'lucide-react'
 import { formatRelativeTime } from '@/shared/lib/utils'
 import { Badge } from '@/shared/components/ui/Badge'
@@ -8,7 +9,7 @@ interface SetlistCardProps {
     onClick: () => void
 }
 
-export function SetlistCard({ setlist, onClick }: SetlistCardProps) {
+export const SetlistCard = memo(function SetlistCard({ setlist, onClick }: SetlistCardProps) {
     const previewSongs = setlist.songs.slice(0, 4)
     const remaining = setlist.songs.length - previewSongs.length
 
@@ -48,4 +49,4 @@ export function SetlistCard({ setlist, onClick }: SetlistCardProps) {
             </div>
         </div>
     )
-}
+})

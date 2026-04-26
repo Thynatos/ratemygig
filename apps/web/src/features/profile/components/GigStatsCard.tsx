@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Star, Calendar, Users, Heart } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/shared/lib/supabase'
@@ -9,7 +10,7 @@ interface GigStatsCardProps {
     userId: string
 }
 
-export function GigStatsCard({ userId }: GigStatsCardProps) {
+export const GigStatsCard = memo(function GigStatsCard({ userId }: GigStatsCardProps) {
     const { data: reviewsCount = 0 } = useQuery({
         queryKey: ['stats', 'reviews', userId],
         queryFn: async () => {
@@ -67,4 +68,4 @@ export function GigStatsCard({ userId }: GigStatsCardProps) {
             </CardContent>
         </Card>
     )
-}
+})

@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Link } from 'react-router-dom'
 import { Calendar, MapPin, Ticket, Users } from 'lucide-react'
 import type { Event } from '@core/index'
@@ -8,7 +9,7 @@ interface EventCardProps {
     event: Event
 }
 
-export function EventCard({ event }: EventCardProps) {
+export const EventCard = memo(function EventCard({ event }: EventCardProps) {
     const eventDate = new Date(event.start_at)
     const isPast = eventDate < new Date()
 
@@ -76,4 +77,4 @@ export function EventCard({ event }: EventCardProps) {
             </article>
         </Link>
     )
-}
+})

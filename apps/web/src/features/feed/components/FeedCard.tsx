@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Link } from 'react-router-dom'
 import { User, Calendar, MapPin } from 'lucide-react'
 import { Card, CardContent } from '@/shared/components/ui/Card'
@@ -11,7 +12,7 @@ interface FeedCardProps {
     item: FeedItem
 }
 
-export function FeedCard({ item }: FeedCardProps) {
+export const FeedCard = memo(function FeedCard({ item }: FeedCardProps) {
     switch (item.type) {
         case 'review':
             return <ReviewCard item={item} />
@@ -20,7 +21,7 @@ export function FeedCard({ item }: FeedCardProps) {
         case 'attendance':
             return <AttendanceCard item={item} />
     }
-}
+})
 
 function ReviewCard({ item }: { item: ReviewFeedItem }) {
     const author = item.author
