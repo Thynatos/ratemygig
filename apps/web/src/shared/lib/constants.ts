@@ -1,0 +1,45 @@
+export const STALE_TIMES = {
+  DEFAULT: 1000 * 60 * 5,
+  EVENTS: 1000 * 60 * 2,
+  CITIES: 1000 * 60 * 30,
+  TAGS: 1000 * 60 * 60,
+} as const
+
+export const NOTIFICATION_REFETCH_INTERVAL = 30000
+
+export const PAGE_SIZES = {
+  EVENTS: 12,
+  VENUES: 24,
+  ARTISTS: 24,
+  FEED: 10,
+  MOCK_DEFAULT: 10,
+} as const
+
+export const RATE_LIMITS = {
+  ATTENDANCE: 2000,
+  REVIEW_CREATE: 5000,
+  LIST_CREATE: 5000,
+  SETLIST_CREATE: 5000,
+  PHOTO_UPLOAD: 3000,
+  COMMENT_CREATE: 3000,
+  REACTION: 1000,
+} as const
+
+export const QUERY_DEFAULTS = {
+  RETRY: 2,
+} as const
+
+export const STORAGE = {
+  REVIEW_PHOTOS_BUCKET: 'review-photos',
+  AVATAR_BUCKET: 'avatar-photos',
+  SIGNED_URL_EXPIRY: 3600,
+} as const
+
+export const FILE_LIMITS = {
+  AVATAR_MAX_BYTES: 5 * 1024 * 1024,
+  AVATAR_MAX_DIMENSION: 400,
+} as const
+
+export const DEBOUNCE_MS = {
+  SEARCH: 300,
+} as const

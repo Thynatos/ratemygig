@@ -1,0 +1,6 @@
+export { useRecommendedEvents, useNearbyVenues, useTrendingEvents } from './api/discovery'
+export { useUserPreferences, useUpdatePreferences, useClearPreferences } from './api/preferences'
+export { RecommendedEventsSection } from './components/RecommendedEventsSection'
+export { TrendingEventsSection } from './components/TrendingEventsSection'
+export { NearbyVenuesSection } from './components/NearbyVenuesSection'
+export { EnhancedSearch } from './components/EnhancedSearch'

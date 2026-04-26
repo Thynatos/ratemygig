@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/shared/lib/supabase'
 import { useAuth } from '@/features/auth/hooks/useAuth'
+import { NOTIFICATION_REFETCH_INTERVAL } from '@/shared/lib/constants'
 import type { Notification as NotificationType } from '@core/index'
 
 export const notificationKeys = {
@@ -49,7 +50,7 @@ export function useUnreadNotificationCount() {
             return count ?? 0
         },
         enabled: !!user,
-        refetchInterval: 30000,
+        refetchInterval: NOTIFICATION_REFETCH_INTERVAL,
     })
 }
 

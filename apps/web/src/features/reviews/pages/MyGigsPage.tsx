@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Calendar, Check, Edit, Star, Plus, Music, MapPin } from 'lucide-react'
 import { useMyGigs } from '../api/reviews'
+import { DraftReviewsSection } from '../components/DraftReviewsSection'
 import { FollowedArtistsList } from '@/features/artists/components/FollowedArtistsList'
 import { FollowedVenuesList } from '@/features/venues/components/FollowedVenuesList'
 import { Button } from '@/shared/components/ui/Button'
@@ -37,6 +38,9 @@ export function MyGigsPage() {
                     <p className="section-subtitle">Your concert history and upcoming shows</p>
                 </div>
             </div>
+
+            {/* Draft Reviews */}
+            <DraftReviewsSection />
 
             {/* Tabs */}
             <div className="flex gap-2 mb-6 border-b border-surface-800 overflow-x-auto">

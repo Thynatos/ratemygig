@@ -153,3 +153,46 @@
 - Review comments/discussion thread
 - Seat/section info in reviews (optional field)
 - Review reactions display (from Phase A4)
+
+### Phase D — Profile & Lists (COMPLETE)
+
+#### D1. Profile Enrichment — DONE
+- `avatar-photos` storage bucket (public, 5MB, JPEG/PNG/WebP) with RLS
+- `AvatarUpload` component with client-side resize to 256×256, remove avatar
+- `SocialLinksForm` via `useUpdateProfile` React Query mutation with cache invalidation
+- `GigStatsCard` showing reviews/events/followers/following counts
+- `ProfilePage` enhanced with avatar upload, stats card, social links form
+- `PublicProfilePage` enhanced with social links display, GigStatsCard, reviews/lists tabs
+
+#### D2. Custom Lists/Collections — DONE
+- `lists` table (id, user_id, name, description, is_public) with RLS
+- `list_items` table (id, list_id, event_id, notes, position) with RLS + UNIQUE(list_id, event_id)
+- `ListPage` at `/lists/:listId` with ordered event list, owner delete
+- `ListCard` compact preview component
+- `CreateListModal` with name, description, public/private toggle (5s rate-limited)
+- `AddToListButton` dropdown on EventDetailPage showing user's lists + "New list" option
+
+#### D3. Review Enhancements — DONE
+- `reviews.status` column (TEXT, 'draft' | 'published') added via migration
+- Draft reviews: `useDrafts`, `useSaveDraft`, `usePublishDraft` hooks
+- `DraftReviewsSection` on MyGigsPage with edit/publish/delete actions
+- `comments` table (id, review_id, user_id, body) with RLS
+- `CommentSection` + `CommentItem` on PublicReviewPage (3s rate-limited)
+- Public review queries filter by `status = 'published'` to prevent draft leak
+- `Review` type updated with `status: ReviewStatus` field
+- `profiles` extended with website_url, twitter_handle, instagram_handle columns
+
+## Known Issues (Medium — Not Blocking)
+
+### Comment/List Mutations Lack Optimistic Updates
+- `useCreateComment`, `useDeleteComment`, `useAddEventToList`, `useRemoveEventFromList` do not use `onMutate`/`onError` rollback
+- Comments and list changes appear only after server round-trip
+- Low priority since these are not frequently rapid-fire actions
+
+### Missing Rate Limiter on useAddEventToList
+- `useAddEventToList` has no rate limiter; rapid clicking could hit duplicate key errors (caught server-side by UNIQUE constraint)
+- Consider adding a 1-2s limiter or debouncing the AddToListButton
+
+### AddToListButton Does Not Auto-Add After List Creation
+- `CreateListModal`'s `onCreated` callback is not wired in `AddToListButton`
+- After creating a new list, the event is not automatically added to it

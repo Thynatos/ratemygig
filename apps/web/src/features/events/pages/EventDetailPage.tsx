@@ -8,6 +8,7 @@ import { useEventReviews } from '@/features/reviews/api/reviews'
 import { useEventSetlists } from '@/features/setlists/api/setlists'
 import { SetlistCard } from '@/features/setlists/components/SetlistCard'
 import { ReactionButtons } from '@/features/reviews/components/ReactionButtons'
+import { AddToListButton } from '@/features/lists/components/AddToListButton'
 import { usePhotoUrls } from '@/shared/hooks'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { Button } from '@/shared/components/ui/Button'
@@ -183,6 +184,8 @@ export function EventDetailPage() {
                                     )}
                                     {attendance?.status === 'attended' ? 'I was there' : 'Mark as attended'}
                                 </Button>
+
+                                <AddToListButton eventId={event.id} />
 
                                 <Button variant="ghost" onClick={handleShare}>
                                     <Share2 className="w-4 h-4 mr-2" />

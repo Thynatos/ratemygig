@@ -140,3 +140,18 @@ export const paginatedResponseSchema = <T extends z.ZodTypeAny>(itemSchema: T) =
         pageSize: z.number(),
         hasMore: z.boolean(),
     })
+
+// ============================================
+// Database JSONB Parsing Schemas
+// ============================================
+
+export const ticketUrlsArraySchema = z
+    .array(z.object({
+        label: z.string(),
+        url: z.string(),
+    }))
+    .catch([])
+
+export const lineupArraySchema = z
+    .array(z.string())
+    .catch([])

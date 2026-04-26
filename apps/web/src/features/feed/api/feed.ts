@@ -112,6 +112,7 @@ async function fetchReviewFeed(
             .select('id, rating, title, body, created_at, user_id, event:events(id, name)')
             .in('user_id', followedUserIds)
             .eq('is_public', true)
+            .eq('status', 'published')
             .gte('created_at', since)
             .order('created_at', { ascending: false })
             .range(offset, offset + limit - 1)

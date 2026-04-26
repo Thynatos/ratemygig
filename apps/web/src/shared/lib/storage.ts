@@ -1,7 +1,8 @@
 import { supabase } from '@/shared/lib/supabase'
+import { STORAGE } from '@/shared/lib/constants'
 
-const BUCKET_NAME = 'review-photos'
-const SIGNED_URL_EXPIRY = 3600 // 1 hour
+const BUCKET_NAME = STORAGE.REVIEW_PHOTOS_BUCKET
+const SIGNED_URL_EXPIRY = STORAGE.SIGNED_URL_EXPIRY
 
 /**
  * Get a signed URL for a review photo

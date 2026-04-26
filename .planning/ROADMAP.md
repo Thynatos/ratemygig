@@ -38,4 +38,10 @@ Plans:
 - [x] C-03-PLAN.md — Preferences & Notifications UI (Wave 2, parallel to C-02)
 
 ---
-### Phase D: Profile & Lists (Planned)
+### Phase D: Profile & Lists
+**Goal:** Enrich profiles (avatar upload, social links, gig stats), add custom lists/collections, review comments, and draft reviews.
+
+Plans:
+- [x] D-01-PLAN.md — Database schema, storage, and API hooks for avatars, comments, lists, drafts (Wave 1)
+- [x] D-02-PLAN.md — Profile enrichment UI (Wave 2)
+- [x] D-03-PLAN.md — Lists & comments UI (Wave 2, parallel to D-02)

@@ -1,1 +1,33 @@
 node_modules
+
+# Build outputs
+dist
+dist-ssr
+*.local
+
+# Editor files
+.vscode
+.idea
+.DS_Store
+
+# Testing
+/test-results/
+/playwright-report/
+/playwright/.cache/
+
+# Graphify
+graphify-out/
+
+# Local environment
+.env
+.env.local
+
+# Tool artifacts
+.bg-shell/
+.opencode/
+
+# OS files
+Thumbs.db
+
+# Temporary
+*.log

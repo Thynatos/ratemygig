@@ -11,6 +11,7 @@ import { EventCardSkeleton } from '@/shared/components/ui/Loading'
 import { env } from '@/shared/lib/env'
 import { allowsTicketmasterLive, getProviderModeLabel, isAllMode, isTicketmasterMode } from '@/shared/lib/provider-policy'
 import { cn } from '@/shared/lib/utils'
+import { PAGE_SIZES, DEBOUNCE_MS } from '@/shared/lib/constants'
 
 export function DiscoverPage() {
     const [city, setCity] = useState('')
@@ -23,14 +24,14 @@ export function DiscoverPage() {
         city,
         query: debouncedQuery,
         page,
-        pageSize: 12,
+        pageSize: PAGE_SIZES.EVENTS,
     })
 
     useEffect(() => {
         const timeoutId = window.setTimeout(() => {
             setDebouncedQuery(searchQuery)
             setPage(1)
-        }, 300)
+        }, DEBOUNCE_MS.SEARCH)
 
         return () => window.clearTimeout(timeoutId)
     }, [searchQuery])

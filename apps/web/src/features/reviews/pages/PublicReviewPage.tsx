@@ -2,6 +2,7 @@ import { useParams, Link } from 'react-router-dom'
 import { Calendar, MapPin, Share2, ChevronLeft } from 'lucide-react'
 import { useReview } from '../api/reviews'
 import { ReactionButtons } from '../components/ReactionButtons'
+import { CommentSection } from '@/features/comments/components/CommentSection'
 import { usePhotoUrls } from '@/shared/hooks'
 import { Button } from '@/shared/components/ui/Button'
 import { Card, CardContent } from '@/shared/components/ui/Card'
@@ -31,7 +32,7 @@ export function PublicReviewPage() {
 
     if (isLoading) return <LoadingPage message="Loading review..." />
 
-    if (error || !review || !review.is_public) {
+    if (error || !review || !review.is_public || review.status === 'draft') {
         return (
             <div className="page-container">
                 <Card>
@@ -138,6 +139,9 @@ export function PublicReviewPage() {
                     <div className="mt-6 pt-4 border-t border-surface-700">
                         <ReactionButtons reviewId={review.id} />
                     </div>
+
+                    {/* Comments */}
+                    <CommentSection reviewId={review.id} />
 
                     {/* Author */}
                     <div className="flex items-center justify-between pt-6 border-t border-surface-700">

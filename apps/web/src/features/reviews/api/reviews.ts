@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/shared/lib/supabase'
 import { sanitizeText } from '@/shared/lib/sanitize'
 import { createRateLimiter } from '@/shared/lib/throttle'
+import { STALE_TIMES, RATE_LIMITS } from '@/shared/lib/constants'
 import type { Review, ReviewPhoto, ReactionType } from '@core/index'
 
 // Query keys
@@ -28,6 +29,7 @@ export function useEventReviews(eventId: string) {
         `)
                 .eq('event_id', eventId)
                 .eq('is_public', true)
+                .eq('status', 'published')
                 .order('created_at', { ascending: false })
 
             if (error) throw error
@@ -120,7 +122,7 @@ interface ReviewInput {
     tagIds?: string[]
 }
 
-const reviewCreateLimiter = createRateLimiter(5000)
+const reviewCreateLimiter = createRateLimiter(RATE_LIMITS.REVIEW_CREATE)
 
 export function useCreateReview() {
     const queryClient = useQueryClient()
@@ -218,7 +220,7 @@ export function useDeleteReview() {
     })
 }
 
-const photoUploadLimiter = createRateLimiter(3000)
+const photoUploadLimiter = createRateLimiter(RATE_LIMITS.PHOTO_UPLOAD)
 
 // Photo upload
 export function useUploadReviewPhotos() {
@@ -304,7 +306,7 @@ export function useTags() {
             if (error) throw error
             return data
         },
-        staleTime: 1000 * 60 * 60,
+        staleTime: STALE_TIMES.TAGS,
     })
 }
 
@@ -338,7 +340,7 @@ interface UserReactions {
     love: boolean
 }
 
-const reactionLimiter = createRateLimiter(1000)
+const reactionLimiter = createRateLimiter(RATE_LIMITS.REACTION)
 
 export function useReviewReactions(reviewId: string) {
     return useQuery({

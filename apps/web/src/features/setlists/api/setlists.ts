@@ -3,6 +3,7 @@ import { supabase } from '@/shared/lib/supabase'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { createRateLimiter } from '@/shared/lib/throttle'
 import { sanitizeText } from '@/shared/lib/sanitize'
+import { RATE_LIMITS } from '@/shared/lib/constants'
 import type { Setlist, SetlistSong, SetlistWithSongs, Song } from '@core/index'
 
 export const setlistKeys = {
@@ -105,7 +106,7 @@ export function useMySetlists() {
     })
 }
 
-const setlistCreateLimiter = createRateLimiter(5000)
+const setlistCreateLimiter = createRateLimiter(RATE_LIMITS.SETLIST_CREATE)
 
 interface SetlistSongInput {
     songId?: string

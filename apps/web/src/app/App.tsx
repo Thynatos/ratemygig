@@ -29,6 +29,7 @@ const ProfilePage = lazy(() => import('@/features/profile/pages/ProfilePage').th
 const SetlistPage = lazy(() => import('@/features/setlists/pages/SetlistPage').then(m => ({ default: m.SetlistPage })))
 const SongPage = lazy(() => import('@/features/setlists/pages/SongPage').then(m => ({ default: m.SongPage })))
 const NotificationsPage = lazy(() => import('@/features/notifications/pages/NotificationsPage').then(m => ({ default: m.NotificationsPage })))
+const ListPage = lazy(() => import('@/features/lists/pages/ListPage').then(m => ({ default: m.ListPage })))
 
 function App() {
     return (
@@ -48,6 +49,7 @@ function App() {
                     <Route path="/u/:username" element={<PublicProfilePage />} />
                     <Route path="/events/:eventId/setlist" element={<SetlistPage />} />
                     <Route path="/songs/:songId" element={<SongPage />} />
+                    <Route path="/lists/:listId" element={<ListPage />} />
 
                     {/* Legal pages */}
                     <Route path="/about" element={<AboutPage />} />

@@ -12,12 +12,13 @@ import {
     mapMockEventToProviderEvent,
     mockEvents,
 } from './mock-catalog'
+import { PAGE_SIZES } from '@/shared/lib/constants'
 
 export class MockEventsProvider implements IEventsProvider {
     readonly providerId = 'mock'
 
     async searchEvents(params: SearchEventsParams): Promise<SearchEventsResult> {
-        const { city, from, to, query, page = 1, pageSize = 10 } = params
+        const { city, from, to, query, page = 1, pageSize = PAGE_SIZES.MOCK_DEFAULT } = params
 
         const filtered = mockEvents.filter(event => {
             const venue = getMockVenueRecord(event.venueId)

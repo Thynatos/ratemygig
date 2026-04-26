@@ -3,14 +3,18 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { User, Save, Eye, EyeOff } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { supabase } from '@/shared/lib/supabase'
+import { useUpdateProfile } from '@/features/profile/api/profile'
 import { PreferencesForm } from '@/features/profile/components/PreferencesForm'
+import { AvatarUpload } from '@/features/profile/components/AvatarUpload'
+import { SocialLinksForm } from '@/features/profile/components/SocialLinksForm'
+import { GigStatsCard } from '@/features/profile/components/GigStatsCard'
 import { Button } from '@/shared/components/ui/Button'
 import { Input } from '@/shared/components/ui/Input'
 import { Textarea } from '@/shared/components/ui/Textarea'
 import { Card, CardContent } from '@/shared/components/ui/Card'
-import { Avatar } from '@/shared/components/ui/Avatar'
 import { LoadingPage } from '@/shared/components/ui/Loading'
 import { cn } from '@/shared/lib/utils'
 
@@ -31,9 +35,23 @@ type ProfileFormData = z.infer<typeof profileSchema>
 
 export function ProfilePage() {
     const { user } = useAuth()
-    const [isLoading, setIsLoading] = useState(true)
-    const [isSaving, setIsSaving] = useState(false)
-    const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+    const updateProfile = useUpdateProfile()
+
+    const { data: profile, isLoading } = useQuery({
+        queryKey: ['profiles', 'detail', user?.id],
+        queryFn: async () => {
+            if (!user) return null
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single()
+
+            if (error) throw error
+            return data
+        },
+        enabled: !!user,
+    })
 
     const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<ProfileFormData>({
         resolver: zodResolver(profileSchema),
@@ -47,57 +65,40 @@ export function ProfilePage() {
 
     const isPublic = watch('is_profile_public')
 
-    // Load profile
     useEffect(() => {
-        async function loadProfile() {
-            if (!user) return
-
-            const { data } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', user.id)
-                .single()
-
-            if (data) {
-                setValue('username', data.username || '')
-                setValue('display_name', data.display_name || '')
-                setValue('bio', data.bio || '')
-                setValue('is_profile_public', data.is_profile_public)
-            }
-
-            setIsLoading(false)
+        if (profile) {
+            setValue('username', profile.username || '')
+            setValue('display_name', profile.display_name || '')
+            setValue('bio', profile.bio || '')
+            setValue('is_profile_public', profile.is_profile_public)
         }
+    }, [profile, setValue])
 
-        loadProfile()
-    }, [user, setValue])
+    const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
     const onSubmit = async (data: ProfileFormData) => {
         if (!user) return
-
-        setIsSaving(true)
         setMessage(null)
 
-        const { error } = await supabase
-            .from('profiles')
-            .update({
+        updateProfile.mutate(
+            {
+                userId: user.id,
                 username: data.username || null,
                 display_name: data.display_name || null,
                 bio: data.bio || null,
                 is_profile_public: data.is_profile_public,
-            })
-            .eq('id', user.id)
-
-        if (error) {
-            if (error.code === '23505') {
-                setMessage({ type: 'error', text: 'This username is already taken' })
-            } else {
-                setMessage({ type: 'error', text: 'Failed to update profile' })
+            },
+            {
+                onSuccess: () => setMessage({ type: 'success', text: 'Profile updated successfully!' }),
+                onError: (err) => {
+                    if ((err as { code?: string }).code === '23505') {
+                        setMessage({ type: 'error', text: 'This username is already taken' })
+                    } else {
+                        setMessage({ type: 'error', text: 'Failed to update profile' })
+                    }
+                },
             }
-        } else {
-            setMessage({ type: 'success', text: 'Profile updated successfully!' })
-        }
-
-        setIsSaving(false)
+        )
     }
 
     if (isLoading) return <LoadingPage message="Loading profile..." />
@@ -112,25 +113,32 @@ export function ProfilePage() {
                 <p className="section-subtitle">Manage your public profile</p>
             </div>
 
+            <Card className="mb-6">
+                <CardContent className="p-6">
+                    <AvatarUpload
+                        currentAvatarUrl={profile?.avatar_url || null}
+                        userId={user?.id || ''}
+                    />
+                    {user && (
+                        <div className="text-center mt-4">
+                            <p className="text-white font-medium">{user.email}</p>
+                            <p className="text-sm text-surface-400">
+                                Connected via {user.app_metadata?.provider || 'email'}
+                            </p>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
+            {user && (
+                <div className="mb-6">
+                    <GigStatsCard userId={user.id} />
+                </div>
+            )}
+
             <Card>
                 <CardContent className="p-6">
                     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                        {/* Avatar */}
-                        <div className="flex items-center gap-6">
-                            <Avatar
-                                src={user?.user_metadata?.avatar_url}
-                                name={user?.user_metadata?.full_name || user?.email}
-                                size="xl"
-                            />
-                            <div>
-                                <p className="text-white font-medium">{user?.email}</p>
-                                <p className="text-sm text-surface-400">
-                                    Connected via {user?.app_metadata?.provider || 'email'}
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Username */}
                         <Input
                             label="Username"
                             placeholder="your_username"
@@ -139,7 +147,6 @@ export function ProfilePage() {
                             {...register('username')}
                         />
 
-                        {/* Display Name */}
                         <Input
                             label="Display Name"
                             placeholder="Your Name"
@@ -147,7 +154,6 @@ export function ProfilePage() {
                             {...register('display_name')}
                         />
 
-                        {/* Bio */}
                         <Textarea
                             label="Bio"
                             placeholder="Tell us about yourself..."
@@ -155,7 +161,6 @@ export function ProfilePage() {
                             {...register('bio')}
                         />
 
-                        {/* Privacy Toggle */}
                         <div className="flex items-center justify-between p-4 rounded-xl bg-surface-800 border border-surface-700">
                             <div className="flex items-center gap-3">
                                 {isPublic ? (
@@ -191,7 +196,6 @@ export function ProfilePage() {
                             </button>
                         </div>
 
-                        {/* Message */}
                         {message && (
                             <div
                                 className={cn(
@@ -205,9 +209,8 @@ export function ProfilePage() {
                             </div>
                         )}
 
-                        {/* Submit */}
                         <div className="flex justify-end">
-                            <Button type="submit" isLoading={isSaving}>
+                            <Button type="submit" isLoading={updateProfile.isPending}>
                                 <Save className="w-4 h-4 mr-2" />
                                 Save Changes
                             </Button>
@@ -215,6 +218,10 @@ export function ProfilePage() {
                     </form>
                 </CardContent>
             </Card>
+
+            <div className="mt-6">
+                <SocialLinksForm />
+            </div>
 
             <div className="mt-6">
                 <PreferencesForm />

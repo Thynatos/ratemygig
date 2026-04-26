@@ -2,13 +2,13 @@
 
 Use this at the **start of each agent session** when continuing build-out against [PROMPT.md](../PROMPT.md). After your turn, **update the “Last updated” section** and the **Open work** list so the next agent can loop cleanly.
 
-**Last updated:** 2026-04-04
+**Last updated:** 2026-04-26 (Milestone 1 complete)
 
 ---
 
 ## One-line state (copy into next agent message)
 
-ratemygig: UUID mock + `006_seed_mock_catalog.sql` added; events/venues/artists are Supabase-first with mock/TM fallbacks in `apps/web/src/features/**/api/*.ts`; TM browser wrapper uses `@jobs` in `vite.config.ts`; venue/artist rating filters wired on detail pages; Playwright smoke in `apps/web/e2e/`; **Ticketmaster empty Discover** callout on `DiscoverPage` + README section for `npm run jobs:ingest` and env. **Human must** apply SQL migrations in Supabase and set `apps/web/.env.local`. **Still open:** browse-time upsert (or jobs-only ingestion docs), deeper e2e, PROMPT polish (rate limits, XSS/sanitize review text, etc.), DX mock-json import consolidation.
+ratemygig M1 complete: split 3 large API files into resolver/hooks/follows modules; split monolithic types into 13 domain files; added 12 barrel exports; extracted magic numbers to constants.ts; Zod-validated DB JSONB parsing. All 112 tests pass, build clean. Next: M2 (test coverage) or M3/M4.
 
 ---
 
@@ -40,12 +40,32 @@ Mock catalog for offline path: `apps/web/src/features/events/providers/mock-prov
 
 ## Open work vs PROMPT.md (suggested backlog)
 
-Pick **one** item per iteration unless the user says otherwise.
+Milestones from `docs/ARCHITECTURE_REVIEW.md`:
 
-1. **Ingestion story** – Browse-time upsert is **not** implemented (RLS blocks anon writes); real sync is **`packages/jobs`** + service role. Options: document clearly, or add Edge Function / RPC (design + security).
-2. **E2E depth** – Only discover + not-found; add flows: login (if testable), event detail, review write (needs test DB or mocks).
-3. **PROMPT NFRs** – Rate limiting (where applicable), XSS/sanitize user review HTML, stronger empty/error states (beyond TM Discover callout).
-4. **DX** – Vite warning: dynamic + static import of `mock-events.json`; consolidate loading.
+**M2: Test Coverage** (next priority)
+1. Component tests for UI kit (Button, Input, Modal, StarRating, etc.)
+2. Component tests for feature components (EventCard, FeedCard, etc.)
+3. Deepen E2E tests (user flows: login→browse→review, follow/unfollow)
+4. Integration tests for DB→mock resolver flow
+5. Tests for AuthProvider, ProtectedRoute, Layout
+
+**M3: Performance & Accessibility**
+1. React.memo on card components
+2. useMemo/useCallback on large pages
+3. ARIA labels, roles, keyboard nav
+4. Focus trap, keyboard handlers, skip-to-content
+5. Client-side image resize for review photos
+
+**M4: Security & Data Hardening**
+1. Zod validation for all Supabase response parsing
+2. Consistent sanitizeText() everywhere
+3. Per-feature error boundaries
+
+**M5: Feature Completion**
+1. Export gig history as CSV
+2. Image thumbnails generation
+3. Leaderboard time-range filters
+4. Missing loading skeleton states
 
 ---
 
