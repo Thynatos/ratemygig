@@ -85,13 +85,14 @@ VITE_EVENTS_PROVIDER=mock
 #### Option A: Supabase Cloud
 
 1. Create a project at [supabase.com](https://supabase.com)
-2. Go to SQL Editor and run migrations from `packages/db/migrations/`:
+2. Go to SQL Editor and run migrations from `packages/db/migrations/` in order:
    - `001_initial_schema.sql`
    - `002_rls_policies.sql`
    - `003_indexes.sql`
    - `004_aggregation_functions.sql`
    - `005_storage.sql`
    - `006_seed_mock_catalog.sql` (demo events/venues/artists with UUIDs aligned to `packages/db/seed/mock-events.json`)
+   - `007_review_photos_thumbnail.sql` (adds thumbnail_path to review_photos)
 3. Enable Auth providers:
    - Email (Magic Link)
    - Google OAuth
@@ -199,6 +200,8 @@ If `VITE_EVENTS_PROVIDER=ticketmaster`, Discover reads **database** events where
 
 - Stored in Supabase Storage bucket: `review-photos`
 - Path format: `{userId}/{reviewId}/{uuid}.{ext}`
+- Thumbnails: `{userId}/{reviewId}/thumbs/{uuid}.{ext}` (300px, generated client-side)
+- Originals resized to max 1200px before upload
 - Allowed types: JPG, PNG, WebP
 - Max size: 10MB per file
 - Max 10 photos per review
@@ -246,12 +249,12 @@ The app uses a custom dark theme with:
 ## 🚧 Roadmap
 
 - [x] DB-backed events + mock seed (`006_seed_mock_catalog.sql`) and optional live Ticketmaster (`VITE_EVENTS_PROVIDER`, `VITE_TICKETMASTER_API_KEY`)
+- [x] Image thumbnails generation — client-side resize (1200px + 300px thumbs) on upload
+- [x] Top rated venues/artists leaderboard — with year + city filters
+- [x] Review reactions (helpful/like/love) — rate-limited, optimistic UI
+- [x] Friend follow system — follow users, artists, and venues
+- [x] Export gig history as CSV — from My Gigs page
 - [ ] Scheduled event sync (Supabase Edge Functions) — see `packages/jobs`
-- [ ] Image thumbnails generation
-- [ ] Top rated venues/artists leaderboard
-- [ ] Review reactions (helpful/upvote)
-- [ ] Friend follow system
-- [ ] Export gig history as CSV
 
 ## 📄 License
 
