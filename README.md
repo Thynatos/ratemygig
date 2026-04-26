@@ -4,13 +4,17 @@
 
 ![ratemygig](https://img.shields.io/badge/ratemygig-Concert%20Rating%20Platform-blueviolet)
 
+> **🚀 Ready to deploy?** See [DEPLOYMENT.md](DEPLOYMENT.md) for the complete production setup guide.
+
 ## 🚀 Features
 
 - 🎫 **Discover Concerts** - Browse upcoming events by city, search by artist/venue
 - 🎟️ **Ticket Links** - Quick access to ticket purchase sites
 - ⭐ **Rate & Review** - Share your concert experiences with ratings and photos
+- 📸 **Photo Uploads** - Client-side resize + thumbnails (1200px + 300px)
 - 📊 **Aggregated Ratings** - View venue and artist ratings with filters
 - 🔗 **Shareable Reviews** - Public review pages for social sharing
+- 📤 **Export CSV** - Download your gig history
 - 🔐 **Secure Auth** - Magic link and Google OAuth login
 
 ## 🛠️ Tech Stack
@@ -51,67 +55,54 @@ ratemygig/
 
 **Continuing development:** see [docs/AGENT_CONTINUATION.md](docs/AGENT_CONTINUATION.md) for what is done, what is open, and how to hand off to the next session.
 
-## 🏁 Quick Start
-
-### Prerequisites
-
-- Node.js 18+
-- npm or pnpm
-- Supabase account (or local Supabase)
-
-### 1. Clone and Install
+## 🏁 Quick Start (Development)
 
 ```bash
 git clone <repo-url>
 cd ratemygig
 npm install
-```
-
-### 2. Configure Environment
-
-```bash
-cp .env.example apps/web/.env.local
-```
-
-Edit `apps/web/.env.local`:
-```env
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key
-VITE_EVENTS_PROVIDER=mock
-```
-
-### 3. Set Up Supabase
-
-#### Option A: Supabase Cloud
-
-1. Create a project at [supabase.com](https://supabase.com)
-2. Go to SQL Editor and run migrations from `packages/db/migrations/` in order:
-   - `001_initial_schema.sql`
-   - `002_rls_policies.sql`
-   - `003_indexes.sql`
-   - `004_aggregation_functions.sql`
-   - `005_storage.sql`
-   - `006_seed_mock_catalog.sql` (demo events/venues/artists with UUIDs aligned to `packages/db/seed/mock-events.json`)
-   - `007_review_photos_thumbnail.sql` (adds thumbnail_path to review_photos)
-3. Enable Auth providers:
-   - Email (Magic Link)
-   - Google OAuth
-
-#### Option B: Supabase Local
-
-```bash
-npx supabase init
-npx supabase start
-npx supabase db push
-```
-
-### 4. Run Development Server
-
-```bash
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000)
+
+Uses mock data by default. For production deployment with real data, see **[DEPLOYMENT.md](DEPLOYMENT.md)**.
+
+---
+
+## 🚀 Production Deployment
+
+**Full step-by-step guide:** [DEPLOYMENT.md](DEPLOYMENT.md)
+
+Quick overview:
+1. Create Supabase project
+2. Run 12 SQL migrations in order
+3. Configure Auth (Magic Link + Google OAuth)
+4. Set environment variables
+5. Seed with mock data or ingest from Ticketmaster
+6. Build: `npm run build`
+7. Deploy to Vercel/Netlify/static host
+
+---
+
+## 📁 Database Setup
+
+Run migrations in Supabase SQL Editor (in order):
+
+```
+001_initial_schema.sql
+002_rls_policies.sql
+003_indexes.sql
+004_aggregation_functions.sql
+005_storage.sql
+006_seed_mock_catalog.sql      ← Optional demo data
+007_social_features.sql
+008_setlists.sql
+009_setlist_stats_rpc.sql
+010_discovery_intelligence.sql
+011_profile_lists.sql
+012_review_photos_thumbnail.sql
+```
 
 ## 🗃️ Database Schema
 
