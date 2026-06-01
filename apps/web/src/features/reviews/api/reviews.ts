@@ -151,6 +151,25 @@ export function useCreateReview() {
 
             if (error) throw error
 
+            // Ensure attendance record exists (mark as attended when reviewing)
+            const { data: existingAttendance } = await supabase
+                .from('attendance')
+                .select('id')
+                .eq('event_id', input.eventId)
+                .eq('user_id', user.id)
+                .maybeSingle()
+
+            if (existingAttendance) {
+                await supabase
+                    .from('attendance')
+                    .update({ status: 'attended' })
+                    .eq('id', existingAttendance.id)
+            } else {
+                await supabase
+                    .from('attendance')
+                    .insert({ event_id: input.eventId, user_id: user.id, status: 'attended' })
+            }
+
             // Add tags if provided
             if (input.tagIds && input.tagIds.length > 0) {
                 const { error: tagError } = await supabase

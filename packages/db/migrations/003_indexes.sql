@@ -3,6 +3,9 @@
 -- Migration: 003_indexes.sql
 -- ============================================
 
+-- Enable trigram extension for fuzzy search (must be before indexes that use it)
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
 -- ============================================
 -- EVENTS INDEXES
 -- ============================================
@@ -98,6 +101,3 @@ CREATE INDEX IF NOT EXISTS idx_review_photos_review_id
 -- For username lookups
 CREATE INDEX IF NOT EXISTS idx_profiles_username 
   ON public.profiles (username) WHERE username IS NOT NULL;
-
--- Enable trigram extension for fuzzy search
-CREATE EXTENSION IF NOT EXISTS pg_trgm;

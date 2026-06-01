@@ -25,6 +25,9 @@ graphify-out/
 # Tool artifacts
 .bg-shell/
 .opencode/
+.claude/
+opencode.json
+latest_prompt.txt
 
 # OS files
 Thumbs.db
