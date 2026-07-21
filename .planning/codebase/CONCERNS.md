@@ -196,3 +196,16 @@
 ### AddToListButton Does Not Auto-Add After List Creation
 - `CreateListModal`'s `onCreated` callback is not wired in `AddToListButton`
 - After creating a new list, the event is not automatically added to it
+
+## Sprint 1 — Notification Triggers (Notes & Tradeoffs)
+
+### Dedupe collapses repeat activity on the same review
+- The `idx_notifications_dedupe` unique index on `notifications(user_id, type, link)` means a review owner gets **one** `new_comment` and **one** `review_reaction` notification per review, ever — later comments/reactions on the same review do not re-notify (this is per the Sprint 1 spec; comment/reaction links are `/r/<review id>`).
+- Acceptable as noise reduction for v1; revisit with per-actor links or grouped copy ("X and 3 others") if it feels lossy.
+
+### Artist fan-out lives on event_artists, not events
+- `packages/jobs` `SyncService.syncEvents()` inserts the `events` row first and links `event_artists` afterwards, so an `AFTER INSERT ON events` trigger can never see artist links (FK guarantees they can't exist yet).
+- `013_notification_triggers.sql` therefore fires `artist_event` notifications from `trg_notify_on_event_artist` (AFTER INSERT ON `event_artists`); the events trigger handles `venue_event` only (venue_id is on the events row). Dedupe protects any writer that links in a different order.
+
+### useUpdatePreferences is now a partial upsert
+- The mutation builds its upsert payload from provided keys only. Previously it always sent all three location fields with `?? null`, so saving a city silently cleared `preferred_lat`/`preferred_lng`; now omitted fields are preserved. Required so the Sprint 1 notification toggles don't wipe location prefs (and vice versa).

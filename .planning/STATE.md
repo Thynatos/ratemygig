@@ -1,9 +1,9 @@
 # Project State
 
 ## Current Phase
-**Phase:** D — Profile & Lists
-**Status:** Complete
-**Last Activity:** 2026-04-26
+**Phase:** Post-M5 Sprints (see .planning/SPRINTS.md)
+**Status:** Sprint 1 complete — next up: Sprint 2 (Scheduled event ingest)
+**Last Activity:** 2026-07-21
 
 ## Completed
 - Auth (magic link + Google OAuth)
@@ -45,7 +45,9 @@
 - Drafts: DraftReviewsSection on MyGigsPage
 - Public review queries filter by status=published (no draft leak)
 - useUpdateProfile React Query mutation with cache invalidation
-- 112 unit tests passing, 0 lint errors
+- Sprint 1: notification triggers migration 013 (artist/venue event fan-out, new review, comment, reaction) with SECURITY DEFINER functions, preference gates, (user_id,type,link) dedupe
+- Sprint 1: 5 notification opt-out toggles in PreferencesForm; NotificationItem renders new_comment/review_reaction/friend_attendance
+- 206 unit tests passing, 0 lint errors
 
 ## Decisions
 - Direct Supabase client queries (no custom API layer)

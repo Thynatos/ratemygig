@@ -1,4 +1,4 @@
-import { Calendar, Star, Users, MapPin } from 'lucide-react'
+import { Calendar, Star, Users, MapPin, MessageCircle, Heart, Ticket } from 'lucide-react'
 import { sanitizeText } from '@/shared/lib/sanitize'
 import type { Notification as NotificationType } from '@core/index'
 
@@ -7,6 +7,9 @@ const typeIcons: Record<string, typeof Calendar> = {
     new_review: Star,
     artist_event: Users,
     venue_event: MapPin,
+    new_comment: MessageCircle,
+    review_reaction: Heart,
+    friend_attendance: Ticket,
 }
 
 const typeColors: Record<string, string> = {
@@ -14,6 +17,9 @@ const typeColors: Record<string, string> = {
     new_review: 'text-yellow-400',
     artist_event: 'text-accent-400',
     venue_event: 'text-primary-400',
+    new_comment: 'text-green-400',
+    review_reaction: 'text-pink-400',
+    friend_attendance: 'text-accent-400',
 }
 
 interface NotificationItemProps {

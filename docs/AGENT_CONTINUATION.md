@@ -2,13 +2,13 @@
 
 Use this at the **start of each agent session** when continuing build-out against [PROMPT.md](../PROMPT.md). After your turn, **update the "Last updated" section** and the **Open work** list so the next agent can loop cleanly.
 
-**Last updated:** 2026-04-26 (Milestones 1–4 complete, 196 tests)
+**Last updated:** 2026-07-21 (Sprint 1 complete — live notifications via DB triggers, 206 tests)
 
 ---
 
 ## One-line state (copy into next agent message)
 
-ratemygig M1–M5 complete: refactored APIs, split types, 196 tests, React.memo on cards, ARIA/focus management, rate limiting on 19 mutations, Zod validation on 8 RPC endpoints, sanitizeText on 50+ rendered fields, per-feature ErrorBoundaries on all 16 routes, CSV export from My Gigs, client-side image resize + thumbnail generation for review photos. Build clean, 0 lint errors.
+ratemygig M1–M5 + Sprint 1 complete: refactored APIs, split types, 206 tests, React.memo on cards, ARIA/focus management, rate limiting on 19 mutations, Zod validation on 8 RPC endpoints, sanitizeText on 50+ rendered fields, per-feature ErrorBoundaries on all 16 routes, CSV export from My Gigs, client-side image resize + thumbnail generation for review photos. Sprint 1: migration 013 adds SECURITY DEFINER notification triggers (artist_event, venue_event, new_review, new_comment, review_reaction) with preference gates + dedupe; 5 opt-out toggles in PreferencesForm. Build clean, 0 lint errors. Next: Sprint 2 (scheduled event ingest).
 
 ---
 
@@ -36,13 +36,17 @@ Mock catalog for offline path: `apps/web/src/features/events/providers/mock-prov
 
 ## Human / environment (not in git)
 
-1. **Supabase SQL:** run migrations in order: `packages/db/migrations/001` … `006` (including **`006_seed_mock_catalog.sql`**), or the app leans on mock/empty DB behavior.
+1. **Supabase SQL:** run migrations in order: `packages/db/migrations/001` … `013` (including **`006_seed_mock_catalog.sql`** and **`013_notification_triggers.sql`**, the latter powers all live notifications), or the app leans on mock/empty DB behavior.
 2. **`apps/web/.env.local`:** real `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`; optional `VITE_TICKETMASTER_API_KEY`, `VITE_EVENTS_PROVIDER` (`mock` | `ticketmaster` | `all`).
 3. **Playwright (fresh machine):** `cd apps/web && npx playwright install` before `npm run test:e2e`.
 
 ---
 
 ## Open work vs PROMPT.md (suggested backlog)
+
+> **2026-07-21:** The backlog below is superseded by [`.planning/SPRINTS.md`](../.planning/SPRINTS.md) —
+> 9 ordered, independently-shippable sprints with acceptance criteria. Work the first
+> unchecked sprint, one per session.
 
 Milestones from `docs/ARCHITECTURE_REVIEW.md`:
 

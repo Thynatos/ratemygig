@@ -34,12 +34,18 @@ export function useUserPreferences() {
     })
 }
 
+type PreferenceUpdate = Partial<Pick<UserPreferences,
+    'preferred_city' | 'preferred_lat' | 'preferred_lng' |
+    'notify_artist_events' | 'notify_venue_events' | 'notify_new_reviews' |
+    'notify_comments' | 'notify_reactions'
+>>
+
 export function useUpdatePreferences() {
     const queryClient = useQueryClient()
     const { user } = useAuth()
 
     return useMutation({
-        mutationFn: async (prefs: Partial<Pick<UserPreferences, 'preferred_city' | 'preferred_lat' | 'preferred_lng'>>) => {
+        mutationFn: async (prefs: PreferenceUpdate) => {
             if (!preferenceLimiter.allow()) {
                 throw new Error('Please wait before updating preferences again')
             }
@@ -47,14 +53,14 @@ export function useUpdatePreferences() {
             const { data: { user: authUser } } = await supabase.auth.getUser()
             if (!authUser) throw new Error('Not authenticated')
 
+            const payload: Record<string, unknown> = { user_id: authUser.id }
+            for (const [key, value] of Object.entries(prefs)) {
+                payload[key] = value ?? null
+            }
+
             const { data, error } = await supabase
                 .from('user_preferences')
-                .upsert({
-                    user_id: authUser.id,
-                    preferred_city: prefs.preferred_city ?? null,
-                    preferred_lat: prefs.preferred_lat ?? null,
-                    preferred_lng: prefs.preferred_lng ?? null,
-                }, { onConflict: 'user_id' })
+                .upsert(payload, { onConflict: 'user_id' })
                 .select()
                 .single()
 

@@ -1,5 +1,10 @@
 # Project Roadmap — RateMyGig
 
+> **Milestones below are COMPLETE.** Active work is planned in
+> [SPRINTS.md](SPRINTS.md) — 9 ordered sprints (notifications triggers, scheduled
+> ingest, friends-going + calendar, UX fixes, perf/CI, Gig Wrapped, OG cards,
+> setlist.fm import, PWA/push). One sprint per agent session.
+
 ## Milestone: Social Proof & Engagement
 
 **Status:** Phase A Complete
