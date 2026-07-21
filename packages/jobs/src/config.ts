@@ -13,6 +13,7 @@ export interface JobsConfig {
     };
     ingest: {
         countries: string[];
+        cities: string[];
         classification: string;
         daysAhead: number;
     };
@@ -43,6 +44,7 @@ export function loadConfig(): JobsConfig {
         },
         ingest: {
             countries: getEnvOrDefault('INGEST_COUNTRIES', 'US').split(',').map(c => c.trim()),
+            cities: getEnvOrDefault('INGEST_CITIES', '').split(',').map(c => c.trim()).filter(c => c.length > 0),
             classification: getEnvOrDefault('INGEST_CLASSIFICATION', 'music'),
             daysAhead: parseInt(getEnvOrDefault('INGEST_DAYS_AHEAD', '180'), 10),
         },

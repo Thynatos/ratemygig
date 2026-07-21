@@ -10,6 +10,7 @@ export interface IngestResult {
     endTime: Date;
     durationMs: number;
     countries: string[];
+    cities: string[];
     stats: SyncStats;
 }
 
@@ -23,6 +24,7 @@ export async function runDailyIngest(): Promise<IngestResult> {
     const config = loadConfig();
     console.log(`Configuration loaded:`);
     console.log(`  - Countries: ${config.ingest.countries.join(', ')}`);
+    console.log(`  - Cities: ${config.ingest.cities.length > 0 ? config.ingest.cities.join(', ') : '(not set — country mode)'}`);
     console.log(`  - Classification: ${config.ingest.classification}`);
     console.log(`  - Days ahead: ${config.ingest.daysAhead}`);
 
@@ -62,6 +64,7 @@ export async function runDailyIngest(): Promise<IngestResult> {
     // Fetch and sync events in batches
     for await (const events of tmProvider.fetchAllEvents({
         countries: config.ingest.countries,
+        cities: config.ingest.cities,
         from,
         to,
     })) {
@@ -114,6 +117,7 @@ export async function runDailyIngest(): Promise<IngestResult> {
         endTime,
         durationMs,
         countries: config.ingest.countries,
+        cities: config.ingest.cities,
         stats: totalStats,
     };
 }

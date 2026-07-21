@@ -2,13 +2,13 @@
 
 Use this at the **start of each agent session** when continuing build-out against [PROMPT.md](../PROMPT.md). After your turn, **update the "Last updated" section** and the **Open work** list so the next agent can loop cleanly.
 
-**Last updated:** 2026-07-21 (Sprint 1 complete — live notifications via DB triggers, 206 tests)
+**Last updated:** 2026-07-21 (Sprint 2 complete — scheduled event ingest via GitHub Actions cron, 206 tests)
 
 ---
 
 ## One-line state (copy into next agent message)
 
-ratemygig M1–M5 + Sprint 1 complete: refactored APIs, split types, 206 tests, React.memo on cards, ARIA/focus management, rate limiting on 19 mutations, Zod validation on 8 RPC endpoints, sanitizeText on 50+ rendered fields, per-feature ErrorBoundaries on all 16 routes, CSV export from My Gigs, client-side image resize + thumbnail generation for review photos. Sprint 1: migration 013 adds SECURITY DEFINER notification triggers (artist_event, venue_event, new_review, new_comment, review_reaction) with preference gates + dedupe; 5 opt-out toggles in PreferencesForm. Build clean, 0 lint errors. Next: Sprint 2 (scheduled event ingest).
+ratemygig M1–M5 + Sprints 1–2 complete: refactored APIs, split types, 206 tests, React.memo on cards, ARIA/focus management, rate limiting on 19 mutations, Zod validation on 8 RPC endpoints, sanitizeText on 50+ rendered fields, per-feature ErrorBoundaries on all 16 routes, CSV export from My Gigs, client-side image resize + thumbnail generation for review photos. Sprint 1: migration 013 adds SECURITY DEFINER notification triggers (artist_event, venue_event, new_review, new_comment, review_reaction) with preference gates + dedupe; 5 opt-out toggles in PreferencesForm. Sprint 2: .github/workflows/ingest.yml runs packages/jobs on GHA cron (06:00 UTC daily + workflow_dispatch); INGEST_CITIES env enables city-scoped ingest to stay under TM's 1000-item/query paging cap; DEPLOYMENT.md documents secrets/vars setup. Build clean, 0 lint errors. Next: Sprint 3 (Friends Going badge + calendar export).
 
 ---
 

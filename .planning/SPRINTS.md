@@ -26,7 +26,7 @@
 | # | Sprint | Size | Status |
 |---|--------|------|--------|
 | 1 | Live notifications (DB triggers) | M | [x] |
-| 2 | Scheduled event ingest (CI cron) | S | [ ] |
+| 2 | Scheduled event ingest (CI cron) | S | [x] |
 | 3 | Friends Going + calendar export | M | [ ] |
 | 4 | UX correctness pack (known issues) | S | [ ] |
 | 5 | Performance & CI hardening | M | [ ] |

@@ -209,3 +209,16 @@
 
 ### useUpdatePreferences is now a partial upsert
 - The mutation builds its upsert payload from provided keys only. Previously it always sent all three location fields with `?? null`, so saving a city silently cleared `preferred_lat`/`preferred_lng`; now omitted fields are preserved. Required so the Sprint 1 notification toggles don't wipe location prefs (and vice versa).
+
+## Sprint 2 — Scheduled Ingest (Notes & Tradeoffs)
+
+### Ticketmaster deep-paging cap truncates country-mode ingest
+- `TicketmasterClient.searchEventsAll()` stops at 1000 items per query (`maxPage` guard, TM API limit). Country-wide US ingest with the default 180-day window exceeds this, so country mode **silently truncates** — no error is logged when the cap is hit.
+- Mitigation shipped in Sprint 2: `INGEST_CITIES` (comma-separated) switches `fetchAllEvents` to per-city queries, which stay under the cap. Very large metros with long windows could still hit it; reduce `INGEST_DAYS_AHEAD` or split cities further if so.
+
+### GitHub Actions scheduled-workflow caveats
+- Scheduled runs can be delayed during periods of high GitHub Actions load — ingest is not guaranteed to start exactly at 06:00 UTC. Acceptable for daily sync.
+- On public repos, GitHub disables scheduled workflows after 60 days of repository inactivity; re-enable from the Actions tab if ingest stops after a quiet period.
+
+### First ingest run after enabling notifications causes a fan-out burst
+- Expected behavior, not a bug: the first cron (or local) ingest after migration `013` is applied fires `artist_event`/`venue_event` notifications for every newly inserted future event matching existing follows. The `(user_id, type, link)` dedupe index keeps re-ingests quiet.

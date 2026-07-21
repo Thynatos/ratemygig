@@ -2,7 +2,7 @@
 
 ## Current Phase
 **Phase:** Post-M5 Sprints (see .planning/SPRINTS.md)
-**Status:** Sprint 1 complete — next up: Sprint 2 (Scheduled event ingest)
+**Status:** Sprint 2 complete — next up: Sprint 3 (Friends Going + calendar export)
 **Last Activity:** 2026-07-21
 
 ## Completed
@@ -47,6 +47,9 @@
 - useUpdateProfile React Query mutation with cache invalidation
 - Sprint 1: notification triggers migration 013 (artist/venue event fan-out, new review, comment, reaction) with SECURITY DEFINER functions, preference gates, (user_id,type,link) dedupe
 - Sprint 1: 5 notification opt-out toggles in PreferencesForm; NotificationItem renders new_comment/review_reaction/friend_attendance
+- Sprint 2: .github/workflows/ingest.yml — GHA cron (06:00 UTC daily) + workflow_dispatch, concurrency group, 30min timeout, secrets/vars config
+- Sprint 2: INGEST_CITIES env (comma-separated) — city-scoped ingest in fetchAllEvents/runDailyIngest to stay under TM's 1000-item/query paging cap; country mode unchanged when unset
+- Sprint 2: DEPLOYMENT.md "Scheduled Ingest" section (GHA-vs-Edge-Functions decision, secrets/vars, paging cap); README roadmap item ticked
 - 206 unit tests passing, 0 lint errors
 
 ## Decisions

@@ -245,7 +245,7 @@ The app uses a custom dark theme with:
 - [x] Review reactions (helpful/like/love) — rate-limited, optimistic UI
 - [x] Friend follow system — follow users, artists, and venues
 - [x] Export gig history as CSV — from My Gigs page
-- [ ] Scheduled event sync (Supabase Edge Functions) — see `packages/jobs`
+- [x] Scheduled event sync (GitHub Actions cron) — see `.github/workflows/ingest.yml` and `packages/jobs`
 
 ## 📄 License
 

@@ -198,31 +198,45 @@ export class TicketmasterProvider {
 
     /**
      * Fetch all events matching criteria (for daily ingestion)
-     * Uses pagination to get as many events as possible
+     * Uses pagination to get as many events as possible.
+     * When `cities` is provided, fetches per city instead of per country
+     * (Ticketmaster caps deep paging at 1000 items per query, so
+     * city-scoped queries truncate less than country-wide ones).
      */
     async *fetchAllEvents(params: {
         countries: string[];
+        cities?: string[];
         from: Date;
         to: Date;
     }): AsyncGenerator<ProviderEvent[], void, unknown> {
+        const dateParams = {
+            classificationName: this.classification,
+            startDateTime: params.from.toISOString().replace('.000Z', 'Z'),
+            endDateTime: params.to.toISOString().replace('.000Z', 'Z'),
+        };
+
+        if (params.cities && params.cities.length > 0) {
+            for (const city of params.cities) {
+                console.log(`Fetching events for city: ${city}`);
+                yield* this.fetchBatches({ ...dateParams, city });
+            }
+            return;
+        }
+
         for (const country of params.countries) {
             console.log(`Fetching events for country: ${country}`);
+            yield* this.fetchBatches({ ...dateParams, countryCode: country });
+        }
+    }
 
-            const searchParams: TmEventSearchParams = {
-                countryCode: country,
-                classificationName: this.classification,
-                startDateTime: params.from.toISOString().replace('.000Z', 'Z'),
-                endDateTime: params.to.toISOString().replace('.000Z', 'Z'),
-            };
+    private async *fetchBatches(searchParams: TmEventSearchParams): AsyncGenerator<ProviderEvent[], void, unknown> {
+        for await (const batch of this.client.searchEventsAll(searchParams)) {
+            const events = batch
+                .map(e => this.mapEvent(e))
+                .filter((e): e is ProviderEvent => e !== null);
 
-            for await (const batch of this.client.searchEventsAll(searchParams)) {
-                const events = batch
-                    .map(e => this.mapEvent(e))
-                    .filter((e): e is ProviderEvent => e !== null);
-
-                if (events.length > 0) {
-                    yield events;
-                }
+            if (events.length > 0) {
+                yield events;
             }
         }
     }

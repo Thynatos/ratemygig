@@ -46,6 +46,7 @@ In your Supabase project, go to the **SQL Editor** and run each migration file i
 010_discovery_intelligence.sql
 011_profile_lists.sql
 012_review_photos_thumbnail.sql
+013_notification_triggers.sql
 ```
 
 > **Important:** Run them one at a time in order. Each file is idempotent (can be re-run safely).
@@ -121,6 +122,8 @@ TICKETMASTER_API_KEY=your-ticketmaster-key
 INGEST_COUNTRIES=US
 INGEST_CLASSIFICATION=music
 INGEST_DAYS_AHEAD=180
+# Optional: comma-separated cities; when set, ingest is per city and INGEST_COUNTRIES is ignored
+# INGEST_CITIES=New York,Los Angeles,Chicago
 ```
 
 ---
@@ -145,7 +148,7 @@ npm run jobs:ingest
 
 This fetches real concert data from Ticketmaster and inserts it into your Supabase database.
 
-**For ongoing sync:** Set up a cron job or GitHub Action that runs `npm run jobs:ingest` daily.
+**For ongoing sync:** See the **Scheduled Ingest** section below — the repo ships a GitHub Actions cron workflow that runs `npm run jobs:ingest` daily.
 
 ---
 
@@ -209,6 +212,57 @@ After `npm run build`, upload the contents of `apps/web/dist/` to:
 - [ ] CSV export works on My Gigs page
 - [ ] Venue/artist rating pages load
 - [ ] Mobile responsive
+
+---
+
+## Scheduled Ingest (GitHub Actions)
+
+The repo includes [`.github/workflows/ingest.yml`](.github/workflows/ingest.yml), which runs
+`npm run jobs:ingest` on a cron (`0 6 * * *` — 06:00 UTC daily) and on demand.
+
+**Decision: GitHub Actions cron, not Supabase Edge Functions.** The jobs package is Node
+(`tsx` + `node-cron` + `@supabase/supabase-js`); porting it to Deno Edge Functions is a rewrite
+for zero functional gain, and GitHub Actions provides logs, secrets management, manual dispatch,
+and run history for free. The `node-cron` self-host path (`npm run jobs:start`,
+`packages/jobs/src/scheduler.ts`) remains untouched for anyone who prefers to run the scheduler
+on their own server.
+
+### Setup
+
+In your GitHub repo, go to **Settings > Secrets and variables > Actions**:
+
+**Secrets** (required — the job fails fast if any are missing):
+
+| Secret | Value |
+|---|---|
+| `TICKETMASTER_API_KEY` | Ticketmaster Discovery API key |
+| `SUPABASE_URL` | e.g. `https://xxxxxxxx.supabase.co` |
+| `SUPABASE_SERVICE_ROLE_KEY` | `service_role` key (bypasses RLS for upserts) |
+
+**Variables** (optional, under the **Variables** tab):
+
+| Variable | Default | Notes |
+|---|---|---|
+| `INGEST_CITIES` | _(empty)_ | Comma-separated, e.g. `New York,Los Angeles,Chicago`. When set, ingest fetches per city and ignores `INGEST_COUNTRIES`. **Recommended** — see paging note below. |
+| `INGEST_DAYS_AHEAD` | `180` | How far ahead to fetch events. |
+
+### Running it manually
+
+**Actions** tab → **Scheduled event ingest** → **Run workflow** (workflow_dispatch). Logs live in
+the same place: open the run → `ingest` job → the `npm run jobs:ingest` step shows per-city/country
+fetch progress and sync stats (events created/updated, venues, artists, errors).
+
+Overlapping runs are prevented by a workflow concurrency group (`cancel-in-progress: false`), so a
+slow run queues the next one rather than double-ingesting. Re-runs are safe regardless: events
+upsert on `(provider, provider_event_id)` and notifications dedupe on `(user_id, type, link)`.
+
+### Ticketmaster paging cap (why INGEST_CITIES exists)
+
+Ticketmaster caps deep paging at **1000 items per query** (`size * page < 1000`; enforced by the
+`maxPage` guard in `packages/jobs/src/ticketmaster/ticketmaster-client.ts`). A country-wide US
+query with the default 180-day window returns far more than 1000 music events, so country mode
+silently truncates. City-scoped queries stay well under the cap, so set `INGEST_CITIES` to the
+metros you care about (each city is a separate paged query; same city name as on Ticketmaster).
 
 ---
 

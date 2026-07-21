@@ -1,4 +1,4 @@
-/gsd-plan-phase Phase A — Social Proof
+Execute Sprint 3 — Friends Going badge + calendar export from .planning/SPRINTS.md
 
 Project: RateMyGig — concert discovery and rating web app
 Repo: C:\Users\badir\Documents\ratemygig
@@ -7,52 +7,156 @@ Architecture summary:
 - Monorepo: apps/web (React 19 + Vite + Tailwind), packages/core (domain types), packages/db (SQL migrations), packages/jobs (Ticketmaster sync)
 - Backend: Supabase (Postgres, Auth, Storage, RLS) — no custom API server
 - State: TanStack React Query + React Hook Form + Zod
-- Events: Pluggable provider (DB → Ticketmaster API → mock fallback)
 - Codebase docs: .planning/codebase/ has STACK.md, ARCHITECTURE.md, STRUCTURE.md, CONVENTIONS.md, INTEGRATIONS.md, TESTING.md, CONCERNS.md
+- AGENTS.md in repo root has graphify rules — follow them (read graphify-out/GRAPH_REPORT.md first; rebuild graph after code changes with: python -c "from graphify.watch import _rebuild_code; from pathlib import Path; _rebuild_code(Path('.'))")
 
-What's done:
-- Auth (magic link + Google OAuth), event discovery, attendance, reviews with photo uploads, venue/artist rating pages, XSS sanitization, leaderboard pages (Top Venues / Top Artists), pagination for venues/artists, E2E tests, client-side rate limiting on mutations, 86 unit tests passing, 0 lint errors
+Current state:
+- M1–M5 + Sprints 1–2 complete: 206 unit tests passing, build clean, 0 lint errors
+- Sprint 1 shipped migration 013 (SECURITY DEFINER notification triggers + preference
+  gates + (user_id,type,link) dedupe). Sprint 2 shipped .github/workflows/ingest.yml
+  (GHA cron + workflow_dispatch) and INGEST_CITIES city-scoped ingest.
+- The full post-M5 backlog lives in .planning/SPRINTS.md — implement ONLY Sprint 3
+  this session. Do not touch later sprints.
 
-What to build — Phase A: Social Proof (in order):
+Read first (in order):
+1. .planning/SPRINTS.md — Sprint 3 section is the authoritative spec
+2. docs/AGENT_CONTINUATION.md — project handoff state
+3. .planning/codebase/CONVENTIONS.md + CONCERNS.md
+4. packages/db/migrations/007_social_features.sql (user_follows schema) +
+   002_rls_policies.sql (attendance policies) + 010_discovery_intelligence.sql
+   (RPC style) + 013_notification_triggers.sql (SECURITY DEFINER pattern)
+5. apps/web/src/features/events/components/EventCard.tsx + its call sites
+   (DiscoverPage, ArtistDetailPage, VenueDetailPage, TrendingEventsSection,
+   RecommendedEventsSection)
+6. apps/web/src/features/events/pages/EventDetailPage.tsx
+7. apps/web/src/features/reviews/pages/MyGigsPage.tsx +
+   apps/web/src/shared/lib/utils.ts (exportToCsv download pattern +
+   validateRpcResponse Zod helper)
+8. apps/web/src/features/events/api/events.ts (query key factory + hook pattern)
+   and apps/web/src/features/profile/api/follows.test.ts (existing test style)
 
-A1. Artist Follow System
-- New migration 007_artist_follows.sql: artist_follows table (id, user_id FK → auth.users, artist_id FK → artists, created_at), UNIQUE(user_id, artist_id), RLS policies (owner CRUD, public read)
-- API hooks in features/artists/api/artists.ts: useFollowArtist, useUnfollowArtist, useIsFollowingArtist, useFollowedArtists
-- "Track Artist" button on ArtistDetailPage (heart/star toggle, optimistic update)
-- "Tracked Artists" tab on MyGigsPage showing followed artists with upcoming events
+Task — Sprint 3: two features (Friends Going badge, calendar export).
 
-A2. Venue Follow System
-- Same migration 007: venue_follows table (id, user_id, venue_id, created_at), same RLS pattern
-- API hooks in features/venues/api/venues.ts: useFollowVenue, useUnfollowVenue, useIsFollowingVenue, useFollowedVenues
-- "Track Venue" button on VenueDetailPage
-- "Tracked Venues" tab on MyGigsPage
+CRITICAL gotchas (verified against the code — do not skip):
+- attendance RLS is OWNER-ONLY: policy "Users can view own attendance" is
+  USING (auth.uid() = user_id) (002_rls_policies.sql line 86). Reading FRIENDS'
+  attendance therefore requires the RPC to be SECURITY DEFINER with
+  SET search_path = public (pattern in 013). Because SECURITY DEFINER bypasses RLS,
+  the function MUST restrict the social graph to the caller: filter
+  user_follows by follower_id = auth.uid() (keep the spec's p_user_id parameter for
+  signature compatibility but do not let it enumerate arbitrary users' graphs;
+  document this deviation in a migration comment).
+- user_follows columns are (follower_id, following_id) — the followed user is
+  following_id. attendance.status is the ENUM attendance_status ('planned','attended')
+  with UNIQUE(user_id, event_id), so one row per friend per event (no dedupe needed).
+- profiles already has display_name and avatar_url (001_initial_schema.sql) — join
+  profiles on attendance.user_id for the RPC's display fields.
+- EventCard is React.memo'd with an `event`-ONLY prop and is rendered from 6 places:
+  DiscoverPage.tsx:236, ArtistDetailPage.tsx:109+121, VenueDetailPage.tsx:106+118,
+  TrendingEventsSection.tsx:39, RecommendedEventsSection.tsx:51. The new friends
+  prop MUST be optional (existing call sites and the 6 EventCard renders in
+  features/components.test.tsx pass only `event` and must keep compiling/passing).
+  Pages opt in by passing a pre-fetched slice of the Map — do NOT call the hook
+  inside EventCard (zero extra queries per card is the acceptance bar).
+- features/feed/components/FeedCard.tsx has its OWN local EventCard component
+  (different component, `item` prop) — do not touch or confuse it with
+  features/events/components/EventCard.tsx.
+- MyGigsPage's `gigs` from useMyGigs(statusFilter) is TAB-FILTERED — on the
+  'planned'/'attended' tabs it contains only that subset. Calendar export must
+  include ALL planned + attended events: call useMyGigs() unfiltered for the
+  export (same query key as the 'all' tab, so React Query dedupes there).
+- SPRINTS.md says "useFriendsGoing test following the mocking pattern in
+  follows.test.ts" — verified: follows.test.ts only tests QUERY KEY FACTORIES;
+  no supabase-mocking pattern exists anywhere in the repo. Do NOT invent mock
+  infrastructure. Instead: extract the row→Map grouping into a pure exported
+  function (e.g. groupFriendsByEvent(rows)) and unit-test that + the query key
+  factory, matching the existing key-factory test style.
+- Validate the RPC response client-side with a Zod schema (add to
+  shared/validation/schemas.ts) + validateRpcResponse() from shared/lib/utils.ts
+  — this is the established M4 pattern for all RPC call sites.
+- ical.ts must be pure and dependency-free — take the UID domain as a parameter
+  with a default (e.g. 'ratemygig'), do NOT read window.location inside the lib,
+  so tests are deterministic.
 
-A3. User Follow System
-- Same migration 007: user_follows table (id, follower_id, following_id, created_at), UNIQUE(follower_id, following_id), check(follower_id != following_id), RLS policies
-- API hooks in features/profile/api/follows.ts: useFollowUser, useUnfollowUser, useIsFollowingUser, useFollowers, useFollowing
-- Follow/unfollow button on PublicProfilePage
-- Follower and following counts displayed on profile
+Tasks:
+1. packages/db/migrations/014_friends_attendance.sql — RPC
+   get_friends_attendance(p_user_id UUID, p_event_ids UUID[]) RETURNS
+   TABLE(event_id UUID, user_id UUID, display_name TEXT, avatar_url TEXT):
+   user_follows (follower_id = auth.uid()) → attendance (user_id = following_id,
+   status IN ('planned','attended'), event_id = ANY(p_event_ids)) → profiles for
+   display fields. plpgsql STABLE, SECURITY DEFINER SET search_path = public,
+   matching existing migration style. Include a COMMENTED manual verification
+   script at the bottom (Supabase SQL editor), like 013 does.
+2. apps/web/src/features/events/api/useFriendsGoing.ts — hook taking eventIds:
+   string[], returns Map<eventId, FriendGoing[]> (FriendGoing =
+   { userId, displayName, avatarUrl }). supabase.rpc + Zod validation, query key
+   factory co-located in the file, enabled: !!user && eventIds.length > 0
+   (useAuth from @/features/auth/hooks/useAuth exposes { user }). Export
+   groupFriendsByEvent as a pure function for testing.
+3. FriendsGoing badge on EventCard — optional prop friendsGoing?: FriendGoing[];
+   compact badge: Avatar stack (≤3, existing shared/components/ui/Avatar) +
+   "N friends going" (pluralize); render nothing when undefined/empty. Wire the
+   pre-fetched map from the 6 call sites above (each page calls useFriendsGoing
+   once with its visible event ids). Reuse the same badge/data on
+   EventDetailPage (hook with [eventId]).
+4. apps/web/src/shared/lib/ical.ts — dependency-free .ics builder:
+   BEGIN:VCALENDAR / VEVENT with UID (event id + domain param), DTSTAMP,
+   DTSTART/DTEND (from start_at, +3h default duration), SUMMARY (event name),
+   LOCATION (venue + city), URL + DESCRIPTION (first ticket link). CRLF line
+   endings, TEXT escaping (\ , ; newline), 75-octet line folding (CRLF + single
+   space continuation). Dates as UTC basic format (yyyyMMddTHHmmssZ).
+5. AddToCalendarButton on EventDetailPage — two actions: download .ics
+   (Blob + anchor, mirror exportToCsv's download pattern in utils.ts) and open
+   Google Calendar template URL
+   (https://calendar.google.com/calendar/render?action=TEMPLATE&text=...&dates=...&details=...&location=...).
+   No auth required — it's a client-side file.
+6. MyGigsPage — "Export calendar" button next to the existing Export CSV button:
+   one .ics containing ALL planned + attended events (unfiltered fetch, per the
+   gotcha above), filename my-gigs-<date>.ics.
 
-A4. Review Reactions
-- Same migration 007: review_reactions table (id, user_id, review_id, reaction_type ENUM('like','helpful','love'), created_at), UNIQUE(user_id, review_id, reaction_type), RLS policies
-- API hooks in features/reviews/api/reviews.ts: useReactToReview, useRemoveReaction, useReviewReactions
-- Reaction buttons (👍 Helpful ❤️ Love 🔥 Like) on PublicReviewPage and EventDetailPage review cards with counts
-
-A5. Activity Feed
-- New route /feed with FeedPage component
-- New hook useActivityFeed() that queries: recent public reviews from followed users, recent events from tracked artists/venues (via attendance), recent reviews on tracked venues/artists
-- Paginated feed with cards showing: review summary + rating, event announcement, "X is going to" activity
-- Add "Feed" link to main nav in Layout.tsx
-
-Conventions to follow (see .planning/codebase/CONVENTIONS.md for full details):
+Conventions to follow (see .planning/codebase/CONVENTIONS.md):
 - Feature-based structure: features/{name}/api/, components/, pages/
 - Path aliases: @/ (src), @shared/, @features/, @core/
-- Named exports, function components only
-- Zod validation in shared/validation/schemas.ts
-- Query key factories in api/*.ts files
-- Sanitize all user text with sanitizeText() from shared/lib/sanitize.ts
-- Client-side rate limiting with createRateLimiter() from shared/lib/throttle.ts
-- Run npm run lint, npm run test, npm run build before committing
-- Update .planning/codebase/CONCERNS.md as you complete each task (mark items FIXED or add new concerns found)
+- Named exports, function components only; no comments unless the file has that style
+- Query key factories co-located in api/*.ts files
+- sanitizeText() on user-generated rendered fields; no rate limiter needed (read-only)
+- SQL style: match existing migrations (public. prefix, IF NOT EXISTS where applicable)
 
-Start by reading the planning docs in .planning/codebase/ to understand the full codebase context before planning.
+Tests:
+- ical.test.ts: escaping, 75-octet line folding, CRLF, multi-event output, UTC
+  formatting, default +3h duration.
+- useFriendsGoing: groupFriendsByEvent pure-function tests (grouping, empty input,
+  multiple friends per event) + query key factory tests, in the follows.test.ts style.
+- EventCard badge render test (add to features/components.test.tsx): renders badge
+  when friendsGoing provided, renders nothing when omitted.
+- All 206 existing tests must still pass.
+
+Verification (from repo root, all must pass):
+- npm run lint
+- npm run test
+- npm run build
+- Optional (UI flows changed but E2E needs Playwright + running Supabase — do not
+  block): npm run test:e2e
+
+After finishing (required doc updates):
+- Mark Sprint 3 [x] in the status table of .planning/SPRINTS.md
+- Update .planning/STATE.md (Completed list + Last Activity date)
+- Update "Last updated" + one-line state in docs/AGENT_CONTINUATION.md
+- Add 014_friends_attendance.sql to the migration list in DEPLOYMENT.md and to the
+  human migrations step in docs/AGENT_CONTINUATION.md
+- Add any new issues discovered to .planning/codebase/CONCERNS.md
+- Run the graphify rebuild (command above)
+
+Acceptance criteria:
+- Badge renders on event cards when a followed user has planned/attended attendance
+  on a visible event; hidden otherwise; zero extra queries per card (one batched
+  RPC per page).
+- Same badge/data on EventDetailPage.
+- Downloaded .ics imports cleanly into Google Calendar and Apple Calendar
+  (multi-event export from My Gigs included).
+- SECURITY DEFINER RPC cannot be used to enumerate other users' social graphs
+  (verify: calling with another user's id as p_user_id returns only the caller's
+  friends' rows).
+- Human follow-up in your summary: apply migration 014 in Supabase SQL editor.
+
+Start by reading the planning docs listed above before writing any code.
