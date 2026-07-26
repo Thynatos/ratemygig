@@ -4,11 +4,14 @@ import {
     Check, Plus, Share2, Star, ChevronLeft, Music
 } from 'lucide-react'
 import { useEvent, useAttendance, useToggleAttendance } from '../api/events'
+import { useFriendsGoing } from '../api/useFriendsGoing'
+import { FriendsGoingBadge } from '../components/FriendsGoingBadge'
 import { useEventReviews } from '@/features/reviews/api/reviews'
 import { useEventSetlists } from '@/features/setlists/api/setlists'
 import { SetlistCard } from '@/features/setlists/components/SetlistCard'
 import { ReactionButtons } from '@/features/reviews/components/ReactionButtons'
 import { AddToListButton } from '@/features/lists/components/AddToListButton'
+import { AddToCalendarButton } from '../components/AddToCalendarButton'
 import { usePhotoUrls } from '@/shared/hooks'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { Button } from '@/shared/components/ui/Button'
@@ -25,6 +28,8 @@ export function EventDetailPage() {
     const { user } = useAuth()
     const { data: event, isLoading, error } = useEvent(eventId!)
     const { data: attendance } = useAttendance(eventId!)
+    const { data: friendsGoingMap } = useFriendsGoing(eventId ? [eventId] : [])
+    const friendsGoing = eventId ? friendsGoingMap?.get(eventId) : undefined
     const { data: reviews = [], isLoading: reviewsLoading } = useEventReviews(eventId!)
     const { data: setlists = [], isLoading: setlistsLoading } = useEventSetlists(eventId!)
     const toggleAttendance = useToggleAttendance()
@@ -187,11 +192,19 @@ export function EventDetailPage() {
 
                                 <AddToListButton eventId={event.id} />
 
+                                <AddToCalendarButton event={event} />
+
                                 <Button variant="ghost" onClick={handleShare}>
                                     <Share2 className="w-4 h-4 mr-2" />
                                     Share
                                 </Button>
                             </div>
+
+                            {friendsGoing && friendsGoing.length > 0 && (
+                                <div className="mt-4">
+                                    <FriendsGoingBadge friends={friendsGoing} />
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
 

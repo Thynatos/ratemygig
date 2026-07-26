@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Calendar, Check, Edit, Star, Plus, Music, MapPin, Download } from 'lucide-react'
+import { Calendar, CalendarPlus, Check, Edit, Star, Plus, Music, MapPin, Download } from 'lucide-react'
 import { useMyGigs } from '../api/reviews'
-import { exportToCsv, formatDate } from '@/shared/lib/utils'
+import { buildIcs } from '@/shared/lib/ical'
+import { downloadTextFile, exportToCsv, formatDate } from '@/shared/lib/utils'
 import { DraftReviewsSection } from '../components/DraftReviewsSection'
 import { FollowedArtistsList } from '@/features/artists/components/FollowedArtistsList'
 import { FollowedVenuesList } from '@/features/venues/components/FollowedVenuesList'
@@ -20,6 +21,7 @@ export function MyGigsPage() {
     const statusFilter = activeTab === 'planned' ? 'planned' : activeTab === 'attended' ? 'attended' : undefined
     const showGigs = activeTab === 'all' || activeTab === 'planned' || activeTab === 'attended'
     const { data: gigs, isLoading } = useMyGigs(showGigs ? statusFilter : undefined)
+    const { data: allGigs } = useMyGigs()
 
     const handleExportCsv = () => {
         if (!gigs || gigs.length === 0) return
@@ -44,6 +46,22 @@ export function MyGigsPage() {
         exportToCsv(rows, `my-gigs-${new Date().toISOString().split('T')[0]}.csv`)
     }
 
+    const handleExportCalendar = () => {
+        if (!allGigs || allGigs.length === 0) return
+        const events = allGigs
+            .filter(gig => gig.event)
+            .map(gig => ({
+                id: gig.event.id as string,
+                name: gig.event.name as string,
+                startAt: gig.event.start_at as string,
+                venueName: gig.event.venue?.name ?? null,
+                city: gig.event.city as string,
+                ticketUrl: gig.event.ticket_urls?.[0]?.url ?? null,
+            }))
+        const ics = buildIcs(events)
+        downloadTextFile(ics, `my-gigs-${new Date().toISOString().split('T')[0]}.ics`, 'text/calendar;charset=utf-8;')
+    }
+
     const tabs: { id: TabType; label: string; icon: typeof Calendar }[] = [
         { id: 'all', label: 'All', icon: Calendar },
         { id: 'planned', label: 'Planned', icon: Calendar },
@@ -62,11 +80,21 @@ export function MyGigsPage() {
                     </h1>
                     <p className="section-subtitle">Your concert history and upcoming shows</p>
                 </div>
-                {showGigs && gigs && gigs.length > 0 && (
-                    <Button variant="secondary" size="sm" onClick={handleExportCsv}>
-                        <Download className="w-4 h-4 mr-2" />
-                        Export CSV
-                    </Button>
+                {showGigs && (gigs && gigs.length > 0 || allGigs && allGigs.length > 0) && (
+                    <div className="flex items-center gap-2">
+                        {allGigs && allGigs.length > 0 && (
+                            <Button variant="secondary" size="sm" onClick={handleExportCalendar}>
+                                <CalendarPlus className="w-4 h-4 mr-2" />
+                                Export calendar
+                            </Button>
+                        )}
+                        {gigs && gigs.length > 0 && (
+                            <Button variant="secondary" size="sm" onClick={handleExportCsv}>
+                                <Download className="w-4 h-4 mr-2" />
+                                Export CSV
+                            </Button>
+                        )}
+                    </div>
                 )}
             </div>
 

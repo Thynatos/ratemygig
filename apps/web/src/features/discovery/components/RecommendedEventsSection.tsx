@@ -1,6 +1,7 @@
 import { Sparkles } from 'lucide-react'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { useRecommendedEvents } from '../api/discovery'
+import { useFriendsGoing } from '@/features/events/api/useFriendsGoing'
 import { EventCard } from '@/features/events/components/EventCard'
 import { Skeleton } from '@/shared/components/ui/Loading'
 
@@ -18,6 +19,7 @@ const reasonLabels: Record<string, string> = {
 export function RecommendedEventsSection({ limit = 8 }: RecommendedEventsSectionProps) {
     const { user } = useAuth()
     const { data: recommendations = [], isLoading } = useRecommendedEvents(limit)
+    const { data: friendsGoing } = useFriendsGoing(recommendations.map(({ event }) => event.id))
 
     if (!user) return null
 
@@ -48,7 +50,7 @@ export function RecommendedEventsSection({ limit = 8 }: RecommendedEventsSection
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 {recommendations.map(({ event, reason }) => (
                     <div key={event.id} className="relative">
-                        <EventCard event={event} />
+                        <EventCard event={event} friendsGoing={friendsGoing?.get(event.id)} />
                         <span className="absolute top-2 right-2 bg-accent-500/20 text-accent-300 border border-accent-500/30 text-xs px-2 py-0.5 rounded-full">
                             {reasonLabels[reason] || reason}
                         </span>

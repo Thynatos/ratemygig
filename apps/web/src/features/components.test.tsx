@@ -77,6 +77,31 @@ describe('EventCard', () => {
         const link = screen.getByRole('link')
         expect(link).toHaveAttribute('href', '/events/evt-1')
     })
+
+    it('renders friends going badge when friendsGoing is provided', () => {
+        const friendsGoing = [
+            { userId: 'user-1', displayName: 'Alex', avatarUrl: null },
+            { userId: 'user-2', displayName: 'Sam', avatarUrl: null },
+        ]
+        renderWithRouter(<EventCard event={mockEvent} friendsGoing={friendsGoing} />)
+        expect(screen.getByText('2 friends going')).toBeInTheDocument()
+    })
+
+    it('pluralizes the badge for a single friend', () => {
+        const friendsGoing = [{ userId: 'user-1', displayName: 'Alex', avatarUrl: null }]
+        renderWithRouter(<EventCard event={mockEvent} friendsGoing={friendsGoing} />)
+        expect(screen.getByText('1 friend going')).toBeInTheDocument()
+    })
+
+    it('renders no badge when friendsGoing is omitted', () => {
+        renderWithRouter(<EventCard event={mockEvent} />)
+        expect(screen.queryByText(/friends? going/)).not.toBeInTheDocument()
+    })
+
+    it('renders no badge when friendsGoing is empty', () => {
+        renderWithRouter(<EventCard event={mockEvent} friendsGoing={[]} />)
+        expect(screen.queryByText(/friends? going/)).not.toBeInTheDocument()
+    })
 })
 
 describe('FeedCard', () => {

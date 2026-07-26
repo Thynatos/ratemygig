@@ -5,12 +5,15 @@ import type { Event } from '@core/index'
 import { formatDate } from '@/shared/lib/utils'
 import { sanitizeText } from '@/shared/lib/sanitize'
 import { Badge } from '@/shared/components/ui/Badge'
+import { FriendsGoingBadge } from './FriendsGoingBadge'
+import type { FriendGoing } from '../api/useFriendsGoing'
 
 interface EventCardProps {
     event: Event
+    friendsGoing?: FriendGoing[]
 }
 
-export const EventCard = memo(function EventCard({ event }: EventCardProps) {
+export const EventCard = memo(function EventCard({ event, friendsGoing }: EventCardProps) {
     const eventDate = new Date(event.start_at)
     const isPast = eventDate < new Date()
 
@@ -49,6 +52,12 @@ export const EventCard = memo(function EventCard({ event }: EventCardProps) {
                         </div>
                     </div>
                 </div>
+
+                {friendsGoing && friendsGoing.length > 0 && (
+                    <div className="mt-3">
+                        <FriendsGoingBadge friends={friendsGoing} />
+                    </div>
+                )}
 
                 {/* Tags and Actions */}
                 <div className="mt-4 flex items-center justify-between gap-4">

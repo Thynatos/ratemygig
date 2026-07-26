@@ -47,6 +47,7 @@ In your Supabase project, go to the **SQL Editor** and run each migration file i
 011_profile_lists.sql
 012_review_photos_thumbnail.sql
 013_notification_triggers.sql
+014_friends_attendance.sql
 ```
 
 > **Important:** Run them one at a time in order. Each file is idempotent (can be re-run safely).
@@ -296,10 +297,10 @@ metros you care about (each city is a separate paged query; same city name as on
 |---|---|---|
 | Frontend | Vite + React 19 + Tailwind | ✅ |
 | Backend | Supabase (Postgres + Auth + Storage) | ✅ |
-| Database | 12 migrations, full RLS | ✅ |
+| Database | 14 migrations, full RLS | ✅ |
 | Auth | Magic Link + Google OAuth | ✅ |
 | Storage | Photos + Avatars | ✅ |
 | Data | Mock seed + Ticketmaster ingestion | ✅ |
-| Tests | 196 passing | ✅ |
+| Tests | 234 passing | ✅ |
 
 **You're ready to go live! 🚀**

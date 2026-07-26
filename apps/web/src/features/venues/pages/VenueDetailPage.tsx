@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/shared/components/ui/Card'
 import { RatingDisplay } from '@/shared/components/ui/StarRating'
 import { LoadingPage } from '@/shared/components/ui/Loading'
 import { EventCard } from '@/features/events/components/EventCard'
+import { useFriendsGoing } from '@/features/events/api/useFriendsGoing'
 import { Input } from '@/shared/components/ui/Input'
 import { env } from '@/shared/lib/env'
 import { getProviderModeLabel, isTicketmasterMode } from '@/shared/lib/provider-policy'
@@ -28,6 +29,13 @@ export function VenueDetailPage() {
         city: summaryCity.trim() || undefined,
     })
     const { data: events = [] } = useVenueEvents(venueId!)
+    const visibleEventIds = useMemo(() => {
+        const now = new Date()
+        const upcoming = events.filter(e => new Date(e.start_at) >= now)
+        const past = events.filter(e => new Date(e.start_at) < now).slice(0, 4)
+        return [...upcoming, ...past].map(e => e.id)
+    }, [events])
+    const { data: friendsGoing } = useFriendsGoing(visibleEventIds)
 
     if (venueLoading) return <LoadingPage message="Loading venue..." />
 
@@ -103,7 +111,7 @@ export function VenueDetailPage() {
                             </h2>
                             <div className="grid gap-4 md:grid-cols-2">
                                 {upcomingEvents.map(event => (
-                                    <EventCard key={event.id} event={event} />
+                                    <EventCard key={event.id} event={event} friendsGoing={friendsGoing?.get(event.id)} />
                                 ))}
                             </div>
                         </section>
@@ -115,7 +123,7 @@ export function VenueDetailPage() {
                             <h2 className="section-title mb-4 text-surface-400">Past Events</h2>
                             <div className="grid gap-4 md:grid-cols-2">
                                 {pastEvents.slice(0, 4).map(event => (
-                                    <EventCard key={event.id} event={event} />
+                                    <EventCard key={event.id} event={event} friendsGoing={friendsGoing?.get(event.id)} />
                                 ))}
                             </div>
                         </section>

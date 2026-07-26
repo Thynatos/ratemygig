@@ -1,5 +1,6 @@
 import { TrendingUp } from 'lucide-react'
 import { useTrendingEvents } from '../api/discovery'
+import { useFriendsGoing } from '@/features/events/api/useFriendsGoing'
 import { EventCard } from '@/features/events/components/EventCard'
 import { Skeleton } from '@/shared/components/ui/Loading'
 
@@ -9,6 +10,7 @@ interface TrendingEventsSectionProps {
 
 export function TrendingEventsSection({ limit = 6 }: TrendingEventsSectionProps) {
     const { data: trending = [], isLoading } = useTrendingEvents(limit)
+    const { data: friendsGoing } = useFriendsGoing(trending.map(({ event }) => event.id))
 
     if (isLoading) {
         return (
@@ -36,7 +38,7 @@ export function TrendingEventsSection({ limit = 6 }: TrendingEventsSectionProps)
             </h2>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {trending.map(({ event }) => (
-                    <EventCard key={event.id} event={event} />
+                    <EventCard key={event.id} event={event} friendsGoing={friendsGoing?.get(event.id)} />
                 ))}
             </div>
         </section>

@@ -212,6 +212,13 @@ export const trendingEventSchema = z.object({
     trending_score: z.number(),
 })
 
+export const friendsAttendanceRowSchema = z.object({
+    event_id: z.string().uuid(),
+    user_id: z.string().uuid(),
+    display_name: z.string().nullable(),
+    avatar_url: z.string().nullable(),
+})
+
 export const artistSongStatsSchema = z.object({
     song_id: z.string().uuid(),
     song_name: z.string(),

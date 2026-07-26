@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Search, Calendar, SlidersHorizontal, X } from 'lucide-react'
 import { useEvents } from '../api/events'
+import { useFriendsGoing } from '../api/useFriendsGoing'
 import { EventCard } from '../components/EventCard'
 import { CitySelector } from '../components/CitySelector'
 import { RecommendedEventsSection } from '@/features/discovery/components/RecommendedEventsSection'
@@ -26,6 +27,8 @@ export function DiscoverPage() {
         page,
         pageSize: PAGE_SIZES.EVENTS,
     })
+
+    const { data: friendsGoing } = useFriendsGoing(data?.data.map(event => event.id) ?? [])
 
     useEffect(() => {
         const timeoutId = window.setTimeout(() => {
@@ -233,7 +236,7 @@ export function DiscoverPage() {
                     <>
                         <div className="grid gap-4 md:grid-cols-2">
                             {data.data.map(event => (
-                                <EventCard key={event.id} event={event} />
+                                <EventCard key={event.id} event={event} friendsGoing={friendsGoing?.get(event.id)} />
                             ))}
                         </div>
 

@@ -149,6 +149,20 @@ export function validateRpcResponse<T>(schema: z.ZodType<T>, data: unknown, cont
     return result.data
 }
 
+/**
+ * Trigger a browser download for text content (CSV, iCal, etc.)
+ */
+export function downloadTextFile(content: string, filename: string, mimeType: string): void {
+    const blob = new Blob([content], { type: mimeType })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(link.href)
+}
+
 interface CsvRow {
     [key: string]: string | number | boolean | null | undefined
 }
@@ -173,12 +187,5 @@ export function exportToCsv(rows: CsvRow[], filename: string): void {
         ...rows.map(row => headers.map(h => escape(row[h])).join(',')),
     ].join('\n')
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    link.href = URL.createObjectURL(blob)
-    link.download = filename
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(link.href)
+    downloadTextFile(csv, filename, 'text/csv;charset=utf-8;')
 }
