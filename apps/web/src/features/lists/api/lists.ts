@@ -3,23 +3,26 @@ import { supabase } from '@/shared/lib/supabase'
 import { sanitizeText } from '@/shared/lib/sanitize'
 import { createRateLimiter } from '@/shared/lib/throttle'
 import { RATE_LIMITS } from '@/shared/lib/constants'
+import { generateId } from '@/shared/lib/utils'
+import { useAuth } from '@/features/auth/hooks/useAuth'
 import type { List, ListItem, Event } from '@core/index'
 
 export const listKeys = {
     all: ['lists'] as const,
     byUser: (userId: string) => [...listKeys.all, 'user', userId] as const,
     detail: (id: string) => [...listKeys.all, 'detail', id] as const,
+    event: (eventId: string) => [...listKeys.all, 'event', eventId] as const,
 }
 
-interface ListWithItemCount extends List {
+export interface ListWithItemCount extends List {
     item_count: number
 }
 
-interface ListItemWithEvent extends ListItem {
+export interface ListItemWithEvent extends ListItem {
     event: Event | null
 }
 
-interface ListWithItems extends List {
+export interface ListWithItems extends List {
     items: ListItemWithEvent[]
     profile: {
         id: string
@@ -27,6 +30,34 @@ interface ListWithItems extends List {
         username: string | null
         avatar_url: string | null
     } | null
+}
+
+export function applyEventListToggle(listIds: string[], listId: string): string[] {
+    return listIds.includes(listId)
+        ? listIds.filter((id) => id !== listId)
+        : [...listIds, listId]
+}
+
+export function applyListItemAdded(list: ListWithItems, item: ListItemWithEvent): ListWithItems {
+    return {
+        ...list,
+        items: [...list.items, item].sort((a, b) => a.position - b.position),
+    }
+}
+
+export function applyListItemRemoved(list: ListWithItems, eventId: string): ListWithItems {
+    return {
+        ...list,
+        items: list.items.filter((item) => item.event_id !== eventId),
+    }
+}
+
+export function applyListItemCountDelta(lists: ListWithItemCount[], listId: string, delta: number): ListWithItemCount[] {
+    return lists.map((list) =>
+        list.id === listId
+            ? { ...list, item_count: Math.max(0, list.item_count + delta) }
+            : list
+    )
 }
 
 export function useUserLists(userId: string) {
@@ -82,7 +113,7 @@ export function useList(listId: string) {
 
 export function useEventLists(eventId: string) {
     return useQuery({
-        queryKey: [...listKeys.all, 'event', eventId],
+        queryKey: listKeys.event(eventId),
         queryFn: async () => {
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) return []
@@ -103,6 +134,7 @@ export function useEventLists(eventId: string) {
 
 const listCreateLimiter = createRateLimiter(RATE_LIMITS.LIST_CREATE)
 const listMutationLimiter = createRateLimiter(RATE_LIMITS.LIST_CREATE)
+const listItemLimiter = createRateLimiter(RATE_LIMITS.LIST_ITEM)
 
 export function useCreateList() {
     const queryClient = useQueryClient()
@@ -196,10 +228,11 @@ export function useDeleteList() {
 
 export function useAddEventToList() {
     const queryClient = useQueryClient()
+    const { user } = useAuth()
 
     return useMutation({
         mutationFn: async ({ listId, eventId }: { listId: string; eventId: string }) => {
-            if (!listMutationLimiter.allow()) {
+            if (!listItemLimiter.allow()) {
                 throw new Error('Please wait before modifying lists again')
             }
 
@@ -221,20 +254,66 @@ export function useAddEventToList() {
             if (error) throw error
             return data as ListItem
         },
-        onSuccess: (_data, variables) => {
-            queryClient.invalidateQueries({ queryKey: listKeys.detail(variables.listId) })
+        onMutate: async ({ listId, eventId }) => {
+            await Promise.all([
+                queryClient.cancelQueries({ queryKey: listKeys.event(eventId) }),
+                queryClient.cancelQueries({ queryKey: listKeys.detail(listId) }),
+                ...(user ? [queryClient.cancelQueries({ queryKey: listKeys.byUser(user.id) })] : []),
+            ])
+
+            const prevEventLists = queryClient.getQueryData<string[]>(listKeys.event(eventId))
+            const prevList = queryClient.getQueryData<ListWithItems>(listKeys.detail(listId))
+            const prevUserLists = user
+                ? queryClient.getQueryData<ListWithItemCount[]>(listKeys.byUser(user.id))
+                : undefined
+
+            if (prevEventLists) {
+                queryClient.setQueryData(listKeys.event(eventId), applyEventListToggle(prevEventLists, listId))
+            }
+            if (prevList) {
+                queryClient.setQueryData(listKeys.detail(listId), applyListItemAdded(prevList, {
+                    id: generateId(),
+                    list_id: listId,
+                    event_id: eventId,
+                    notes: null,
+                    position: prevList.items.length,
+                    created_at: new Date().toISOString(),
+                    event: null,
+                }))
+            }
+            if (prevUserLists && user) {
+                queryClient.setQueryData(listKeys.byUser(user.id), applyListItemCountDelta(prevUserLists, listId, 1))
+            }
+
+            return { prevEventLists, prevList, prevUserLists, userId: user?.id }
+        },
+        onError: (_err, { listId, eventId }, ctx) => {
+            if (!ctx) return
+            if (ctx.prevEventLists) {
+                queryClient.setQueryData(listKeys.event(eventId), ctx.prevEventLists)
+            }
+            if (ctx.prevList) {
+                queryClient.setQueryData(listKeys.detail(listId), ctx.prevList)
+            }
+            if (ctx.prevUserLists && ctx.userId) {
+                queryClient.setQueryData(listKeys.byUser(ctx.userId), ctx.prevUserLists)
+            }
+        },
+        onSettled: (_data, _err, { listId, eventId }) => {
+            queryClient.invalidateQueries({ queryKey: listKeys.detail(listId) })
             queryClient.invalidateQueries({ queryKey: listKeys.all })
-            queryClient.invalidateQueries({ queryKey: [...listKeys.all, 'event', variables.eventId] })
+            queryClient.invalidateQueries({ queryKey: listKeys.event(eventId) })
         },
     })
 }
 
 export function useRemoveEventFromList() {
     const queryClient = useQueryClient()
+    const { user } = useAuth()
 
     return useMutation({
         mutationFn: async ({ listId, eventId }: { listId: string; eventId: string }) => {
-            if (!listMutationLimiter.allow()) {
+            if (!listItemLimiter.allow()) {
                 throw new Error('Please wait before modifying lists again')
             }
 
@@ -246,10 +325,47 @@ export function useRemoveEventFromList() {
 
             if (error) throw error
         },
-        onSuccess: (_data, variables) => {
-            queryClient.invalidateQueries({ queryKey: listKeys.detail(variables.listId) })
+        onMutate: async ({ listId, eventId }) => {
+            await Promise.all([
+                queryClient.cancelQueries({ queryKey: listKeys.event(eventId) }),
+                queryClient.cancelQueries({ queryKey: listKeys.detail(listId) }),
+                ...(user ? [queryClient.cancelQueries({ queryKey: listKeys.byUser(user.id) })] : []),
+            ])
+
+            const prevEventLists = queryClient.getQueryData<string[]>(listKeys.event(eventId))
+            const prevList = queryClient.getQueryData<ListWithItems>(listKeys.detail(listId))
+            const prevUserLists = user
+                ? queryClient.getQueryData<ListWithItemCount[]>(listKeys.byUser(user.id))
+                : undefined
+
+            if (prevEventLists) {
+                queryClient.setQueryData(listKeys.event(eventId), applyEventListToggle(prevEventLists, listId))
+            }
+            if (prevList) {
+                queryClient.setQueryData(listKeys.detail(listId), applyListItemRemoved(prevList, eventId))
+            }
+            if (prevUserLists && user) {
+                queryClient.setQueryData(listKeys.byUser(user.id), applyListItemCountDelta(prevUserLists, listId, -1))
+            }
+
+            return { prevEventLists, prevList, prevUserLists, userId: user?.id }
+        },
+        onError: (_err, { listId, eventId }, ctx) => {
+            if (!ctx) return
+            if (ctx.prevEventLists) {
+                queryClient.setQueryData(listKeys.event(eventId), ctx.prevEventLists)
+            }
+            if (ctx.prevList) {
+                queryClient.setQueryData(listKeys.detail(listId), ctx.prevList)
+            }
+            if (ctx.prevUserLists && ctx.userId) {
+                queryClient.setQueryData(listKeys.byUser(ctx.userId), ctx.prevUserLists)
+            }
+        },
+        onSettled: (_data, _err, { listId, eventId }) => {
+            queryClient.invalidateQueries({ queryKey: listKeys.detail(listId) })
             queryClient.invalidateQueries({ queryKey: listKeys.all })
-            queryClient.invalidateQueries({ queryKey: [...listKeys.all, 'event', variables.eventId] })
+            queryClient.invalidateQueries({ queryKey: listKeys.event(eventId) })
         },
     })
 }

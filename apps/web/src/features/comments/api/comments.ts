@@ -3,6 +3,8 @@ import { supabase } from '@/shared/lib/supabase'
 import { sanitizeText } from '@/shared/lib/sanitize'
 import { createRateLimiter } from '@/shared/lib/throttle'
 import { RATE_LIMITS } from '@/shared/lib/constants'
+import { generateId } from '@/shared/lib/utils'
+import { useAuth } from '@/features/auth/hooks/useAuth'
 import type { Comment } from '@core/index'
 
 export const commentKeys = {
@@ -18,6 +20,14 @@ export interface CommentWithProfile extends Comment {
         username: string | null
         avatar_url: string | null
     } | null
+}
+
+export function applyCommentAdded(comments: CommentWithProfile[], comment: CommentWithProfile): CommentWithProfile[] {
+    return [...comments, comment].sort((a, b) => a.created_at.localeCompare(b.created_at))
+}
+
+export function applyCommentRemoved(comments: CommentWithProfile[], commentId: string): CommentWithProfile[] {
+    return comments.filter((comment) => comment.id !== commentId)
 }
 
 export function useComments(reviewId: string) {
@@ -44,6 +54,7 @@ const commentCreateLimiter = createRateLimiter(RATE_LIMITS.COMMENT_CREATE)
 
 export function useCreateComment(reviewId: string) {
     const queryClient = useQueryClient()
+    const { user } = useAuth()
 
     return useMutation({
         mutationFn: async (body: string) => {
@@ -51,7 +62,6 @@ export function useCreateComment(reviewId: string) {
                 throw new Error('Please wait before posting another comment')
             }
 
-            const { data: { user } } = await supabase.auth.getUser()
             if (!user) throw new Error('Not authenticated')
 
             const sanitized = sanitizeText(body)
@@ -73,7 +83,31 @@ export function useCreateComment(reviewId: string) {
             if (error) throw error
             return data as CommentWithProfile
         },
-        onSuccess: () => {
+        onMutate: async (body) => {
+            await queryClient.cancelQueries({ queryKey: commentKeys.byReview(reviewId) })
+
+            const prev = queryClient.getQueryData<CommentWithProfile[]>(commentKeys.byReview(reviewId))
+            if (prev) {
+                const now = new Date().toISOString()
+                queryClient.setQueryData(commentKeys.byReview(reviewId), applyCommentAdded(prev, {
+                    id: generateId(),
+                    review_id: reviewId,
+                    user_id: user?.id ?? '',
+                    body: sanitizeText(body),
+                    created_at: now,
+                    updated_at: now,
+                    profile: null,
+                }))
+            }
+
+            return { prev }
+        },
+        onError: (_err, _body, ctx) => {
+            if (ctx?.prev) {
+                queryClient.setQueryData(commentKeys.byReview(reviewId), ctx.prev)
+            }
+        },
+        onSettled: () => {
             queryClient.invalidateQueries({ queryKey: commentKeys.byReview(reviewId) })
         },
     })
@@ -99,7 +133,22 @@ export function useDeleteComment() {
 
             if (error) throw error
         },
-        onSuccess: (_data, variables) => {
+        onMutate: async ({ commentId, reviewId }) => {
+            await queryClient.cancelQueries({ queryKey: commentKeys.byReview(reviewId) })
+
+            const prev = queryClient.getQueryData<CommentWithProfile[]>(commentKeys.byReview(reviewId))
+            if (prev) {
+                queryClient.setQueryData(commentKeys.byReview(reviewId), applyCommentRemoved(prev, commentId))
+            }
+
+            return { prev }
+        },
+        onError: (_err, variables, ctx) => {
+            if (ctx?.prev) {
+                queryClient.setQueryData(commentKeys.byReview(variables.reviewId), ctx.prev)
+            }
+        },
+        onSettled: (_data, _err, variables) => {
             queryClient.invalidateQueries({ queryKey: commentKeys.byReview(variables.reviewId) })
         },
     })

@@ -2,13 +2,13 @@
 
 Use this at the **start of each agent session** when continuing build-out against [PROMPT.md](../PROMPT.md). After your turn, **update the "Last updated" section** and the **Open work** list so the next agent can loop cleanly.
 
-**Last updated:** 2026-07-21 (Sprint 2 complete — scheduled event ingest via GitHub Actions cron, 206 tests)
+**Last updated:** 2026-07-26 (Sprint 4 complete — UX correctness pack, 254 tests, 0 lint errors 0 warnings)
 
 ---
 
 ## One-line state (copy into next agent message)
 
-ratemygig M1–M5 + Sprints 1–2 complete: refactored APIs, split types, 206 tests, React.memo on cards, ARIA/focus management, rate limiting on 19 mutations, Zod validation on 8 RPC endpoints, sanitizeText on 50+ rendered fields, per-feature ErrorBoundaries on all 16 routes, CSV export from My Gigs, client-side image resize + thumbnail generation for review photos. Sprint 1: migration 013 adds SECURITY DEFINER notification triggers (artist_event, venue_event, new_review, new_comment, review_reaction) with preference gates + dedupe; 5 opt-out toggles in PreferencesForm. Sprint 2: .github/workflows/ingest.yml runs packages/jobs on GHA cron (06:00 UTC daily + workflow_dispatch); INGEST_CITIES env enables city-scoped ingest to stay under TM's 1000-item/query paging cap; DEPLOYMENT.md documents secrets/vars setup. Build clean, 0 lint errors. Next: Sprint 3 (Friends Going badge + calendar export).
+ratemygig M1–M5 + Sprints 1–4 complete: refactored APIs, split types, 254 tests, React.memo on cards, ARIA/focus management, rate limiting on 19 mutations, Zod validation on 9 RPC endpoints, sanitizeText on 50+ rendered fields, per-feature ErrorBoundaries on all 16 routes, CSV export from My Gigs, client-side image resize + thumbnail generation for review photos. Sprint 1: migration 013 adds SECURITY DEFINER notification triggers (artist_event, venue_event, new_review, new_comment, review_reaction) with preference gates + dedupe; 5 opt-out toggles in PreferencesForm. Sprint 2: .github/workflows/ingest.yml runs packages/jobs on GHA cron (06:00 UTC daily + workflow_dispatch); INGEST_CITIES env enables city-scoped ingest to stay under TM's 1000-item/query paging cap; DEPLOYMENT.md documents secrets/vars setup. Sprint 3: migration 014 adds SECURITY DEFINER get_friends_attendance RPC scoped to the caller's follow graph; Friends Going badge (avatar stack + count) on EventCard via optional pre-fetched prop (one batched RPC per page) and EventDetailPage; dependency-free ical.ts .ics builder with AddToCalendarButton (.ics download + Google Calendar template URL) on EventDetailPage and Export calendar on MyGigsPage. Sprint 4: optimistic updates with rollback (pure exported cache helpers, onMutate/onError/onSettled) for comment create/delete and list item add/remove; dedicated 2s RATE_LIMITS.LIST_ITEM limiter; AddToListButton auto-adds event to just-created list via CreateListModal onCreated; react-hooks warnings fixed with useWatch (plus a compiler-unmasked set-state-in-effect rewritten as render-phase state adjustment); CONCERNS.md Known Issues section emptied. Build clean, 0 lint errors 0 warnings. Next: Sprint 5 (Performance & CI hardening).
 
 ---
 
@@ -36,7 +36,7 @@ Mock catalog for offline path: `apps/web/src/features/events/providers/mock-prov
 
 ## Human / environment (not in git)
 
-1. **Supabase SQL:** run migrations in order: `packages/db/migrations/001` … `013` (including **`006_seed_mock_catalog.sql`** and **`013_notification_triggers.sql`**, the latter powers all live notifications), or the app leans on mock/empty DB behavior.
+1. **Supabase SQL:** run migrations in order: `packages/db/migrations/001` … `014` (including **`006_seed_mock_catalog.sql`**, **`013_notification_triggers.sql`** which powers all live notifications, and **`014_friends_attendance.sql`** which powers the Friends Going badge), or the app leans on mock/empty DB behavior.
 2. **`apps/web/.env.local`:** real `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`; optional `VITE_TICKETMASTER_API_KEY`, `VITE_EVENTS_PROVIDER` (`mock` | `ticketmaster` | `all`).
 3. **Playwright (fresh machine):** `cd apps/web && npx playwright install` before `npm run test:e2e`.
 

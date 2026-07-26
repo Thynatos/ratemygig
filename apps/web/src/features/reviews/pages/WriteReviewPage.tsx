@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { ChevronLeft, Eye, EyeOff, Save, Trash2 } from 'lucide-react'
@@ -57,7 +57,7 @@ export function WriteReviewPage() {
     const existingThumbPaths = existingReview?.photos?.map((p: { thumbnail_path: string | null }) => p.thumbnail_path) ?? []
     const { urls: existingPhotoUrls, thumbUrls: existingThumbUrls } = usePhotoUrls(existingPaths, existingThumbPaths)
 
-    const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<ReviewFormData>({
+    const { register, handleSubmit, setValue, control, formState: { errors } } = useForm<ReviewFormData>({
         resolver: zodResolver(reviewSchema),
         defaultValues: {
             rating: 0,
@@ -67,8 +67,8 @@ export function WriteReviewPage() {
         },
     })
 
-    const rating = watch('rating')
-    const isPublic = watch('isPublic')
+    const rating = useWatch({ control, name: 'rating' })
+    const isPublic = useWatch({ control, name: 'isPublic' })
 
     // Load existing review data
     useEffect(() => {
@@ -81,18 +81,25 @@ export function WriteReviewPage() {
     }, [existingReview, setValue])
 
     // Load existing photos with signed URLs (prefer thumbnails for editor preview)
-    useEffect(() => {
-        if (existingReview?.photos && existingPhotoUrls.size > 0) {
-            setPhotos(existingReview.photos.map((p: { id: string; storage_path: string; thumbnail_path: string | null }) => {
-                const thumbUrl = p.thumbnail_path ? existingThumbUrls.get(p.thumbnail_path) : null
-                const fullUrl = existingPhotoUrls.get(p.storage_path) || ''
-                return {
-                    id: p.id,
-                    url: thumbUrl || fullUrl,
-                }
-            }))
-        }
-    }, [existingReview, existingPhotoUrls, existingThumbUrls])
+    const [prevPhotoDeps, setPrevPhotoDeps] = useState<readonly [unknown, unknown, unknown] | null>(null)
+    if (
+        existingReview?.photos &&
+        existingPhotoUrls.size > 0 &&
+        (!prevPhotoDeps ||
+            prevPhotoDeps[0] !== existingReview ||
+            prevPhotoDeps[1] !== existingPhotoUrls ||
+            prevPhotoDeps[2] !== existingThumbUrls)
+    ) {
+        setPrevPhotoDeps([existingReview, existingPhotoUrls, existingThumbUrls])
+        setPhotos(existingReview.photos.map((p: { id: string; storage_path: string; thumbnail_path: string | null }) => {
+            const thumbUrl = p.thumbnail_path ? existingThumbUrls.get(p.thumbnail_path) : null
+            const fullUrl = existingPhotoUrls.get(p.storage_path) || ''
+            return {
+                id: p.id,
+                url: thumbUrl || fullUrl,
+            }
+        }))
+    }
 
     const onSubmit = async (data: ReviewFormData) => {
         try {

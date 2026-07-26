@@ -27,8 +27,8 @@
 |---|--------|------|--------|
 | 1 | Live notifications (DB triggers) | M | [x] |
 | 2 | Scheduled event ingest (CI cron) | S | [x] |
-| 3 | Friends Going + calendar export | M | [ ] |
-| 4 | UX correctness pack (known issues) | S | [ ] |
+| 3 | Friends Going + calendar export | M | [x] |
+| 4 | UX correctness pack (known issues) | S | [x] |
 | 5 | Performance & CI hardening | M | [ ] |
 | 6 | Gig Wrapped (year-in-review stats) | M | [ ] |
 | 7 | Share cards / OG images | L | [ ] |

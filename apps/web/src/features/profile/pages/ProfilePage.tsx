@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { User, Save, Eye, EyeOff } from 'lucide-react'
@@ -53,7 +53,7 @@ export function ProfilePage() {
         enabled: !!user,
     })
 
-    const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<ProfileFormData>({
+    const { register, handleSubmit, setValue, control, formState: { errors } } = useForm<ProfileFormData>({
         resolver: zodResolver(profileSchema),
         defaultValues: {
             username: '',
@@ -63,7 +63,7 @@ export function ProfilePage() {
         },
     })
 
-    const isPublic = watch('is_profile_public')
+    const isPublic = useWatch({ control, name: 'is_profile_public' })
 
     useEffect(() => {
         if (profile) {

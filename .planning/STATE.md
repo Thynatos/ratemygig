@@ -2,8 +2,8 @@
 
 ## Current Phase
 **Phase:** Post-M5 Sprints (see .planning/SPRINTS.md)
-**Status:** Sprint 2 complete — next up: Sprint 3 (Friends Going + calendar export)
-**Last Activity:** 2026-07-21
+**Status:** Sprint 4 complete — next up: Sprint 5 (Performance & CI hardening)
+**Last Activity:** 2026-07-26
 
 ## Completed
 - Auth (magic link + Google OAuth)
@@ -50,7 +50,13 @@
 - Sprint 2: .github/workflows/ingest.yml — GHA cron (06:00 UTC daily) + workflow_dispatch, concurrency group, 30min timeout, secrets/vars config
 - Sprint 2: INGEST_CITIES env (comma-separated) — city-scoped ingest in fetchAllEvents/runDailyIngest to stay under TM's 1000-item/query paging cap; country mode unchanged when unset
 - Sprint 2: DEPLOYMENT.md "Scheduled Ingest" section (GHA-vs-Edge-Functions decision, secrets/vars, paging cap); README roadmap item ticked
-- 206 unit tests passing, 0 lint errors
+- Sprint 3: migration 014 get_friends_attendance RPC (SECURITY DEFINER, caller-scoped social graph, batched by event ids)
+- Sprint 3: Friends Going badge (FriendsGoingBadge + optional friendsGoing prop on EventCard, one batched RPC per page) on Discover, Artist/Venue detail, Trending/Recommended sections, EventDetailPage
+- Sprint 3: shared/lib/ical.ts (.ics builder: CRLF, TEXT escaping, 75-octet folding, UTC basic dates, +3h default duration); AddToCalendarButton (.ics download + Google Calendar URL) on EventDetailPage; Export calendar button on MyGigsPage (all planned+attended)
+- Sprint 4: optimistic updates with rollback for comments (create/delete) and list items (add/remove) via pure exported cache-transform helpers
+- Sprint 4: dedicated 2s rate limiter (RATE_LIMITS.LIST_ITEM) for list item add/remove; CreateListModal onCreated wired in AddToListButton (event auto-added to new list)
+- Sprint 4: react-hooks lint warnings fixed via useWatch; CONCERNS.md "Known Issues" section emptied
+- 254 unit tests passing, 0 lint errors, 0 lint warnings
 
 ## Decisions
 - Direct Supabase client queries (no custom API layer)

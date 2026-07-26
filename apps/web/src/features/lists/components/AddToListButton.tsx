@@ -106,6 +106,7 @@ export function AddToListButton({ eventId }: AddToListButtonProps) {
             <CreateListModal
                 isOpen={showCreateModal}
                 onClose={() => setShowCreateModal(false)}
+                onCreated={(listId) => addToList.mutate({ listId, eventId })}
             />
         </>
     )

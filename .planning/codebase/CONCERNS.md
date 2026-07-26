@@ -73,8 +73,8 @@
 - **Remaining**: E2E tests still require running Supabase; no mock server strategy for CI
 
 ### Bundle Size
-- **Concern**: Main JS chunk is 597 KB (down from 692 KB after code splitting). Still above 500 KB warning threshold.
-- **Mitigation**: 15 routes now lazy-loaded via `React.lazy()`. Further splitting possible with `manualChunks` in Vite config.
+- **Concern**: Main JS chunk is 640 KB (measured 2026-07-21; the 597 KB figure previously recorded here was stale — it was already 638.5 KB before Sprint 3). Still above 500 KB warning threshold.
+- **Mitigation**: 15 routes now lazy-loaded via `React.lazy()`. Further splitting possible with `manualChunks` in Vite config (Sprint 5).
 - **Location**: `apps/web/src/app/App.tsx`
 
 ### Feed Pagination Architecture
@@ -182,21 +182,6 @@
 - `Review` type updated with `status: ReviewStatus` field
 - `profiles` extended with website_url, twitter_handle, instagram_handle columns
 
-## Known Issues (Medium — Not Blocking)
-
-### Comment/List Mutations Lack Optimistic Updates
-- `useCreateComment`, `useDeleteComment`, `useAddEventToList`, `useRemoveEventFromList` do not use `onMutate`/`onError` rollback
-- Comments and list changes appear only after server round-trip
-- Low priority since these are not frequently rapid-fire actions
-
-### Missing Rate Limiter on useAddEventToList
-- `useAddEventToList` has no rate limiter; rapid clicking could hit duplicate key errors (caught server-side by UNIQUE constraint)
-- Consider adding a 1-2s limiter or debouncing the AddToListButton
-
-### AddToListButton Does Not Auto-Add After List Creation
-- `CreateListModal`'s `onCreated` callback is not wired in `AddToListButton`
-- After creating a new list, the event is not automatically added to it
-
 ## Sprint 1 — Notification Triggers (Notes & Tradeoffs)
 
 ### Dedupe collapses repeat activity on the same review
@@ -222,3 +207,27 @@
 
 ### First ingest run after enabling notifications causes a fan-out burst
 - Expected behavior, not a bug: the first cron (or local) ingest after migration `013` is applied fires `artist_event`/`venue_event` notifications for every newly inserted future event matching existing follows. The `(user_id, type, link)` dedupe index keeps re-ingests quiet.
+
+## Sprint 3 — Friends Going + Calendar Export (Notes & Tradeoffs)
+
+### get_friends_attendance ignores its p_user_id parameter (deliberate spec deviation)
+- The RPC signature keeps `p_user_id UUID` per the Sprint 3 spec, but the function body filters `user_follows` by `follower_id = auth.uid()` only. Because the function is SECURITY DEFINER (required to read friends' attendance past the owner-only RLS policy), honoring p_user_id would let any caller enumerate any user's social graph. Documented in the migration header comment; the client always passes the caller's own id.
+
+### Friends' profile display fields bypass is_profile_public
+- `get_friends_attendance` joins `profiles` under SECURITY DEFINER, so a followed user's `display_name`/`avatar_url` is returned even when their profile is private. Deliberate: showing names/avatars of people you follow is the point of the badge. Revisit (e.g. filter `is_profile_public` in the RPC) if private-profile users object to being surfaced to their followers.
+
+### MyGigsPage always fetches the unfiltered gigs list
+- The Export calendar button needs ALL planned+attended events, so the page now calls `useMyGigs()` (no status) alongside the tab-filtered call. On the 'all' tab React Query dedupes (same `['my-gigs', undefined]` key); on the tracked-artists/venues tabs this adds one attendance fetch that wasn't previously made. Acceptable cost for correct export; could be made lazy if it ever matters.
+
+## Sprint 4 — UX Correctness Pack (Notes & Tradeoffs)
+
+### The "missing rate limiter" concern was stale
+- The old Known Issues entry claimed `useAddEventToList` had no rate limiter. In reality it already shared `listMutationLimiter` (5s) with update/delete/reorder — the real problem was the *opposite*: a 5s shared window made rapid add/remove of different events feel broken.
+- Sprint 4 gave `useAddEventToList`/`useRemoveEventFromList` their own `listItemLimiter` (`RATE_LIMITS.LIST_ITEM = 2000`). Create/update/delete/reorder stay on the existing 5s limiters. Still client-side only (see "No Rate Limiting" remaining risk).
+
+### Optimistic helpers are pure exported functions (no mutation-mock infra exists)
+- There is no supabase-mocking pattern for mutations anywhere in the test suite (`follows.test.ts` is pure key-factory tests; `layout-auth.test.tsx` mocks `supabase.auth` only). Rather than invent one, the optimistic cache transforms were extracted as pure exported functions (`applyCommentAdded`/`applyCommentRemoved` in comments.ts; `applyEventListToggle`/`applyListItemAdded`/`applyListItemRemoved`/`applyListItemCountDelta` in lists.ts) following the Sprint 3 `groupFriendsByEvent` precedent. `onMutate` handlers are thin wrappers: cancel → snapshot → `setQueryData` via helper; `onError` restores; `onSettled` (not `onSuccess`) invalidates so caches resync after rollback too.
+- Optimistic comment carries `profile: null` (CommentItem falls back to 'Anonymous'); optimistic list item carries `event: null` (ListPage falls back to 'Unknown Event'). Both use `generateId()` temp ids and are replaced by server rows on the `onSettled` invalidation.
+
+### Fixing the 2 react-hooks warnings unmasked a compiler error
+- The `watch()` calls in ProfilePage/WriteReviewPage caused React Compiler to skip compiling those components, which also hid a real `react-hooks/set-state-in-effect` error in WriteReviewPage (photo sync effect). After switching to `useWatch({ control, name })`, the effect was rewritten as React's documented render-phase state adjustment (prev-deps tracking) — same sync semantics, no eslint-disable anywhere.
