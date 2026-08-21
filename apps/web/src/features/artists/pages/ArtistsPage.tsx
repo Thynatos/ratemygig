@@ -1,18 +1,19 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Users, Search } from 'lucide-react'
+import { Link, useLocation } from 'react-router-dom'
+import { Search } from 'lucide-react'
 import { useArtists } from '../api/artists'
-import { Card, CardContent } from '@/shared/components/ui/Card'
-import { Badge } from '@/shared/components/ui/Badge'
 import { Button } from '@/shared/components/ui/Button'
-import { Skeleton } from '@/shared/components/ui/Loading'
+import { RowSkeletonList } from '@/shared/components/ui/Loading'
+import { BoardHeader, EmptyState } from '@/shared/components/ui/Board'
 import { sanitizeText } from '@/shared/lib/sanitize'
+import { cn } from '@/shared/lib/utils'
 
 const PAGE_SIZE = 24
 
 export function ArtistsPage() {
     const [searchQuery, setSearchQuery] = useState('')
     const [page, setPage] = useState(1)
+    const { pathname } = useLocation()
 
     const { data, isLoading } = useArtists(searchQuery || undefined, page, PAGE_SIZE)
 
@@ -20,96 +21,119 @@ export function ArtistsPage() {
     const hasMore = data?.hasMore ?? false
 
     return (
-        <div className="page-container">
-            <div className="mb-8">
-                <h1 className="section-title flex items-center gap-3">
-                    <Users className="w-8 h-8 text-accent-400" />
-                    Artists
-                </h1>
-                <p className="section-subtitle">Explore artists and their concert ratings</p>
-            </div>
+        <div className="page page-body">
+            <BoardHeader
+                title="Artists"
+                lede="Everyone who has played a gig on the board. Open one to see where they've played and how the nights were rated."
+            >
+                <div className="tab-rail mb-4">
+                    <Link
+                        to="/artists"
+                        className={cn('tab', pathname === '/artists' && 'tab-active')}
+                        aria-current={pathname === '/artists' ? 'page' : undefined}
+                    >
+                        All artists
+                    </Link>
+                    <Link
+                        to="/artists/top"
+                        className={cn('tab', pathname === '/artists/top' && 'tab-active')}
+                    >
+                        Top rated
+                    </Link>
+                </div>
 
-            {/* Search */}
-            <div className="mb-8">
                 <div className="relative max-w-md">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-surface-500" />
+                    <label htmlFor="artist-search" className="sr-only">
+                        Search artists
+                    </label>
+                    <Search
+                        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-bone-faint"
+                        aria-hidden="true"
+                    />
                     <input
-                        type="text"
+                        id="artist-search"
+                        type="search"
                         value={searchQuery}
-                        onChange={(e) => { setSearchQuery(e.target.value); setPage(1) }}
-                        placeholder="Search artists..."
-                        className="input-field pl-12"
+                        onChange={e => {
+                            setSearchQuery(e.target.value)
+                            setPage(1)
+                        }}
+                        placeholder="Search artists"
+                        className="input-field pl-9"
                     />
                 </div>
-            </div>
+            </BoardHeader>
 
-            {/* Loading */}
-            {isLoading && page === 1 && (
-                <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-                    {Array.from({ length: 8 }).map((_, i) => (
-                        <Card key={i}>
-                            <CardContent className="p-5">
-                                <Skeleton className="w-16 h-16 rounded-full mx-auto mb-3" />
-                                <Skeleton className="h-5 w-3/4 mx-auto mb-2" />
-                                <Skeleton className="h-4 w-1/2 mx-auto" />
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
-            )}
+            {isLoading && page === 1 && <RowSkeletonList count={8} label="Loading artists" />}
 
-            {/* Empty State */}
             {!isLoading && artists.length === 0 && (
-                <Card>
-                    <CardContent className="p-12 text-center">
-                        <Users className="w-16 h-16 text-surface-600 mx-auto mb-4" />
-                        <h3 className="text-xl font-semibold text-white mb-2">No artists found</h3>
-                        <p className="text-surface-400">
-                            {searchQuery
-                                ? 'Try a different search term'
-                                : 'Artists will appear here as events are added'}
-                        </p>
-                    </CardContent>
-                </Card>
+                <EmptyState
+                    title={searchQuery ? 'No artist by that name' : 'No artists yet'}
+                    body={
+                        searchQuery
+                            ? `Nothing matches “${searchQuery}”. Check the spelling, or try part of the name.`
+                            : 'Artists appear here as gigs are added to the board.'
+                    }
+                    action={
+                        searchQuery ? (
+                            <Button variant="secondary" onClick={() => setSearchQuery('')}>
+                                Clear search
+                            </Button>
+                        ) : (
+                            <Link to="/" className="btn-secondary">
+                                See what's on
+                            </Link>
+                        )
+                    }
+                />
             )}
 
-            {/* Artists Grid */}
             {(!isLoading || page > 1) && artists.length > 0 && (
-                <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-                    {artists.map(artist => (
-                        <Link key={artist.id} to={`/artists/${artist.id}`}>
-                            <Card hoverable>
-                                <CardContent className="p-5 text-center">
-                                    {/* Avatar */}
-                                    <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gradient-to-br from-accent-500/30 to-primary-500/30 flex items-center justify-center text-2xl font-bold text-white">
-                                        {sanitizeText(artist.name).charAt(0)}
-                                    </div>
+                <>
+                    <ul className="rail-list">
+                        {artists.map(artist => {
+                            const name = sanitizeText(artist.name)
+                            return (
+                                <li key={artist.id}>
+                                    <Link
+                                        to={`/artists/${artist.id}`}
+                                        className="row row-interactive"
+                                    >
+                                        <span className="row-slot">
+                                            <span
+                                                className="voice-board text-bone-dim text-[1.75rem] leading-none"
+                                                aria-hidden="true"
+                                            >
+                                                {name.charAt(0)}
+                                            </span>
+                                        </span>
+                                        <span className="row-body">
+                                            <span className="row-title">{name}</span>
+                                        </span>
+                                        <span className="row-end">
+                                            <span className="voice-label text-bone-faint">
+                                                View
+                                            </span>
+                                        </span>
+                                    </Link>
+                                </li>
+                            )
+                        })}
+                    </ul>
 
-                                    <h3 className="font-semibold text-white mb-2 line-clamp-1">
-                                        {sanitizeText(artist.name)}
-                                    </h3>
-
-                                    <div className="flex items-center justify-center gap-2">
-                                        <Badge variant="accent">Artist</Badge>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </Link>
-                    ))}
-                </div>
-            )}
-
-            {/* Load More */}
-            {hasMore && (
-                <div className="mt-8 text-center">
-                    <Button
-                        variant="secondary"
-                        onClick={() => setPage(p => p + 1)}
-                        isLoading={isLoading && page > 1}
-                    >
-                        Load More Artists
-                    </Button>
-                </div>
+                    {hasMore && (
+                        <div className="mt-4">
+                            <Button
+                                variant="secondary"
+                                onClick={() => setPage(p => p + 1)}
+                                isLoading={isLoading && page > 1}
+                                loadingLabel="Loading more artists"
+                            >
+                                Show more artists
+                            </Button>
+                        </div>
+                    )}
+                </>
             )}
         </div>
     )

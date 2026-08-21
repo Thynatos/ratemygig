@@ -1,10 +1,8 @@
 import { Link } from 'react-router-dom'
-import { MapPin } from 'lucide-react'
 import { useFollowedVenues } from '../api/venues'
-import { Card, CardContent } from '@/shared/components/ui/Card'
-import { Button } from '@/shared/components/ui/Button'
 import { useAuth } from '@/features/auth/hooks/useAuth'
-import { EventCardSkeleton } from '@/shared/components/ui/Loading'
+import { RowSkeletonList } from '@/shared/components/ui/Loading'
+import { EmptyState } from '@/shared/components/ui/Board'
 import { sanitizeText } from '@/shared/lib/sanitize'
 
 export function FollowedVenuesList() {
@@ -13,64 +11,64 @@ export function FollowedVenuesList() {
 
     if (!user) {
         return (
-            <Card>
-                <CardContent className="p-8 text-center">
-                    <MapPin className="w-12 h-12 text-surface-600 mx-auto mb-4" />
-                    <p className="text-surface-400">Sign in to track venues</p>
-                </CardContent>
-            </Card>
+            <EmptyState
+                title="Sign in to follow venues"
+                body="Following a room puts its new listings in your notifications."
+                action={
+                    <Link to="/login" className="btn-primary">
+                        Sign in
+                    </Link>
+                }
+            />
         )
     }
 
     if (isLoading) {
-        return (
-            <div className="grid gap-4 md:grid-cols-2">
-                {Array.from({ length: 3 }).map((_, i) => (
-                    <EventCardSkeleton key={i} />
-                ))}
-            </div>
-        )
+        return <RowSkeletonList count={3} label="Loading venues you follow" />
     }
 
     if (!follows || follows.length === 0) {
         return (
-            <Card>
-                <CardContent className="p-8 text-center">
-                    <MapPin className="w-12 h-12 text-surface-600 mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold text-white mb-2">No tracked venues yet</h3>
-                    <p className="text-surface-400 mb-6">Track venues to see their upcoming events here</p>
-                    <Link to="/venues">
-                        <Button>Browse Venues</Button>
+            <EmptyState
+                title="You're not following any rooms"
+                body="Follow a venue and its new listings turn up in your notifications."
+                action={
+                    <Link to="/venues" className="btn-primary">
+                        Browse venues
                     </Link>
-                </CardContent>
-            </Card>
+                }
+            />
         )
     }
 
     return (
-        <div className="grid gap-4 md:grid-cols-2">
-            {follows.map((follow: { id: string; venue: { id: string; name: string; city: string } }) => {
-                const venue = follow.venue
-                if (!venue) return null
+        <ul className="rail-list">
+            {follows.map(
+                (follow: { id: string; venue: { id: string; name: string; city: string } }) => {
+                    const venue = follow.venue
+                    if (!venue) return null
+                    const name = sanitizeText(venue.name)
 
-                return (
-                    <Link key={follow.id} to={`/venues/${venue.id}`}>
-                        <Card hoverable>
-                            <CardContent className="p-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500/30 to-accent-500/30 flex items-center justify-center border-2 border-surface-700">
-                                        <MapPin className="w-5 h-5 text-primary-400" />
-                                    </div>
-                                    <div>
-                                        <p className="font-semibold text-white">{sanitizeText(venue.name)}</p>
-                                        <p className="text-sm text-surface-400">{sanitizeText(venue.city)}</p>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </Link>
-                )
-            })}
-        </div>
+                    return (
+                        <li key={follow.id}>
+                            <Link to={`/venues/${venue.id}`} className="row row-interactive">
+                                <span className="row-slot">
+                                    <span
+                                        className="voice-board text-bone-dim text-[1.75rem] leading-none"
+                                        aria-hidden="true"
+                                    >
+                                        {name.charAt(0)}
+                                    </span>
+                                </span>
+                                <span className="row-body">
+                                    <span className="row-title">{name}</span>
+                                    <span className="row-meta">{sanitizeText(venue.city)}</span>
+                                </span>
+                            </Link>
+                        </li>
+                    )
+                }
+            )}
+        </ul>
     )
 }

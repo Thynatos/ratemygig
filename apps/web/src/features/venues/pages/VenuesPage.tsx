@@ -1,13 +1,13 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { MapPin, Star, Search } from 'lucide-react'
+import { Link, useLocation } from 'react-router-dom'
+import { Search } from 'lucide-react'
 import { useVenues } from '../api/venues'
 import { useCities } from '@/features/events/api/events'
-import { Card, CardContent } from '@/shared/components/ui/Card'
-import { Badge } from '@/shared/components/ui/Badge'
 import { Button } from '@/shared/components/ui/Button'
-import { Skeleton } from '@/shared/components/ui/Loading'
+import { RowSkeletonList } from '@/shared/components/ui/Loading'
+import { BoardHeader, EmptyState } from '@/shared/components/ui/Board'
 import { sanitizeText } from '@/shared/lib/sanitize'
+import { cn } from '@/shared/lib/utils'
 
 const PAGE_SIZE = 24
 
@@ -15,6 +15,7 @@ export function VenuesPage() {
     const [selectedCity, setSelectedCity] = useState<string>('')
     const [searchQuery, setSearchQuery] = useState('')
     const [page, setPage] = useState(1)
+    const { pathname } = useLocation()
 
     const { data: cities = [] } = useCities()
     const { data, isLoading } = useVenues(selectedCity || undefined, page, PAGE_SIZE)
@@ -22,118 +23,157 @@ export function VenuesPage() {
     const venues = data?.data ?? []
     const hasMore = data?.hasMore ?? false
 
-    const filteredVenues = venues.filter(venue =>
-        venue.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        venue.city.toLowerCase().includes(searchQuery.toLowerCase())
+    const filteredVenues = venues.filter(
+        venue =>
+            venue.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            venue.city.toLowerCase().includes(searchQuery.toLowerCase())
     )
 
+    const hasFilters = Boolean(searchQuery || selectedCity)
+
     return (
-        <div className="page-container">
-            <div className="mb-8">
-                <h1 className="section-title flex items-center gap-3">
-                    <MapPin className="w-8 h-8 text-primary-400" />
-                    Venues
-                </h1>
-                <p className="section-subtitle">Discover concert venues and their ratings</p>
-            </div>
-
-            {/* Filters */}
-            <div className="flex flex-col sm:flex-row gap-4 mb-8">
-                {/* Search */}
-                <div className="relative flex-1">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-surface-500" />
-                    <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search venues..."
-                        className="input-field pl-12"
-                    />
-                </div>
-
-                {/* City Filter */}
-                <select
-                    value={selectedCity}
-                    onChange={(e) => { setSelectedCity(e.target.value); setPage(1) }}
-                    className="input-field w-full sm:w-48"
-                >
-                    <option value="">All Cities</option>
-                    {cities.map(city => (
-                        <option key={city} value={city}>{city}</option>
-                    ))}
-                </select>
-            </div>
-
-            {/* Loading */}
-            {isLoading && page === 1 && (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {Array.from({ length: 6 }).map((_, i) => (
-                        <Card key={i}>
-                            <CardContent className="p-5">
-                                <Skeleton className="h-6 w-3/4 mb-2" />
-                                <Skeleton className="h-4 w-1/2 mb-4" />
-                                <Skeleton className="h-4 w-1/3" />
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
-            )}
-
-            {/* Empty State */}
-            {!isLoading && filteredVenues.length === 0 && (
-                <Card>
-                    <CardContent className="p-12 text-center">
-                        <MapPin className="w-16 h-16 text-surface-600 mx-auto mb-4" />
-                        <h3 className="text-xl font-semibold text-white mb-2">No venues found</h3>
-                        <p className="text-surface-400">
-                            {searchQuery || selectedCity
-                                ? 'Try adjusting your filters'
-                                : 'Venues will appear here as events are added'}
-                        </p>
-                    </CardContent>
-                </Card>
-            )}
-
-            {/* Venues Grid */}
-            {(!isLoading || page > 1) && filteredVenues.length > 0 && (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {filteredVenues.map(venue => (
-                        <Link key={venue.id} to={`/venues/${venue.id}`}>
-                            <Card hoverable>
-                                <CardContent className="p-5">
-                                    <h3 className="font-semibold text-lg text-white mb-1">
-                                        {sanitizeText(venue.name)}
-                                    </h3>
-                                    <p className="text-surface-400 flex items-center gap-1 mb-4">
-                                        <MapPin className="w-4 h-4" />
-                                        {sanitizeText(venue.city)}, {sanitizeText(venue.country)}
-                                    </p>
-
-                                    <div className="flex items-center justify-between">
-                                        <Badge variant="surface">Venue</Badge>
-                                        <span className="flex items-center gap-1 text-sm text-surface-400">
-                                            <Star className="w-4 h-4" />
-                                            <span>—</span>
-                                        </span>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </Link>
-                    ))}
-                </div>
-            )}
-
-            {/* Load More */}
-            {hasMore && (
-                <div className="mt-8 text-center">
-                    <Button
-                        variant="secondary"
-                        onClick={() => setPage(p => p + 1)}
-                        isLoading={isLoading && page > 1}
+        <div className="page page-body">
+            <BoardHeader
+                title="Venues"
+                lede="Every room on the board. The venue is half the night — open one to see how its gigs get rated."
+            >
+                <div className="tab-rail mb-4">
+                    <Link
+                        to="/venues"
+                        className={cn('tab', pathname === '/venues' && 'tab-active')}
+                        aria-current={pathname === '/venues' ? 'page' : undefined}
                     >
-                        Load More Venues
-                    </Button>
+                        All venues
+                    </Link>
+                    <Link
+                        to="/venues/top"
+                        className={cn('tab', pathname === '/venues/top' && 'tab-active')}
+                    >
+                        Top rated
+                    </Link>
                 </div>
+
+                <div className="grid gap-2 sm:grid-cols-[1fr_minmax(0,12rem)] max-w-2xl">
+                    <div className="relative">
+                        <label htmlFor="venue-search" className="sr-only">
+                            Search venues
+                        </label>
+                        <Search
+                            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-bone-faint"
+                            aria-hidden="true"
+                        />
+                        <input
+                            id="venue-search"
+                            type="search"
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                            placeholder="Search rooms or cities"
+                            className="input-field pl-9"
+                        />
+                    </div>
+
+                    <div>
+                        <label htmlFor="venue-city" className="sr-only">
+                            Filter by city
+                        </label>
+                        <select
+                            id="venue-city"
+                            value={selectedCity}
+                            onChange={e => {
+                                setSelectedCity(e.target.value)
+                                setPage(1)
+                            }}
+                            className="input-field"
+                        >
+                            <option value="">Every city</option>
+                            {cities.map(city => (
+                                <option key={city} value={city}>
+                                    {city}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+            </BoardHeader>
+
+            {isLoading && page === 1 && <RowSkeletonList count={8} label="Loading venues" />}
+
+            {!isLoading && filteredVenues.length === 0 && (
+                <EmptyState
+                    title={hasFilters ? 'No room matches' : 'No venues yet'}
+                    body={
+                        hasFilters
+                            ? 'Nothing matches those filters. Try a wider city or a shorter search.'
+                            : 'Venues appear here as gigs are added to the board.'
+                    }
+                    action={
+                        hasFilters ? (
+                            <Button
+                                variant="secondary"
+                                onClick={() => {
+                                    setSearchQuery('')
+                                    setSelectedCity('')
+                                    setPage(1)
+                                }}
+                            >
+                                Clear filters
+                            </Button>
+                        ) : (
+                            <Link to="/" className="btn-secondary">
+                                See what's on
+                            </Link>
+                        )
+                    }
+                />
+            )}
+
+            {(!isLoading || page > 1) && filteredVenues.length > 0 && (
+                <>
+                    <ul className="rail-list">
+                        {filteredVenues.map(venue => {
+                            const name = sanitizeText(venue.name)
+                            return (
+                                <li key={venue.id}>
+                                    <Link to={`/venues/${venue.id}`} className="row row-interactive">
+                                        <span className="row-slot">
+                                            <span
+                                                className="voice-board text-bone-dim text-[1.75rem] leading-none"
+                                                aria-hidden="true"
+                                            >
+                                                {name.charAt(0)}
+                                            </span>
+                                        </span>
+                                        <span className="row-body">
+                                            <span className="row-title">{name}</span>
+                                            <span className="row-meta">
+                                                {sanitizeText(venue.city)},{' '}
+                                                {sanitizeText(venue.country)}
+                                            </span>
+                                        </span>
+                                        <span className="row-end">
+                                            <span className="voice-label text-bone-faint">
+                                                View
+                                            </span>
+                                        </span>
+                                    </Link>
+                                </li>
+                            )
+                        })}
+                    </ul>
+
+                    {hasMore && (
+                        <div className="mt-4">
+                            <Button
+                                variant="secondary"
+                                onClick={() => setPage(p => p + 1)}
+                                isLoading={isLoading && page > 1}
+                                loadingLabel="Loading more venues"
+                            >
+                                Show more venues
+                            </Button>
+                        </div>
+                    )}
+                </>
             )}
         </div>
     )

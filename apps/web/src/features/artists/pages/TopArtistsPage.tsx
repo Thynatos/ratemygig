@@ -1,12 +1,12 @@
 import { useState, useMemo } from 'react'
-import { Link } from 'react-router-dom'
-import { Trophy } from 'lucide-react'
+import { Link, useLocation } from 'react-router-dom'
 import { useTopArtists } from '../api/artists'
-import { Card, CardContent } from '@/shared/components/ui/Card'
-import { Skeleton } from '@/shared/components/ui/Loading'
+import { RowSkeletonList } from '@/shared/components/ui/Loading'
 import { QueryErrorState } from '@/shared/components/QueryErrorState'
-import { RatingDisplay } from '@/shared/components/ui/StarRating'
+import { BoardHeader, EmptyState } from '@/shared/components/ui/Board'
+import { Leaderboard, LeaderboardFilters } from '@/shared/components/Leaderboard'
 import { sanitizeText } from '@/shared/lib/sanitize'
+import { cn } from '@/shared/lib/utils'
 
 export function TopArtistsPage() {
     const yearChoices = useMemo(
@@ -15,117 +15,92 @@ export function TopArtistsPage() {
     )
     const [year, setYear] = useState<number | ''>('')
     const [city, setCity] = useState('')
+    const { pathname } = useLocation()
 
     // No `= []` default: a failed query must surface as an error state, not
     // masquerade as "no rated artists yet" (audit finding A13).
-    const { data: artistsData, isLoading, isError, refetch } = useTopArtists(
-        city.trim() || undefined,
-        year === '' ? undefined : year,
-    )
+    const {
+        data: artistsData,
+        isLoading,
+        isError,
+        refetch,
+    } = useTopArtists(city.trim() || undefined, year === '' ? undefined : year)
     const artists = artistsData ?? []
 
+    const entries = artists.map(artist => ({
+        id: artist.artist_id,
+        name: sanitizeText(artist.artist_name),
+        avgRating: Number(artist.avg_rating),
+        countReviews: Number(artist.count_reviews),
+        // The leaderboard RPC returns no per-star buckets; open the artist for
+        // the full distribution rather than showing a fabricated one here.
+    }))
+
+    const scope = [year === '' ? null : String(year), city.trim() || null]
+        .filter(Boolean)
+        .join(' · ')
+
     return (
-        <div className="page-container">
-            <div className="mb-8">
-                <h1 className="section-title flex items-center gap-3">
-                    <Trophy className="w-8 h-8 text-yellow-400" />
-                    Top Rated Artists
-                </h1>
-                <p className="section-subtitle">Artists ranked by average review rating</p>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-4 mb-8">
-                <select
-                    value={year === '' ? '' : String(year)}
-                    onChange={e => {
-                        const v = e.target.value
-                        setYear(v === '' ? '' : Number(v))
-                    }}
-                    className="input-field w-full sm:w-48"
-                >
-                    <option value="">All years</option>
-                    {yearChoices.map(y => (
-                        <option key={y} value={y}>{y}</option>
-                    ))}
-                </select>
-
-                <input
-                    type="text"
-                    value={city}
-                    onChange={e => setCity(e.target.value)}
-                    placeholder="Filter by city..."
-                    className="input-field flex-1"
-                />
-            </div>
-
-            {isLoading && (
-                <div className="space-y-4">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                        <Card key={i}>
-                            <CardContent className="p-5">
-                                <Skeleton className="h-6 w-1/3 mb-2" />
-                                <Skeleton className="h-4 w-1/4 mb-2" />
-                                <Skeleton className="h-4 w-1/5" />
-                            </CardContent>
-                        </Card>
-                    ))}
+        <div className="page page-body">
+            <BoardHeader
+                strip={scope || 'All time · everywhere'}
+                title="Top rated artists"
+                lede="Ranked by the average score of every gig of theirs that anyone has logged."
+            >
+                <div className="tab-rail mb-4">
+                    <Link
+                        to="/artists"
+                        className={cn('tab', pathname === '/artists' && 'tab-active')}
+                    >
+                        All artists
+                    </Link>
+                    <Link
+                        to="/artists/top"
+                        className={cn('tab', pathname === '/artists/top' && 'tab-active')}
+                        aria-current={pathname === '/artists/top' ? 'page' : undefined}
+                    >
+                        Top rated
+                    </Link>
                 </div>
-            )}
+
+                <LeaderboardFilters
+                    year={year}
+                    onYearChange={setYear}
+                    city={city}
+                    onCityChange={setCity}
+                    yearChoices={yearChoices}
+                    cityLabel="City the gig was in"
+                />
+            </BoardHeader>
+
+            {isLoading && <RowSkeletonList count={6} label="Ranking artists" />}
 
             {!isLoading && isError && (
                 <QueryErrorState
-                    title="Couldn't load top artists"
+                    title="Couldn't rank the artists"
+                    message="The ratings query failed. Your filters are still set."
                     onRetry={() => refetch()}
                 />
             )}
 
-            {!isLoading && !isError && artists.length === 0 && (
-                <Card>
-                    <CardContent className="p-12 text-center">
-                        <Trophy className="w-16 h-16 text-surface-600 mx-auto mb-4" />
-                        <h3 className="text-xl font-semibold text-white mb-2">No rated artists yet</h3>
-                        <p className="text-surface-400">
-                            Artists will appear here once they receive reviews
-                        </p>
-                    </CardContent>
-                </Card>
+            {!isLoading && !isError && entries.length === 0 && (
+                <EmptyState
+                    title="Nothing to rank yet"
+                    body={
+                        scope
+                            ? 'No artist has a rated gig matching those filters. Try a wider year or clear the city.'
+                            : 'An artist joins this table once someone rates one of their gigs.'
+                    }
+                    action={
+                        <Link to="/artists" className="btn-secondary">
+                            Browse all artists
+                        </Link>
+                    }
+                />
             )}
 
-            {!isLoading && !isError && artists.length > 0 && (
-                <div className="space-y-4">
-                    {artists.map((artist, index) => (
-                        <Link key={artist.artist_id} to={`/artists/${artist.artist_id}`}>
-                            <Card hoverable>
-                                <CardContent className="p-5">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-yellow-500/10 text-yellow-400 font-bold text-lg">
-                                                {index + 1}
-                                            </div>
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-accent-500/30 to-primary-500/30 flex items-center justify-center text-xl font-bold text-white">
-                                                    {sanitizeText(artist.artist_name).charAt(0)}
-                                                </div>
-                                                <div>
-                                                    <h3 className="font-semibold text-lg text-white">
-                                                        {sanitizeText(artist.artist_name)}
-                                                    </h3>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="text-right">
-                                            <RatingDisplay
-                                                rating={Number(artist.avg_rating)}
-                                                count={Number(artist.count_reviews)}
-                                                size="sm"
-                                            />
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </Link>
-                    ))}
-                </div>
+            {!isLoading && !isError && entries.length > 0 && (
+                <Leaderboard entries={entries} hrefPrefix="/artists" />
             )}
         </div>
     )
