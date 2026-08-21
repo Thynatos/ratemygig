@@ -109,6 +109,8 @@ export function EnhancedSearch() {
                 <input
                     id="enhanced-search"
                     type="search"
+                            autoComplete="off"
+                            spellCheck={false}
                     value={query}
                     onChange={e => { setQuery(e.target.value); setIsOpen(true) }}
                     onFocus={() => { if (debouncedQuery.length >= 2) setIsOpen(true) }}

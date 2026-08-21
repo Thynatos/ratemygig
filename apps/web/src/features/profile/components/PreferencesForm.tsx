@@ -129,6 +129,7 @@ export function PreferencesForm() {
                             value={city}
                             onChange={e => setCity(e.target.value)}
                             placeholder="Manchester"
+                            autoComplete="address-level2"
                             className="flex-1"
                         />
                         <Button

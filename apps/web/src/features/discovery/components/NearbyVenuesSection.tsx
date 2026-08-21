@@ -109,7 +109,7 @@ export function NearbyVenuesSection() {
                                 </span>
                             </span>
                             <span className="voice-data text-ui-sm text-bone-dim shrink-0 tabular-nums">
-                                {venue.distance_km.toFixed(1)} km
+                                {venue.distance_km.toFixed(1)}&nbsp;km
                             </span>
                         </Link>
                     </li>

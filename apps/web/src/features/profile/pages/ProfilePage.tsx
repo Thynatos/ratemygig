@@ -191,6 +191,8 @@ export function ProfilePage() {
                             <Input
                                 label="Username"
                                 placeholder="your_username"
+                                autoComplete="off"
+                                spellCheck={false}
                                 hint="This becomes your profile address: ratemygig.com/u/your_username"
                                 error={errors.username?.message}
                                 {...register('username')}
@@ -199,6 +201,7 @@ export function ProfilePage() {
                             <Input
                                 label="Display name"
                                 placeholder="What people should call you"
+                                autoComplete="off"
                                 error={errors.display_name?.message}
                                 {...register('display_name')}
                             />

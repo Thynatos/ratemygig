@@ -65,6 +65,8 @@ export function VenuesPage() {
                         <input
                             id="venue-search"
                             type="search"
+                            autoComplete="off"
+                            spellCheck={false}
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
                             placeholder="Search rooms or cities"

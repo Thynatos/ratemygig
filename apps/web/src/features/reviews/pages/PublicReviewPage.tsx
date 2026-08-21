@@ -146,6 +146,8 @@ export function PublicReviewPage() {
                                             <img
                                                 src={displayUrl}
                                                 alt={`Photo from ${authorName}'s review${event ? ` of ${sanitizeText(event.name)}` : ''}`}
+                                                width={300}
+                                                height={300}
                                                 loading="lazy"
                                                 decoding="async"
                                             />

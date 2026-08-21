@@ -53,6 +53,8 @@ export function ArtistsPage() {
                     <input
                         id="artist-search"
                         type="search"
+                            autoComplete="off"
+                            spellCheck={false}
                         value={searchQuery}
                         onChange={e => {
                             setSearchQuery(e.target.value)

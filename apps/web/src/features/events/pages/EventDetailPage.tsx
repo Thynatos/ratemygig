@@ -339,8 +339,11 @@ export function EventDetailPage() {
                                                                 <img
                                                                     src={url}
                                                                     alt={`Photo from ${review.profile?.display_name || 'this'} review`}
+                                                                    width={64}
+                                                                    height={64}
                                                                     className="h-16 w-16 object-cover border border-rail hover:opacity-80 transition-opacity duration-150 ease-board"
                                                                     loading="lazy"
+                                                                    decoding="async"
                                                                 />
                                                             </Link>
                                                         ) : null

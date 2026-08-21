@@ -39,7 +39,7 @@ export function PhotoUploader({
             }
             if (file.size > maxSizeMB * 1024 * 1024) {
                 setError(
-                    `${sanitizeText(file.name)} is over ${maxSizeMB}MB. Shrink it and try again.`
+                    `${sanitizeText(file.name)} is over ${maxSizeMB}\u00a0MB. Shrink it and try again.`
                 )
                 continue
             }
@@ -106,7 +106,7 @@ export function PhotoUploader({
                         Drop photos here, or choose files
                     </span>
                     <span className="block voice-label text-bone-faint mt-1.5">
-                        JPG, PNG or WebP · up to {maxSizeMB}MB each · {maxPhotos} max
+                        JPG, PNG or WebP · up to {maxSizeMB}&nbsp;MB each · {maxPhotos} max
                     </span>
                 </button>
             )}
@@ -127,6 +127,10 @@ export function PhotoUploader({
                             <img
                                 src={photo.url}
                                 alt={`Photo ${index + 1} of ${photos.length}`}
+                                width={300}
+                                height={300}
+                                loading="lazy"
+                                decoding="async"
                                 className="w-full h-full object-cover"
                             />
                             <button

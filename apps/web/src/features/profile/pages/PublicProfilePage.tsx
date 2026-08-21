@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/shared/lib/supabase'
 import { Avatar } from '@/shared/components/ui/Avatar'
@@ -25,7 +24,12 @@ interface PublicListRow {
 
 export function PublicProfilePage() {
     const { username } = useParams<{ username: string }>()
-    const [activeTab, setActiveTab] = useState<TabType>('reviews')
+    // The tab lives in the URL so a profile view is linkable.
+    const [searchParams, setSearchParams] = useSearchParams()
+    const activeTab: TabType = searchParams.get('tab') === 'lists' ? 'lists' : 'reviews'
+    const setActiveTab = (tab: TabType) => {
+        setSearchParams(tab === 'reviews' ? {} : { tab }, { replace: true })
+    }
 
     const { data: profile, isLoading: profileLoading } = useQuery({
         queryKey: ['public-profile', username],
@@ -147,7 +151,10 @@ export function PublicProfilePage() {
                             {name}
                         </h1>
                         {profile.username && (
-                            <p className="voice-data text-ui-sm text-bone-faint mt-1.5">
+                            <p
+                                translate="no"
+                                className="voice-data text-ui-sm text-bone-faint mt-1.5"
+                            >
                                 @{sanitizeText(profile.username)}
                             </p>
                         )}

@@ -15,6 +15,9 @@ const SIZES = {
     xl: 'w-24 h-24 text-board-md',
 } as const
 
+/** Intrinsic pixel dimensions, so an avatar reserves its box before it loads. */
+const PIXELS = { sm: 32, md: 44, lg: 64, xl: 96 } as const
+
 /** Square, like the photo on a tour laminate. */
 export function Avatar({ src, name, size = 'md', className }: AvatarProps) {
     const [error, setError] = useState(false)
@@ -25,6 +28,8 @@ export function Avatar({ src, name, size = 'md', className }: AvatarProps) {
                 src={src}
                 alt={name ? `${name}'s avatar` : ''}
                 className={cn('avatar', SIZES[size], className)}
+                width={PIXELS[size]}
+                height={PIXELS[size]}
                 loading="lazy"
                 decoding="async"
                 onError={() => setError(true)}

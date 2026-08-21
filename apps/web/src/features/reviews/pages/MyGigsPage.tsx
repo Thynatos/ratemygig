@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useMemo } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { parseISO, isValid } from 'date-fns'
 import { useMyGigs } from '../api/reviews'
 import { buildIcs } from '@/shared/lib/ical'
@@ -30,8 +30,20 @@ const TABS: { id: TabType; label: string }[] = [
     { id: 'tracked-venues', label: 'Venues' },
 ]
 
+const TAB_IDS = TABS.map(t => t.id)
+
+function isTab(value: string | null): value is TabType {
+    return value !== null && (TAB_IDS as string[]).includes(value)
+}
+
 export function MyGigsPage() {
-    const [activeTab, setActiveTab] = useState<TabType>('all')
+    // The tab lives in the URL so a view is linkable and the back button works.
+    const [searchParams, setSearchParams] = useSearchParams()
+    const tabParam = searchParams.get('tab')
+    const activeTab: TabType = isTab(tabParam) ? tabParam : 'all'
+    const setActiveTab = (tab: TabType) => {
+        setSearchParams(tab === 'all' ? {} : { tab }, { replace: true })
+    }
     const statusFilter =
         activeTab === 'planned' ? 'planned' : activeTab === 'attended' ? 'attended' : undefined
     const showGigs = activeTab === 'all' || activeTab === 'planned' || activeTab === 'attended'

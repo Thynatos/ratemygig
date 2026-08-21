@@ -21,7 +21,10 @@ const MEMBER_NAV = [
 function Wordmark({ className }: { className?: string }) {
     return (
         <span className={cn('inline-flex flex-col items-start gap-1', className)}>
-            <span className="voice-board text-bone leading-none text-[1.0625rem] sm:text-[1.1875rem]">
+            <span
+                translate="no"
+                className="voice-board text-bone leading-none text-[1.0625rem] sm:text-[1.1875rem]"
+            >
                 ratemygig
             </span>
             <span className="block h-[3px] w-full bg-strip" aria-hidden="true" />
@@ -235,19 +238,19 @@ export function Layout() {
                         <nav aria-label="Browse">
                             <h2 className="voice-label text-bone-faint mb-3">Browse</h2>
                             <ul className="space-y-2 text-ui-sm">
-                                <li><Link to="/" className="text-bone-dim hover:text-bone">Upcoming gigs</Link></li>
-                                <li><Link to="/artists" className="text-bone-dim hover:text-bone">Artists</Link></li>
-                                <li><Link to="/venues" className="text-bone-dim hover:text-bone">Venues</Link></li>
+                                <li><Link to="/" className="inline-block py-1 text-bone-dim hover:text-bone">Upcoming gigs</Link></li>
+                                <li><Link to="/artists" className="inline-block py-1 text-bone-dim hover:text-bone">Artists</Link></li>
+                                <li><Link to="/venues" className="inline-block py-1 text-bone-dim hover:text-bone">Venues</Link></li>
                             </ul>
                         </nav>
 
                         <nav aria-label="Charts">
                             <h2 className="voice-label text-bone-faint mb-3">Charts</h2>
                             <ul className="space-y-2 text-ui-sm">
-                                <li><Link to="/artists/top" className="text-bone-dim hover:text-bone">Top rated artists</Link></li>
-                                <li><Link to="/venues/top" className="text-bone-dim hover:text-bone">Top rated venues</Link></li>
+                                <li><Link to="/artists/top" className="inline-block py-1 text-bone-dim hover:text-bone">Top rated artists</Link></li>
+                                <li><Link to="/venues/top" className="inline-block py-1 text-bone-dim hover:text-bone">Top rated venues</Link></li>
                                 {user && (
-                                    <li><Link to="/wrapped" className="text-bone-dim hover:text-bone">Your year in gigs</Link></li>
+                                    <li><Link to="/wrapped" className="inline-block py-1 text-bone-dim hover:text-bone">Your year in gigs</Link></li>
                                 )}
                             </ul>
                         </nav>
@@ -255,9 +258,9 @@ export function Layout() {
                         <nav aria-label="About">
                             <h2 className="voice-label text-bone-faint mb-3">About</h2>
                             <ul className="space-y-2 text-ui-sm">
-                                <li><Link to="/about" className="text-bone-dim hover:text-bone">What this is</Link></li>
-                                <li><Link to="/privacy" className="text-bone-dim hover:text-bone">Privacy</Link></li>
-                                <li><Link to="/terms" className="text-bone-dim hover:text-bone">Terms</Link></li>
+                                <li><Link to="/about" className="inline-block py-1 text-bone-dim hover:text-bone">What this is</Link></li>
+                                <li><Link to="/privacy" className="inline-block py-1 text-bone-dim hover:text-bone">Privacy</Link></li>
+                                <li><Link to="/terms" className="inline-block py-1 text-bone-dim hover:text-bone">Terms</Link></li>
                             </ul>
                         </nav>
                     </div>

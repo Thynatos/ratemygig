@@ -73,7 +73,10 @@ export function LoginPage() {
                         className="inline-flex flex-col items-start gap-1 py-2"
                         aria-label="ratemygig — home"
                     >
-                        <span className="voice-board text-bone leading-none text-[1.0625rem]">
+                        <span
+                            translate="no"
+                            className="voice-board text-bone leading-none text-[1.0625rem]"
+                        >
                             ratemygig
                         </span>
                         <span className="block h-[3px] w-full bg-strip" aria-hidden="true" />
@@ -186,6 +189,8 @@ export function LoginPage() {
                                             label="Email"
                                             placeholder="you@example.com"
                                             autoComplete="email"
+                                            spellCheck={false}
+                                            inputMode="email"
                                             error={errors.email?.message}
                                             {...register('email')}
                                         />

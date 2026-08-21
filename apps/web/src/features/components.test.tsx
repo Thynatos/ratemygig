@@ -290,6 +290,6 @@ describe('PhotoUploader', () => {
         const input = document.querySelector('input[type="file"]') as HTMLInputElement
         fireEvent.change(input, { target: { files: [file] } })
 
-        expect(screen.getByText(/is over 1MB/)).toBeInTheDocument()
+        expect(screen.getByText(/is over 1 MB/)).toBeInTheDocument()
     })
 })

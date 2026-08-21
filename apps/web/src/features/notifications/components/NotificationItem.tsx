@@ -33,11 +33,10 @@ export function NotificationItem({ notification, onMarkRead }: NotificationItemP
         }
     }
 
+    // The click target is always a real <a> or <button> (below), never a
+    // <div onClick> — that is unreachable by keyboard.
     const content = (
-        <div
-            className={cn('row items-start', unread && 'row-current row-interactive')}
-            onClick={handleClick}
-        >
+        <div className={cn('row items-start', unread && 'row-current row-interactive')}>
             <span className="row-slot !w-8">
                 <Icon
                     className={cn('w-[18px] h-[18px]', unread ? 'text-strip' : 'text-bone-faint')}
@@ -68,6 +67,21 @@ export function NotificationItem({ notification, onMarkRead }: NotificationItemP
             <a href={notification.link} onClick={handleClick} className="block">
                 {content}
             </a>
+        )
+    }
+
+    // No link, but still unread: marking it read is a real action, so it gets
+    // a real button rather than a click handler on a div.
+    if (unread) {
+        return (
+            <button
+                type="button"
+                onClick={handleClick}
+                className="block w-full text-left"
+                aria-label={`${sanitizeText(notification.title)} — mark as read`}
+            >
+                {content}
+            </button>
         )
     }
 

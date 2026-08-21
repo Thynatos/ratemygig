@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Search, X } from 'lucide-react'
 import { useEvents } from '../api/events'
 import { useFriendsGoing } from '../api/useFriendsGoing'
@@ -35,10 +36,29 @@ function todayStrip(city: string): string {
 
 export function DiscoverPage() {
     const { user } = useAuth()
-    const [city, setCity] = useState('')
-    const [searchQuery, setSearchQuery] = useState('')
-    const [debouncedQuery, setDebouncedQuery] = useState('')
-    const [page, setPage] = useState(1)
+
+    // City, search and page live in the URL, so "gigs in Manchester next page"
+    // is a link you can send someone. The text input keeps its own state so
+    // typing stays cheap; only the debounced value reaches the URL.
+    const [searchParams, setSearchParams] = useSearchParams()
+    const city = searchParams.get('city') ?? ''
+    const debouncedQuery = searchParams.get('q') ?? ''
+    const page = Math.max(1, Number(searchParams.get('page')) || 1)
+
+    const [searchQuery, setSearchQuery] = useState(debouncedQuery)
+
+    const applyParams = (next: { city?: string; q?: string; page?: number }) => {
+        const merged = {
+            city: next.city ?? city,
+            q: next.q ?? debouncedQuery,
+            page: next.page ?? page,
+        }
+        const params: Record<string, string> = {}
+        if (merged.city) params.city = merged.city
+        if (merged.q) params.q = merged.q
+        if (merged.page > 1) params.page = String(merged.page)
+        setSearchParams(params, { replace: true })
+    }
 
     const { data, isLoading, error, refetch } = useEvents({
         city,
@@ -51,23 +71,31 @@ export function DiscoverPage() {
 
     useEffect(() => {
         const timeoutId = window.setTimeout(() => {
-            setDebouncedQuery(searchQuery)
-            setPage(1)
+            if (searchQuery !== debouncedQuery) {
+                applyParams({ q: searchQuery, page: 1 })
+            }
         }, DEBOUNCE_MS.SEARCH)
 
         return () => window.clearTimeout(timeoutId)
-    }, [searchQuery])
+        // applyParams is derived from the same params this effect reads.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchQuery, debouncedQuery])
+
+    const setPage = (updater: (p: number) => number) => {
+        applyParams({ page: updater(page) })
+    }
+
+    const setCity = (newCity: string) => {
+        applyParams({ city: newCity, page: 1 })
+    }
 
     const handleCityChange = (newCity: string) => {
         setCity(newCity)
-        setPage(1)
     }
 
     const clearFilters = () => {
         setSearchQuery('')
-        setDebouncedQuery('')
-        setCity('')
-        setPage(1)
+        setSearchParams({}, { replace: true })
     }
 
     const hasActiveFilters = Boolean(city || debouncedQuery)
@@ -111,6 +139,8 @@ export function DiscoverPage() {
                         <input
                             id="event-search"
                             type="search"
+                            autoComplete="off"
+                            spellCheck={false}
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
                             placeholder="Artist, venue or gig"
@@ -138,7 +168,7 @@ export function DiscoverPage() {
                                 type="button"
                                 onClick={() => {
                                     setSearchQuery('')
-                                    setDebouncedQuery('')
+                                    applyParams({ q: '', page: 1 })
                                 }}
                                 className="strip-quiet hover:text-bone hover:border-bone-faint transition-colors duration-150 ease-board"
                             >
@@ -150,7 +180,7 @@ export function DiscoverPage() {
                         <button
                             type="button"
                             onClick={clearFilters}
-                            className="voice-label text-bone-faint underline hover:text-bone"
+                            className="voice-label px-1 text-bone-faint underline hover:text-bone"
                         >
                             Clear all
                         </button>
@@ -248,25 +278,25 @@ export function DiscoverPage() {
                                     <>
                                         <p>
                                             Ticketmaster mode reads your Supabase rows first, matching{' '}
-                                            <code className="voice-data text-strip">provider = ticketmaster</code>.
+                                            <code translate="no" className="voice-data text-strip">provider = ticketmaster</code>.
                                             An empty project returns nothing.
                                         </p>
                                         <p>
                                             Run{' '}
-                                            <code className="voice-data text-bone bg-groove px-1.5 py-0.5">
+                                            <code translate="no" className="voice-data text-bone bg-groove px-1.5 py-0.5">
                                                 npm run jobs:ingest
                                             </code>{' '}
                                             from the repo root with{' '}
-                                            <code className="voice-data text-strip">TICKETMASTER_API_KEY</code>,{' '}
-                                            <code className="voice-data text-strip">SUPABASE_URL</code> and{' '}
-                                            <code className="voice-data text-strip">SUPABASE_SERVICE_ROLE_KEY</code>{' '}
-                                            configured in <code className="voice-data text-strip">packages/jobs</code>.
+                                            <code translate="no" className="voice-data text-strip">TICKETMASTER_API_KEY</code>,{' '}
+                                            <code translate="no" className="voice-data text-strip">SUPABASE_URL</code> and{' '}
+                                            <code translate="no" className="voice-data text-strip">SUPABASE_SERVICE_ROLE_KEY</code>{' '}
+                                            configured in <code translate="no" className="voice-data text-strip">packages/jobs</code>.
                                         </p>
                                         {allowsTicketmasterLive() && (
                                             <p>
                                                 For live browser lookups when the database is empty, set{' '}
-                                                <code className="voice-data text-strip">VITE_TICKETMASTER_API_KEY</code>{' '}
-                                                in <code className="voice-data text-strip">apps/web/.env.local</code>.
+                                                <code translate="no" className="voice-data text-strip">VITE_TICKETMASTER_API_KEY</code>{' '}
+                                                in <code translate="no" className="voice-data text-strip">apps/web/.env.local</code>.
                                             </p>
                                         )}
                                     </>

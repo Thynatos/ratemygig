@@ -84,6 +84,9 @@ export function SocialLinksForm() {
                     label="Website"
                     name="website_url"
                     type="url"
+                    inputMode="url"
+                    autoComplete="url"
+                    spellCheck={false}
                     placeholder="https://"
                     value={websiteUrl}
                     onChange={handleChange(setWebsiteUrl)}
@@ -92,6 +95,8 @@ export function SocialLinksForm() {
                 <Input
                     label="X / Twitter"
                     name="twitter_handle"
+                    autoComplete="off"
+                    spellCheck={false}
                     placeholder="@handle"
                     value={twitterHandle}
                     onChange={handleChange(setTwitterHandle)}
@@ -100,6 +105,8 @@ export function SocialLinksForm() {
                 <Input
                     label="Instagram"
                     name="instagram_handle"
+                    autoComplete="off"
+                    spellCheck={false}
                     placeholder="@handle"
                     value={instagramHandle}
                     onChange={handleChange(setInstagramHandle)}

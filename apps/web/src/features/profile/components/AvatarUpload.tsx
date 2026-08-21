@@ -39,7 +39,7 @@ export function AvatarUpload({ currentAvatarUrl, userId }: AvatarUploadProps) {
         }
 
         if (file.size > MAX_FILE_SIZE) {
-            setError('That image is over 5MB. Shrink it and try again.')
+            setError('That image is over 5 MB. Shrink it and try again.')
             return
         }
 
@@ -75,7 +75,13 @@ export function AvatarUpload({ currentAvatarUrl, userId }: AvatarUploadProps) {
             {/* Square, like the photo on a tour laminate. */}
             <div className="relative w-20 h-20 shrink-0 border border-rail-strong bg-board-raised overflow-hidden">
                 {displayUrl ? (
-                    <img src={displayUrl} alt="Your profile photo" className="w-full h-full object-cover" />
+                    <img
+                        src={displayUrl}
+                        alt="Your profile photo"
+                        width={80}
+                        height={80}
+                        className="w-full h-full object-cover"
+                    />
                 ) : (
                     <span className="w-full h-full flex items-center justify-center voice-label text-bone-faint">
                         None
@@ -125,7 +131,7 @@ export function AvatarUpload({ currentAvatarUrl, userId }: AvatarUploadProps) {
                         {error}
                     </p>
                 ) : (
-                    <p className="input-hint">JPEG, PNG or WebP, up to 5MB.</p>
+                    <p className="input-hint">JPEG, PNG or WebP, up to 5&nbsp;MB.</p>
                 )}
             </div>
         </div>
