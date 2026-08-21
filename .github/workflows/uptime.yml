@@ -21,6 +21,9 @@ jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      issues: write
+      contents: read
     steps:
       - name: Check site root
         run: |
@@ -51,6 +54,12 @@ jobs:
           failed=""
           if [ "$SITE_URL_DOWN" = "true" ]; then failed="$failed site(/)"; fi
           if [ "$OG_IMAGE_DOWN" = "true" ]; then failed="$failed og-image"; fi
+
+          body=$(printf '%s\n\n%s\n\n%s' \
+            "The scheduled uptime check flagged:$failed" \
+            "Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            "Repeated failures also mean the Supabase free-tier idle timer is not being reset by these checks.")
+
           open_issues=$(gh issue list \
             --state open \
             --search "Uptime check failed in:title" \
@@ -58,13 +67,7 @@ jobs:
           if [ "$open_issues" -eq 0 ]; then
             gh issue create \
               --title "Uptime check failed ($(date -u +%Y-%m-%d))" \
-              --body "The scheduled uptime check flagged:$failed
-
-Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
-Target: $SITE_URL / $OG_URL
-
-Note: repeated failures also mean the Supabase free-tier idle timer is not
-being reset by these checks — investigate the project state." \
+              --body "$body" \
               --repo "$GITHUB_REPOSITORY"
           else
             echo "An open 'Uptime check failed' issue already exists; not creating a duplicate."

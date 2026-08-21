@@ -39,6 +39,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          body=$(printf '%s\n\n%s\n\n%s\n\n%s' \
+            "The scheduled event ingest failed." \
+            "Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            "Check the run log for the failing step. Common causes: missing/invalid TICKETMASTER_API_KEY or SUPABASE_SERVICE_ROLE_KEY, Ticketmaster 429/5xx exhausting retries, sync errors above the MAX_SYNC_ERRORS threshold (see packages/jobs/src/jobs/daily-ingest.ts).")
+
           open_issues=$(gh issue list \
             --state open \
             --search "Nightly ingest failed in:title" \
@@ -46,12 +51,7 @@ jobs:
           if [ "$open_issues" -eq 0 ]; then
             gh issue create \
               --title "Nightly ingest failed ($(date -u +%Y-%m-%d))" \
-              --body "The scheduled event ingest failed on the run starting at $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID.
-
-Check the run log for the failing step. Common causes:
-- Missing or invalid \`TICKETMASTER_API_KEY\` / \`SUPABASE_SERVICE_ROLE_KEY\`
-- Ticketmaster 429/5xx exhausting retries
-- Sync errors above the MAX_SYNC_ERRORS threshold (see packages/jobs/src/jobs/daily-ingest.ts)" \
+              --body "$body" \
               --repo "$GITHUB_REPOSITORY"
           else
             echo "An open 'Nightly ingest failed' issue already exists; not creating a duplicate."
