@@ -1,11 +1,16 @@
 import { ReactNode } from 'react'
-import { Link } from 'react-router-dom'
 import { parseISO, isValid, isToday } from 'date-fns'
 import { cn } from '@/shared/lib/utils'
 
 /* ============================================================
    THE BOARD — structural primitives.
-   Every list in the product is built from these. See DESIGN.md §3.
+
+   The row contract itself (`.row`, `.row-slot`, `.row-body`, `.row-end`,
+   `.rail-list`) lives in index.css rather than in a component: every list in
+   the product composes it directly from those classes, so wrapping them in a
+   React shim would add an indirection with no callers. What lives here is the
+   furniture that carries real logic — the header, the date slot, the states,
+   and the figures. See DESIGN.md §3.
    ============================================================ */
 
 interface BoardHeaderProps {
@@ -54,25 +59,6 @@ export function BoardHeader({
 
 /* ---------------------------------------------------------------- */
 
-interface RailListProps {
-    children: ReactNode
-    className?: string
-    /** Renders as a <ul>/<li> list. Default is a plain container. */
-    as?: 'div' | 'ul'
-    'aria-label'?: string
-}
-
-export function RailList({ children, className, as = 'div', ...rest }: RailListProps) {
-    const Tag = as
-    return (
-        <Tag className={cn('rail-list', className)} {...rest}>
-            {children}
-        </Tag>
-    )
-}
-
-/* ---------------------------------------------------------------- */
-
 interface DateSlotProps {
     date: string | Date
     className?: string
@@ -109,62 +95,6 @@ export function DateSlot({ date, className }: DateSlotProps) {
             </span>
         </span>
     )
-}
-
-/* ---------------------------------------------------------------- */
-
-interface RowProps {
-    /** Left slot: the row's identity — a date, a rank, a position. */
-    slot?: ReactNode
-    /** Right slot: a score or the single row action. */
-    end?: ReactNode
-    children: ReactNode
-    /** Route for the whole row. Makes the row a link. */
-    to?: string
-    onClick?: () => void
-    /** Marks the row as the live one — the rail-cap stays amber. */
-    current?: boolean
-    className?: string
-}
-
-/**
- * The row contract: slot · body · slot. Used by every list in the product so
- * the whole app reads as one board rather than a set of features.
- */
-export function Row({ slot, end, children, to, onClick, current, className }: RowProps) {
-    const interactive = Boolean(to || onClick)
-    const classes = cn(
-        'row',
-        interactive && 'row-interactive',
-        current && 'row-current',
-        className
-    )
-
-    const inner = (
-        <>
-            {slot !== undefined && <span className="row-slot">{slot}</span>}
-            <span className="row-body">{children}</span>
-            {end !== undefined && <span className="row-end">{end}</span>}
-        </>
-    )
-
-    if (to) {
-        return (
-            <Link to={to} className={classes}>
-                {inner}
-            </Link>
-        )
-    }
-
-    if (onClick) {
-        return (
-            <button type="button" onClick={onClick} className={classes}>
-                {inner}
-            </button>
-        )
-    }
-
-    return <div className={classes}>{inner}</div>
 }
 
 /* ---------------------------------------------------------------- */

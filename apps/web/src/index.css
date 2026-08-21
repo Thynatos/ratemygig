@@ -600,41 +600,7 @@
     border: 1px solid var(--rail-strong);
   }
 
-  /* --- Legacy shims: neutralise the old world -------------------------- */
-  .glass-card {
-    @apply bg-board border border-rail;
-    backdrop-filter: none;
-    box-shadow: none;
-  }
-
-  .event-card {
-    @apply bg-board border border-rail p-4;
-  }
-
-  .badge,
-  .badge-primary,
-  .badge-accent,
-  .badge-surface {
-    @apply inline-flex items-center voice-label;
-    padding: 0.3125rem 0.5rem;
-    border: 1px solid var(--rail);
-    color: var(--bone-dim);
-  }
-
-  .badge-primary,
-  .badge-accent {
-    color: var(--strip);
-    border-color: var(--strip);
-  }
-
-  .section-title {
-    @apply voice-board text-board-lg text-bone;
-  }
-
-  .section-subtitle {
-    @apply mt-2 text-ui text-bone-dim;
-  }
-
+  /* --- Kept for the two places that still need them --------------------- */
   .page-container {
     @apply page page-body;
   }
@@ -659,10 +625,6 @@
     overscroll-behavior: contain;
   }
 
-  .tooltip {
-    @apply absolute z-50 voice-label bg-board-raised text-bone border border-rail pointer-events-none;
-    padding: 0.3125rem 0.5rem;
-  }
 }
 
 @layer utilities {

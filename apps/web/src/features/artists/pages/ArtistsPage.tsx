@@ -23,6 +23,15 @@ export function ArtistsPage() {
     return (
         <div className="page page-body">
             <BoardHeader
+                // The paginated result carries no total, so the strip states
+                // what is actually on screen rather than a number we can't back.
+                strip={
+                    artists.length > 0
+                        ? searchQuery
+                            ? `${artists.length} matching “${searchQuery}”`
+                            : `${artists.length} showing`
+                        : undefined
+                }
                 title="Artists"
                 lede="Everyone who has played a gig on the board. Open one to see where they've played and how the nights were rated."
             >

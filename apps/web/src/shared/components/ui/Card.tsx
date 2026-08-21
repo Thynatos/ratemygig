@@ -53,32 +53,3 @@ export function CardFooter({ children, className }: CardSectionProps) {
         </div>
     )
 }
-
-interface PanelProps {
-    /** Rendered in the panel's rail header, in board voice. */
-    title?: ReactNode
-    /** Sits opposite the title on the same rail. */
-    action?: ReactNode
-    children: ReactNode
-    className?: string
-    bodyClassName?: string
-}
-
-/**
- * The canonical grouping device: a titled board panel. The title sits on a
- * rail above the content, the way a section label is screwed above its column
- * of dates.
- */
-export function Panel({ title, action, children, className, bodyClassName }: PanelProps) {
-    return (
-        <section className={cn('bg-board border border-rail', className)}>
-            {(title || action) && (
-                <header className="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-rail">
-                    {title && <h2 className="voice-label text-bone-dim">{title}</h2>}
-                    {action}
-                </header>
-            )}
-            <div className={cn('p-4', bodyClassName)}>{children}</div>
-        </section>
-    )
-}

@@ -34,6 +34,13 @@ export function VenuesPage() {
     return (
         <div className="page page-body">
             <BoardHeader
+                // The paginated result carries no total, so the strip states
+                // what is actually on screen rather than a number we can't back.
+                strip={
+                    filteredVenues.length > 0
+                        ? `${filteredVenues.length} showing${selectedCity ? ` in ${selectedCity}` : ''}`
+                        : undefined
+                }
                 title="Venues"
                 lede="Every room on the board. The venue is half the night — open one to see how its gigs get rated."
             >
