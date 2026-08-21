@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { MessageSquare, Send } from 'lucide-react'
 import { useComments, useCreateComment, useDeleteComment } from '@/features/comments/api/comments'
 import { CommentItem } from './CommentItem'
 import { useAuth } from '@/features/auth/hooks/useAuth'
@@ -37,49 +36,57 @@ export function CommentSection({ reviewId }: CommentSectionProps) {
     }
 
     return (
-        <div className="mt-6 pt-6 border-t border-surface-700">
-            <div className="flex items-center gap-2 mb-4">
-                <MessageSquare className="w-5 h-5 text-primary-400" />
-                <h3 className="text-lg font-semibold text-white">
-                    Comments {comments.length > 0 && <span className="text-surface-400">({comments.length})</span>}
-                </h3>
-            </div>
+        <section className="mt-8 pt-5 border-t border-rail-strong">
+            <h2 className="voice-label text-bone-dim mb-3">
+                Replies
+                {comments.length > 0 && <span className="ml-2 tnum">{comments.length}</span>}
+            </h2>
 
-            {user && (
-                <div className="mb-4">
-                    <div className="flex gap-3">
-                        <Textarea
-                            placeholder="Write a comment..."
-                            value={body}
-                            onChange={(e) => setBody(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            className="min-h-[60px]"
-                        />
+            {user ? (
+                <div className="mb-5">
+                    <label htmlFor={`comment-${reviewId}`} className="sr-only">
+                        Write a reply
+                    </label>
+                    <Textarea
+                        id={`comment-${reviewId}`}
+                        placeholder="Were you there? Say so."
+                        value={body}
+                        onChange={e => setBody(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        className="min-h-[72px]"
+                    />
+                    <div className="mt-2 flex items-center justify-between gap-3">
+                        <p className="voice-label text-bone-faint">
+                            Enter to post · Shift + Enter for a new line
+                        </p>
                         <Button
                             size="sm"
                             onClick={handleSubmit}
                             disabled={!body.trim()}
                             isLoading={createComment.isPending}
-                            className="self-end"
+                            loadingLabel="Posting your reply"
                         >
-                            <Send className="w-4 h-4" />
+                            Post reply
                         </Button>
                     </div>
                     {createComment.error && (
-                        <p className="text-sm text-red-400 mt-2">
-                            {(createComment.error as Error).message || 'Failed to post comment'}
+                        <p className="input-error" role="alert">
+                            {(createComment.error as Error).message ||
+                                'The reply did not post. Try again.'}
                         </p>
                     )}
                 </div>
+            ) : (
+                <p className="text-ui-sm text-bone-faint mb-5">Sign in to reply.</p>
             )}
 
             {isLoading && (
-                <div className="space-y-3">
-                    {[1, 2, 3].map((i) => (
-                        <div key={i} className="flex gap-3 py-3">
-                            <Skeleton className="w-8 h-8 rounded-full" />
+                <div className="space-y-3" role="status" aria-label="Loading replies">
+                    {[1, 2, 3].map(i => (
+                        <div key={i} className="flex gap-2.5 py-3">
+                            <Skeleton className="w-8 h-8" />
                             <div className="flex-1 space-y-2">
-                                <Skeleton className="h-4 w-24" />
+                                <Skeleton className="h-3 w-24" />
                                 <Skeleton className="h-3 w-full" />
                             </div>
                         </div>
@@ -88,31 +95,26 @@ export function CommentSection({ reviewId }: CommentSectionProps) {
             )}
 
             {!isLoading && isError && (
-                <QueryErrorState
-                    title="Couldn't load comments"
-                    onRetry={() => refetch()}
-                />
+                <QueryErrorState title="Couldn't load the replies" onRetry={() => refetch()} />
             )}
 
             {!isLoading && !isError && comments.length === 0 && (
-                <p className="text-sm text-surface-500 text-center py-4">
-                    No comments yet. Be the first!
-                </p>
+                <p className="text-ui-sm text-bone-faint py-2">No replies yet.</p>
             )}
 
             {!isLoading && !isError && comments.length > 0 && (
-                <div className="divide-y divide-surface-700/50">
-                    {comments.map((comment) => (
+                <div className="divide-y divide-rail">
+                    {comments.map(comment => (
                         <CommentItem
                             key={comment.id}
                             comment={comment}
-                            onDelete={(id) => deleteComment.mutate({ commentId: id, reviewId })}
+                            onDelete={id => deleteComment.mutate({ commentId: id, reviewId })}
                             canDelete={!!user && user.id === comment.user_id}
                             isPending={deleteComment.isPending}
                         />
                     ))}
                 </div>
             )}
-        </div>
+        </section>
     )
 }

@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Calendar, CalendarPlus, Check, Edit, Star, Plus, Music, MapPin, Download } from 'lucide-react'
+import { parseISO, isValid } from 'date-fns'
 import { useMyGigs } from '../api/reviews'
 import { buildIcs } from '@/shared/lib/ical'
 import { downloadTextFile, exportToCsv, formatDate } from '@/shared/lib/utils'
@@ -8,20 +8,54 @@ import { DraftReviewsSection } from '../components/DraftReviewsSection'
 import { FollowedArtistsList } from '@/features/artists/components/FollowedArtistsList'
 import { FollowedVenuesList } from '@/features/venues/components/FollowedVenuesList'
 import { Button } from '@/shared/components/ui/Button'
-import { Card, CardContent } from '@/shared/components/ui/Card'
-import { Badge } from '@/shared/components/ui/Badge'
-import { EventCardSkeleton } from '@/shared/components/ui/Loading'
+import { ScoreStrip } from '@/shared/components/ui/StarRating'
+import { RowSkeletonList } from '@/shared/components/ui/Loading'
+import {
+    BoardHeader,
+    DateSlot,
+    EmptyState,
+    Figure,
+    FigureRail,
+} from '@/shared/components/ui/Board'
 import { cn } from '@/shared/lib/utils'
 import { sanitizeText } from '@/shared/lib/sanitize'
 
 type TabType = 'all' | 'planned' | 'attended' | 'tracked-artists' | 'tracked-venues'
 
+const TABS: { id: TabType; label: string }[] = [
+    { id: 'all', label: 'Everything' },
+    { id: 'planned', label: 'Going' },
+    { id: 'attended', label: 'Been' },
+    { id: 'tracked-artists', label: 'Artists' },
+    { id: 'tracked-venues', label: 'Venues' },
+]
+
 export function MyGigsPage() {
     const [activeTab, setActiveTab] = useState<TabType>('all')
-    const statusFilter = activeTab === 'planned' ? 'planned' : activeTab === 'attended' ? 'attended' : undefined
+    const statusFilter =
+        activeTab === 'planned' ? 'planned' : activeTab === 'attended' ? 'attended' : undefined
     const showGigs = activeTab === 'all' || activeTab === 'planned' || activeTab === 'attended'
     const { data: gigs, isLoading } = useMyGigs(showGigs ? statusFilter : undefined)
     const { data: allGigs } = useMyGigs()
+
+    const stats = useMemo(() => {
+        const list = allGigs ?? []
+        const attended = list.filter(g => g.status === 'attended')
+        const rated = list.filter(g => g.review && g.review.length > 0)
+        const thisYear = attended.filter(g => {
+            const d = g.event ? parseISO(g.event.start_at) : null
+            return d && isValid(d) && d.getFullYear() === new Date().getFullYear()
+        })
+        const rooms = new Set(
+            attended.map(g => g.event?.venue?.name).filter(Boolean) as string[]
+        )
+        return {
+            attended: attended.length,
+            rated: rated.length,
+            thisYear: thisYear.length,
+            rooms: rooms.size,
+        }
+    }, [allGigs])
 
     const handleExportCsv = () => {
         if (!gigs || gigs.length === 0) return
@@ -59,191 +93,172 @@ export function MyGigsPage() {
                 ticketUrl: gig.event.ticket_urls?.[0]?.url ?? null,
             }))
         const ics = buildIcs(events)
-        downloadTextFile(ics, `my-gigs-${new Date().toISOString().split('T')[0]}.ics`, 'text/calendar;charset=utf-8;')
+        downloadTextFile(
+            ics,
+            `my-gigs-${new Date().toISOString().split('T')[0]}.ics`,
+            'text/calendar;charset=utf-8;'
+        )
     }
 
-    const tabs: { id: TabType; label: string; icon: typeof Calendar }[] = [
-        { id: 'all', label: 'All', icon: Calendar },
-        { id: 'planned', label: 'Planned', icon: Calendar },
-        { id: 'attended', label: 'Attended', icon: Check },
-        { id: 'tracked-artists', label: 'Artists', icon: Music },
-        { id: 'tracked-venues', label: 'Venues', icon: MapPin },
-    ]
+    const hasAnyGigs = Boolean(allGigs && allGigs.length > 0)
+
+    const emptyBody =
+        activeTab === 'planned'
+            ? "Nothing marked as going. Find something on and press “I want to go”."
+            : activeTab === 'attended'
+                ? "Nothing marked as been to. Open a gig you went to and press “I was there”."
+                : 'Your archive starts with one night. Find a gig you went to and log it.'
 
     return (
-        <div className="page-container">
-            <div className="flex items-center justify-between mb-8">
-                <div>
-                    <h1 className="section-title flex items-center gap-3">
-                        <Calendar className="w-8 h-8 text-primary-400" />
-                        My Gigs
-                    </h1>
-                    <p className="section-subtitle">Your concert history and upcoming shows</p>
-                </div>
-                {showGigs && (gigs && gigs.length > 0 || allGigs && allGigs.length > 0) && (
-                    <div className="flex items-center gap-2">
-                        {allGigs && allGigs.length > 0 && (
+        <div className="page page-body">
+            <BoardHeader
+                strip={
+                    hasAnyGigs
+                        ? `${stats.attended} ${stats.attended === 1 ? 'gig' : 'gigs'} logged`
+                        : 'Nothing logged yet'
+                }
+                title="My gigs"
+                lede="Everything you've been to and everything you're going to, oldest habit first."
+                action={
+                    hasAnyGigs ? (
+                        <>
                             <Button variant="secondary" size="sm" onClick={handleExportCalendar}>
-                                <CalendarPlus className="w-4 h-4 mr-2" />
                                 Export calendar
                             </Button>
-                        )}
-                        {gigs && gigs.length > 0 && (
-                            <Button variant="secondary" size="sm" onClick={handleExportCsv}>
-                                <Download className="w-4 h-4 mr-2" />
-                                Export CSV
-                            </Button>
-                        )}
-                    </div>
+                            {gigs && gigs.length > 0 && (
+                                <Button variant="secondary" size="sm" onClick={handleExportCsv}>
+                                    Export CSV
+                                </Button>
+                            )}
+                        </>
+                    ) : undefined
+                }
+            >
+                {hasAnyGigs && (
+                    <FigureRail>
+                        <Figure value={stats.attended} label="Gigs been to" accent />
+                        <Figure value={stats.rated} label="Rated" />
+                        <Figure value={stats.rooms} label="Rooms" />
+                        <Figure value={stats.thisYear} label={`In ${new Date().getFullYear()}`} />
+                    </FigureRail>
                 )}
-            </div>
+            </BoardHeader>
 
-            {/* Draft Reviews */}
             <DraftReviewsSection />
 
-            {/* Tabs */}
-            <div className="flex gap-2 mb-6 border-b border-surface-800 overflow-x-auto">
-                {tabs.map(tab => (
+            <div className="tab-rail mb-4" role="tablist" aria-label="Filter your gigs">
+                {TABS.map(tab => (
                     <button
                         key={tab.id}
+                        type="button"
+                        role="tab"
+                        id={`tab-${tab.id}`}
+                        aria-selected={activeTab === tab.id}
+                        aria-controls="my-gigs-panel"
                         onClick={() => setActiveTab(tab.id)}
-                        className={cn(
-                            'tab flex items-center gap-1.5 whitespace-nowrap',
-                            activeTab === tab.id && 'active'
-                        )}
+                        className={cn('tab', activeTab === tab.id && 'tab-active')}
                     >
-                        <tab.icon className="w-4 h-4" />
                         {tab.label}
                     </button>
                 ))}
             </div>
 
-            {/* Tracked Artists Tab */}
-            {activeTab === 'tracked-artists' && <FollowedArtistsList />}
+            <div id="my-gigs-panel" role="tabpanel" aria-labelledby={`tab-${activeTab}`}>
+                {activeTab === 'tracked-artists' && <FollowedArtistsList />}
+                {activeTab === 'tracked-venues' && <FollowedVenuesList />}
 
-            {/* Tracked Venues Tab */}
-            {activeTab === 'tracked-venues' && <FollowedVenuesList />}
+                {showGigs && (
+                    <>
+                        {isLoading && <RowSkeletonList count={5} label="Loading your gigs" />}
 
-            {/* Gigs Tabs */}
-            {showGigs && (
-                <>
-                    {/* Loading */}
-                    {isLoading && (
-                        <div className="grid gap-4 md:grid-cols-2">
-                            {Array.from({ length: 4 }).map((_, i) => (
-                                <EventCardSkeleton key={i} />
-                            ))}
-                        </div>
-                    )}
+                        {!isLoading && (!gigs || gigs.length === 0) && (
+                            <EmptyState
+                                title={
+                                    activeTab === 'all'
+                                        ? 'Nothing logged yet'
+                                        : activeTab === 'planned'
+                                            ? 'Nothing coming up'
+                                            : 'Nothing logged yet'
+                                }
+                                body={emptyBody}
+                                action={
+                                    <Link to="/" className="btn-primary">
+                                        See what's on
+                                    </Link>
+                                }
+                            />
+                        )}
 
-                    {/* Empty State */}
-                    {!isLoading && (!gigs || gigs.length === 0) && (
-                        <Card>
-                            <CardContent className="p-12 text-center">
-                                <Calendar className="w-16 h-16 text-surface-600 mx-auto mb-4" />
-                                <h3 className="text-xl font-semibold text-white mb-2">No gigs yet</h3>
-                                <p className="text-surface-400 mb-6">
-                                    {activeTab === 'planned'
-                                        ? "You haven't marked any events as planned"
-                                        : activeTab === 'attended'
-                                            ? "You haven't marked any events as attended"
-                                            : "Start exploring events and add them to your list"}
-                                </p>
-                                <Link to="/">
-                                    <Button>Discover Events</Button>
-                                </Link>
-                            </CardContent>
-                        </Card>
-                    )}
+                        {!isLoading && gigs && gigs.length > 0 && (
+                            <div className="rail-list">
+                                {gigs.map(gig => {
+                                    const event = gig.event
+                                    if (!event) return null
 
-                    {/* Gigs List */}
-                    {!isLoading && gigs && gigs.length > 0 && (
-                        <div className="grid gap-4 md:grid-cols-2">
-                            {gigs.map((gig) => {
-                                const event = gig.event
-                                if (!event) return null
+                                    const review =
+                                        gig.review && gig.review.length > 0 ? gig.review[0] : null
+                                    const attended = gig.status === 'attended'
 
-                                const eventDate = new Date(event.start_at)
-                                const hasReview = gig.review && gig.review.length > 0
+                                    return (
+                                        <div key={gig.id} className="row items-start">
+                                            <span className="row-slot">
+                                                <DateSlot date={event.start_at} />
+                                            </span>
 
-                                return (
-                                    <Card key={gig.id} hoverable>
-                                        <CardContent className="p-5">
-                                            <div className="flex gap-4">
-                                                {/* Date Box */}
-                                                <div className={cn(
-                                                    'flex-shrink-0 w-14 h-14 rounded-xl flex flex-col items-center justify-center',
-                                                    gig.status === 'attended'
-                                                        ? 'bg-green-500/20 border border-green-500/30'
-                                                        : 'bg-primary-500/20 border border-primary-500/30'
-                                                )}>
-                                                    <span className="text-xl font-bold text-white">
-                                                        {eventDate.getDate()}
-                                                    </span>
-                                                    <span className="text-xs uppercase text-surface-400 font-medium">
-                                                        {eventDate.toLocaleString('default', { month: 'short' })}
-                                                    </span>
-                                                </div>
+                                            <span className="row-body">
+                                                <Link
+                                                    to={`/events/${event.id}`}
+                                                    className="row-title hover:text-strip"
+                                                >
+                                                    {sanitizeText(event.name)}
+                                                </Link>
+                                                <span className="row-meta">
+                                                    {sanitizeText(
+                                                        event.venue?.name || 'Venue unknown'
+                                                    )}{' '}
+                                                    · {sanitizeText(event.city)}
+                                                </span>
+                                                <span className="voice-label text-bone-faint">
+                                                    {attended ? 'You were there' : 'Going'}
+                                                </span>
+                                            </span>
 
-                                                {/* Event Info */}
-                                                <div className="flex-1 min-w-0">
+                                            <span className="row-end gap-2">
+                                                {review ? (
+                                                    <>
+                                                        <span className="flex items-center gap-2">
+                                                            <span className="voice-board tnum text-board-md text-strip leading-none">
+                                                                {review.rating.toFixed(1)}
+                                                            </span>
+                                                            <ScoreStrip
+                                                                value={review.rating}
+                                                                size="sm"
+                                                            />
+                                                        </span>
+                                                        <Link
+                                                            to={`/review/${event.id}/edit`}
+                                                            className="voice-label text-bone-dim hover:text-strip"
+                                                        >
+                                                            Edit review
+                                                        </Link>
+                                                    </>
+                                                ) : attended ? (
                                                     <Link
-                                                        to={`/events/${event.id}`}
-                                                        className="font-semibold text-white hover:text-primary-400 transition-colors line-clamp-1"
+                                                        to={`/review/${event.id}`}
+                                                        className="btn-primary"
                                                     >
-                                                        {sanitizeText(event.name)}
+                                                        Rate the night
                                                     </Link>
-                                                    <p className="text-sm text-surface-400 mt-1">
-                                                        {sanitizeText(event.venue?.name)} • {sanitizeText(event.city)}
-                                                    </p>
-
-                                                    <div className="flex items-center gap-2 mt-2">
-                                                        <Badge variant={gig.status === 'attended' ? 'success' : 'primary'}>
-                                                            {gig.status === 'attended' ? (
-                                                                <><Check className="w-3 h-3 mr-1" /> Attended</>
-                                                            ) : (
-                                                                <>Planned</>
-                                                            )}
-                                                        </Badge>
-
-                                                        {hasReview && (
-                                                            <Badge variant="accent">
-                                                                <Star className="w-3 h-3 mr-1" fill="currentColor" />
-                                                                {gig.review[0].rating}
-                                                            </Badge>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Actions */}
-                                            {gig.status === 'attended' && (
-                                                <div className="mt-4 pt-4 border-t border-surface-800 flex justify-end gap-2">
-                                                    {hasReview ? (
-                                                        <Link to={`/review/${event.id}/edit`}>
-                                                            <Button size="sm" variant="secondary">
-                                                                <Edit className="w-4 h-4 mr-1" />
-                                                                Edit Review
-                                                            </Button>
-                                                        </Link>
-                                                    ) : (
-                                                        <Link to={`/review/${event.id}`}>
-                                                            <Button size="sm">
-                                                                <Plus className="w-4 h-4 mr-1" />
-                                                                Write Review
-                                                            </Button>
-                                                        </Link>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </CardContent>
-                                    </Card>
-                                )
-                            })}
-                        </div>
-                    )}
-                </>
-            )}
+                                                ) : null}
+                                            </span>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        )}
+                    </>
+                )}
+            </div>
         </div>
     )
 }

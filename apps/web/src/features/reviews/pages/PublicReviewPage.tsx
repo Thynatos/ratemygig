@@ -1,14 +1,14 @@
 import { useParams, Link } from 'react-router-dom'
-import { Calendar, MapPin, Share2, ChevronLeft } from 'lucide-react'
+import { ChevronLeft } from 'lucide-react'
 import { useReview } from '../api/reviews'
 import { ReactionButtons } from '../components/ReactionButtons'
 import { CommentSection } from '@/features/comments/components/CommentSection'
 import { usePhotoUrls, usePageMeta } from '@/shared/hooks'
 import { Button } from '@/shared/components/ui/Button'
-import { Card, CardContent } from '@/shared/components/ui/Card'
-import { StarRating } from '@/shared/components/ui/StarRating'
+import { ScoreStrip } from '@/shared/components/ui/StarRating'
 import { Avatar } from '@/shared/components/ui/Avatar'
 import { LoadingPage } from '@/shared/components/ui/Loading'
+import { EmptyState } from '@/shared/components/ui/Board'
 import { formatDate, formatRelativeTime } from '@/shared/lib/utils'
 import { sanitizeText } from '@/shared/lib/sanitize'
 import { buildOgImageUrl } from '@/shared/lib/og'
@@ -18,206 +18,197 @@ export function PublicReviewPage() {
     const { reviewId } = useParams<{ reviewId: string }>()
     const { data: review, isLoading, error } = useReview(reviewId!)
     const storagePaths = review?.photos?.map((p: { storage_path: string }) => p.storage_path) ?? []
-    const thumbPaths = review?.photos?.map((p: { thumbnail_path: string | null }) => p.thumbnail_path) ?? []
-    const { urls: photoUrls, thumbUrls, isLoading: photosLoading } = usePhotoUrls(storagePaths, thumbPaths)
+    const thumbPaths =
+        review?.photos?.map((p: { thumbnail_path: string | null }) => p.thumbnail_path) ?? []
+    const {
+        urls: photoUrls,
+        thumbUrls,
+        isLoading: photosLoading,
+    } = usePhotoUrls(storagePaths, thumbPaths)
 
     const isPublicReview = !!review && review.is_public && review.status !== 'draft'
     usePageMeta(
         isPublicReview && reviewId
             ? {
-                  title: review.event?.name
-                      ? `Review of ${review.event.name}`
-                      : review.title || 'Review',
-                  description: `${review.profile?.display_name || 'Anonymous'} rated ${
-                      review.event?.name || review.title || 'an event'
-                  } ${review.rating}/5`,
-                  canonicalPath: `/r/${reviewId}`,
-                  ogImage: buildOgImageUrl(env.SUPABASE_URL, reviewId),
-              }
+                title: review.event?.name
+                    ? `Review of ${review.event.name}`
+                    : review.title || 'Review',
+                description: `${review.profile?.display_name || 'Anonymous'} rated ${review.event?.name || review.title || 'an event'
+                    } ${review.rating}/5`,
+                canonicalPath: `/r/${reviewId}`,
+                ogImage: buildOgImageUrl(env.SUPABASE_URL, reviewId),
+            }
             : null
     )
 
     const handleShare = async () => {
         if (navigator.share) {
             await navigator.share({
-                title: review?.event?.name ? `Review of ${review.event.name}` : 'ratemygig Review',
+                title: review?.event?.name
+                    ? `Review of ${review.event.name}`
+                    : 'ratemygig review',
                 url: window.location.href,
             })
         } else {
             await navigator.clipboard.writeText(window.location.href)
-            alert('Link copied to clipboard!')
         }
     }
 
-    if (isLoading) return <LoadingPage message="Loading review..." />
+    if (isLoading) return <LoadingPage message="Opening the review" />
 
     if (error || !review || !review.is_public || review.status === 'draft') {
         return (
-            <div className="page-container">
-                <Card>
-                    <CardContent className="p-12 text-center">
-                        <h2 className="text-xl font-semibold text-white mb-2">Review not found</h2>
-                        <p className="text-surface-400 mb-6">
-                            This review may be private or has been deleted.
-                        </p>
-                        <Link to="/">
-                            <Button variant="secondary">Discover Events</Button>
+            <div className="page page-body">
+                <EmptyState
+                    title="This review isn't public"
+                    body="It's been made private, deleted, or the link is wrong."
+                    action={
+                        <Link to="/" className="btn-secondary">
+                            See what's on
                         </Link>
-                    </CardContent>
-                </Card>
+                    }
+                />
             </div>
         )
     }
 
     const event = review.event
     const profile = review.profile
+    const authorName = sanitizeText(profile?.display_name || profile?.username || 'A gig-goer')
 
     return (
-        <div className="page-container max-w-3xl mx-auto">
-            {/* Back */}
+        <div className="page page-body max-w-3xl">
             <Link
                 to={event ? `/events/${event.id}` : '/'}
-                className="inline-flex items-center gap-2 text-surface-400 hover:text-white mb-6 transition-colors"
+                className="inline-flex items-center gap-1.5 voice-label text-bone-faint hover:text-bone mb-5"
             >
-                <ChevronLeft className="w-5 h-5" />
-                {event ? 'Back to Event' : 'Discover Events'}
+                <ChevronLeft className="w-4 h-4" aria-hidden="true" />
+                {event ? 'Back to the gig' : "What's on"}
             </Link>
 
-            <Card>
-                <CardContent className="p-6 md:p-8">
-                    {/* Event Info */}
-                    {event && (
-                        <div className="mb-6 p-4 rounded-xl bg-surface-800/50 border border-surface-700">
-                            <Link
-                                to={`/events/${event.id}`}
-                                className="font-semibold text-lg text-white hover:text-primary-400 transition-colors"
-                            >
-                                {sanitizeText(event.name)}
-                            </Link>
-                            <div className="flex flex-wrap gap-4 mt-2 text-sm text-surface-400">
-                                <span className="flex items-center gap-1">
-                                    <Calendar className="w-4 h-4" />
-                                    {formatDate(event.start_at, 'MMM d, yyyy')}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                    <MapPin className="w-4 h-4" />
-                                    {sanitizeText(event.venue?.name)}, {sanitizeText(event.city)}
-                                </span>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Rating */}
-                    <div className="flex items-center justify-center mb-6">
-                        <div className="text-center">
-                            <div className="text-5xl font-bold text-white mb-2">{review.rating}</div>
-                            <StarRating value={review.rating} readonly size="lg" />
-                        </div>
-                    </div>
-
-                    {/* Review Title */}
-                    {review.title && (
-                        <h1 className="text-2xl font-display font-bold text-white text-center mb-4">
-                            &ldquo;{sanitizeText(review.title)}&rdquo;
-                        </h1>
-                    )}
-
-                    {/* Review Body */}
-                    <div className="prose prose-invert max-w-none mb-6">
-                        <p className="text-surface-200 text-lg leading-relaxed whitespace-pre-wrap">
-                            {sanitizeText(review.body)}
+            <article>
+                {/* The night this review is about, on its own rail. */}
+                {event && (
+                    <div className="border-y border-rail-strong bg-board px-4 py-3.5 mb-6">
+                        <Link
+                            to={`/events/${event.id}`}
+                            className="voice-slot text-board-md text-bone hover:text-strip"
+                        >
+                            {sanitizeText(event.name)}
+                        </Link>
+                        <p className="row-meta mt-1">
+                            {formatDate(event.start_at, 'EEE d MMM yyyy')} ·{' '}
+                            {sanitizeText(event.venue?.name || 'Venue unknown')} ·{' '}
+                            {sanitizeText(event.city)}
                         </p>
                     </div>
+                )}
 
-                    {/* Photos */}
-                    {review.photos && review.photos.length > 0 && (
-                        <div className="mb-6">
-                            <div className="photo-grid">
-                                {review.photos.map((photo: { id: string; storage_path: string; thumbnail_path: string | null }) => {
-                                    const thumbUrl = photo.thumbnail_path ? thumbUrls.get(photo.thumbnail_path) : null
-                                    const fullUrl = photoUrls.get(photo.storage_path)
-                                    const displayUrl = thumbUrl || fullUrl
-                                    return (
-                                        <div key={photo.id} className="photo-item">
-                                            {photosLoading || !displayUrl ? (
-                                                <div className="w-full h-full bg-surface-700 animate-pulse" />
-                                            ) : (
-                                                <img
-                                                    src={displayUrl}
-                                                    alt="Review photo"
-                                                    className="w-full h-full object-cover rounded-lg"
-                                                    loading="lazy"
-                                                />
-                                            )}
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Reactions */}
-                    <div className="mt-6 pt-4 border-t border-surface-700">
-                        <ReactionButtons reviewId={review.id} />
-                    </div>
-
-                    {/* Comments */}
-                    <CommentSection reviewId={review.id} />
-
-                    {/* Author */}
-                    <div className="flex items-center justify-between pt-6 border-t border-surface-700">
-                        <div className="flex items-center gap-3">
-                            {profile?.is_profile_public ? (
-                                <Link to={`/u/${profile.username}`}>
-                                    <Avatar
-                                        src={profile.avatar_url}
-                                        name={sanitizeText(profile.display_name)}
-                                        size="md"
-                                    />
-                                </Link>
-                            ) : (
-                                <Avatar
-                                    src={profile?.avatar_url}
-                                        name={sanitizeText(profile?.display_name || '')}
-                                    size="md"
-                                />
-                            )}
-                            <div>
-                                {profile?.is_profile_public && profile.username ? (
-                                    <Link
-                                        to={`/u/${profile.username}`}
-                                        className="font-medium text-white hover:text-primary-400 transition-colors"
-                                    >
-                                        {sanitizeText(profile.display_name || profile.username)}
-                                    </Link>
-                                ) : (
-                                    <span className="font-medium text-white">
-                                        {sanitizeText(profile?.display_name || 'Anonymous')}
-                                    </span>
-                                )}
-                                <p className="text-sm text-surface-500">
-                                    {formatRelativeTime(review.created_at)}
-                                </p>
-                            </div>
-                        </div>
-
-                        <Button variant="secondary" size="sm" onClick={handleShare}>
-                            <Share2 className="w-4 h-4 mr-2" />
-                            Share
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
-
-            {/* More from this event */}
-            {event && (
-                <div className="mt-8 text-center">
-                    <Link to={`/events/${event.id}`}>
-                        <Button variant="ghost">
-                            See all reviews for this event
-                        </Button>
-                    </Link>
+                {/* The score is the headline fact. */}
+                <div className="flex items-end gap-4 mb-6">
+                    <span className="voice-board tnum text-strip leading-[0.8] text-[clamp(3.5rem,14vw,6rem)]">
+                        {review.rating}
+                    </span>
+                    <span className="flex flex-col gap-2 pb-2">
+                        <ScoreStrip value={review.rating} size="md" />
+                        <span className="voice-label text-bone-faint">Out of five</span>
+                    </span>
                 </div>
+
+                {review.title && (
+                    <h1 className="voice-board text-board-lg text-bone mb-4 text-balance">
+                        {sanitizeText(review.title)}
+                    </h1>
+                )}
+
+                <p className="voice-read text-bone-mid whitespace-pre-wrap">
+                    {sanitizeText(review.body)}
+                </p>
+
+                {review.photos && review.photos.length > 0 && (
+                    <div className="photo-grid mt-8">
+                        {review.photos.map(
+                            (photo: {
+                                id: string
+                                storage_path: string
+                                thumbnail_path: string | null
+                            }) => {
+                                const thumbUrl = photo.thumbnail_path
+                                    ? thumbUrls.get(photo.thumbnail_path)
+                                    : null
+                                const fullUrl = photoUrls.get(photo.storage_path)
+                                const displayUrl = thumbUrl || fullUrl
+                                return (
+                                    <div key={photo.id} className="photo-item">
+                                        {photosLoading || !displayUrl ? (
+                                            <div className="skeleton w-full h-full" />
+                                        ) : (
+                                            <img
+                                                src={displayUrl}
+                                                alt={`Photo from ${authorName}'s review${event ? ` of ${sanitizeText(event.name)}` : ''}`}
+                                                loading="lazy"
+                                                decoding="async"
+                                            />
+                                        )}
+                                    </div>
+                                )
+                            }
+                        )}
+                    </div>
+                )}
+
+                {/* Who wrote it, and what you can do about it. */}
+                <footer className="mt-8 border-t border-rail-strong pt-4 flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex items-center gap-2.5">
+                        {profile?.is_profile_public && profile.username ? (
+                            <Link
+                                to={`/u/${profile.username}`}
+                                className="flex items-center gap-2.5 group"
+                            >
+                                <Avatar src={profile.avatar_url} name={authorName} size="md" />
+                                <span>
+                                    <span className="block text-ui text-bone group-hover:text-strip">
+                                        {authorName}
+                                    </span>
+                                    <span className="block voice-label text-bone-faint">
+                                        {formatRelativeTime(review.created_at)}
+                                    </span>
+                                </span>
+                            </Link>
+                        ) : (
+                            <>
+                                <Avatar src={profile?.avatar_url} name={authorName} size="md" />
+                                <span>
+                                    <span className="block text-ui text-bone">{authorName}</span>
+                                    <span className="block voice-label text-bone-faint">
+                                        {formatRelativeTime(review.created_at)}
+                                    </span>
+                                </span>
+                            </>
+                        )}
+                    </div>
+
+                    <Button variant="secondary" size="sm" onClick={handleShare}>
+                        Share
+                    </Button>
+                </footer>
+
+                <div className="mt-4">
+                    <ReactionButtons reviewId={review.id} />
+                </div>
+
+                <CommentSection reviewId={review.id} />
+            </article>
+
+            {event && (
+                <p className="mt-10 pt-5 border-t border-rail">
+                    <Link
+                        to={`/events/${event.id}`}
+                        className="voice-label text-bone-dim hover:text-strip"
+                    >
+                        Every review of this night
+                    </Link>
+                </p>
             )}
         </div>
     )
