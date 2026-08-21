@@ -1,71 +1,66 @@
 import { Link, useSearchParams } from 'react-router-dom'
-import {
-    Sparkles,
-    Calendar,
-    Star,
-    Camera,
-    MapPin,
-    Music,
-    Building2,
-    ChevronLeft,
-    ChevronRight,
-} from 'lucide-react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useAuth } from '@/features/auth/hooks/useAuth'
-import { useYearStats, resolveWrappedYear, MIN_WRAPPED_YEAR } from '@/features/wrapped/api/yearStats'
-import { Card, CardContent } from '@/shared/components/ui/Card'
-import { Button } from '@/shared/components/ui/Button'
+import {
+    useYearStats,
+    resolveWrappedYear,
+    MIN_WRAPPED_YEAR,
+} from '@/features/wrapped/api/yearStats'
 import { LoadingPage } from '@/shared/components/ui/Loading'
+import { EmptyState, Figure } from '@/shared/components/ui/Board'
 import { formatDate, formatNumber } from '@/shared/lib/utils'
 import { sanitizeText } from '@/shared/lib/sanitize'
 import type { YearStatEntry } from '@core/index'
 
-function StatCard({ icon: Icon, label, value, color }: {
-    icon: typeof Star
-    label: string
-    value: string
-    color: string
-}) {
-    return (
-        <Card>
-            <CardContent className="p-4">
-                <div className="text-center">
-                    <Icon className={color + ' w-5 h-5 mx-auto mb-1'} />
-                    <div className="text-lg font-bold text-white">{value}</div>
-                    <div className="text-xs text-surface-400">{label}</div>
-                </div>
-            </CardContent>
-        </Card>
-    )
-}
-
-function TopList({ title, icon: Icon, entries }: {
-    title: string
-    icon: typeof Star
-    entries: YearStatEntry[]
-    }) {
+/**
+ * A league table of the year: rank in the left slot, the name in the body, and
+ * the count both as a figure and as a bar sized against the leader.
+ */
+function TopList({ title, entries }: { title: string; entries: YearStatEntry[] }) {
     if (entries.length === 0) return null
+    const max = Math.max(...entries.map(e => e.count), 1)
+
     return (
-        <Card>
-            <CardContent className="p-5">
-                <h2 className="font-semibold text-lg text-white flex items-center gap-2 mb-4">
-                    <Icon className="w-5 h-5 text-primary-400" />
-                    {title}
-                </h2>
-                <div className="space-y-3">
-                    {entries.map((entry, index) => (
-                        <div key={entry.name + index} className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary-500/10 text-primary-400 font-bold text-sm">
-                                    {index + 1}
-                                </div>
-                                <span className="text-white">{sanitizeText(entry.name)}</span>
-                            </div>
-                            <span className="text-sm text-surface-400">{formatNumber(entry.count)} gigs</span>
-                        </div>
-                    ))}
-                </div>
-            </CardContent>
-        </Card>
+        <section>
+            <h2 className="voice-label text-bone-dim mb-3">{title}</h2>
+            <ol className="rail-list">
+                {entries.map((entry, index) => (
+                    <li key={entry.name + index} className="row items-center">
+                        <span className="row-slot !w-10 sm:!w-12">
+                            <span
+                                className={
+                                    index === 0
+                                        ? 'voice-board tnum text-strip text-[1.75rem] leading-none'
+                                        : 'voice-board tnum text-bone-dim text-[1.75rem] leading-none'
+                                }
+                                aria-hidden="true"
+                            >
+                                {index + 1}
+                            </span>
+                        </span>
+
+                        <span className="row-body">
+                            <span className="row-title">{sanitizeText(entry.name)}</span>
+                            <span
+                                aria-hidden="true"
+                                className="block h-1.5 bg-groove mt-1.5 max-w-[16rem]"
+                            >
+                                <span
+                                    className="block h-full bg-strip"
+                                    style={{ width: `${Math.max((entry.count / max) * 100, 6)}%` }}
+                                />
+                            </span>
+                        </span>
+
+                        <span className="row-end">
+                            <span className="voice-label text-bone-dim tnum">
+                                {formatNumber(entry.count)} gigs
+                            </span>
+                        </span>
+                    </li>
+                ))}
+            </ol>
+        </section>
     )
 }
 
@@ -81,75 +76,94 @@ export function WrappedPage() {
         setSearchParams({ year: String(target) })
     }
 
-    if (isLoading) return <LoadingPage message={`Crunching your ${year}...`} />
+    if (isLoading) return <LoadingPage message={`Counting up your ${year}`} />
 
     const isEmpty = !stats || stats.gigs_attended === 0
 
     return (
-        <div className="page-container max-w-2xl mx-auto">
-            <div className="mb-8 text-center">
-                <h1 className="section-title flex items-center justify-center gap-3">
-                    <Sparkles className="w-8 h-8 text-accent-400" />
-                    Your Year in Review
-                </h1>
-                <p className="section-subtitle">Your gig story, one year at a time</p>
-            </div>
+        <div className="page page-body max-w-3xl">
+            <header className="board-header">
+                {/* The year is the fact this page exists to state, so it is the
+                    strip and the headline at once. */}
+                <div className="flex items-center justify-between gap-4">
+                    <button
+                        type="button"
+                        onClick={() => goToYear(year - 1)}
+                        disabled={year <= MIN_WRAPPED_YEAR}
+                        aria-label="Previous year"
+                        className="btn-secondary"
+                    >
+                        <ChevronLeft className="w-4 h-4" aria-hidden="true" />
+                        <span className="tnum">{year - 1}</span>
+                    </button>
 
-            <div className="flex items-center justify-center gap-4 mb-8">
-                <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => goToYear(year - 1)}
-                    disabled={year <= MIN_WRAPPED_YEAR}
-                    aria-label="Previous year"
-                >
-                    <ChevronLeft className="w-4 h-4" />
-                </Button>
-                <span className="text-2xl font-bold text-white min-w-20 text-center">{year}</span>
-                <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => goToYear(year + 1)}
-                    disabled={year >= currentYear}
-                    aria-label="Next year"
-                >
-                    <ChevronRight className="w-4 h-4" />
-                </Button>
-            </div>
+                    <p className="voice-label text-bone-faint">Your year in gigs</p>
+
+                    <button
+                        type="button"
+                        onClick={() => goToYear(year + 1)}
+                        disabled={year >= currentYear}
+                        aria-label="Next year"
+                        className="btn-secondary"
+                    >
+                        <span className="tnum">{year + 1}</span>
+                        <ChevronRight className="w-4 h-4" aria-hidden="true" />
+                    </button>
+                </div>
+
+                <h1 className="voice-board tnum text-strip text-center leading-[0.85] text-[clamp(5rem,26vw,13rem)] mt-4">
+                    {year}
+                </h1>
+            </header>
 
             {isEmpty ? (
-                <Card>
-                    <CardContent className="p-12 text-center">
-                        <Sparkles className="w-16 h-16 text-surface-600 mx-auto mb-4" />
-                        <h3 className="text-xl font-semibold text-white mb-2">No gigs in {year}</h3>
-                        <p className="text-surface-400 mb-6">
-                            Mark events as attended to start building your year in review
-                        </p>
-                        <Link to="/">
-                            <Button>Discover shows</Button>
+                <EmptyState
+                    title={`No gigs in ${year}`}
+                    body="Mark a gig as one you were at, and this page fills itself in."
+                    action={
+                        <Link to="/" className="btn-primary">
+                            Discover shows
                         </Link>
-                    </CardContent>
-                </Card>
+                    }
+                />
             ) : (
                 stats && (
                     <>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
-                            <StatCard icon={Calendar} label="Gigs attended" value={formatNumber(stats.gigs_attended)} color="text-primary-400" />
-                            <StatCard icon={Star} label="Reviews written" value={formatNumber(stats.reviews_written)} color="text-yellow-400" />
-                            <StatCard icon={Star} label="Average rating" value={stats.avg_rating_given.toFixed(1)} color="text-accent-400" />
-                            <StatCard icon={Camera} label="Photos uploaded" value={formatNumber(stats.photos_uploaded)} color="text-pink-400" />
-                            <StatCard icon={MapPin} label="Cities visited" value={formatNumber(stats.distinct_cities)} color="text-green-400" />
-                            <StatCard
-                                icon={Calendar}
-                                label="First gig"
-                                value={stats.first_gig_date ? formatDate(stats.first_gig_date, 'MMM d') : '—'}
-                                color="text-surface-400"
+                        <div className="grid grid-cols-2 sm:grid-cols-3 border border-rail bg-board mb-10 [&>*]:px-4 [&>*]:py-5 [&>*]:border-rail [&>*:not(:nth-child(3n+1))]:border-l [&>*:nth-child(n+3)]:border-t sm:[&>*:nth-child(n+3)]:border-t-0 sm:[&>*:nth-child(n+4)]:border-t">
+                            <Figure
+                                value={formatNumber(stats.gigs_attended)}
+                                label="Gigs been to"
+                                accent
+                            />
+                            <Figure
+                                value={formatNumber(stats.reviews_written)}
+                                label="Reviews written"
+                            />
+                            <Figure
+                                value={stats.avg_rating_given.toFixed(1)}
+                                label="Average score you gave"
+                            />
+                            <Figure
+                                value={formatNumber(stats.distinct_cities)}
+                                label="Cities"
+                            />
+                            <Figure
+                                value={formatNumber(stats.photos_uploaded)}
+                                label="Photos kept"
+                            />
+                            <Figure
+                                value={
+                                    stats.first_gig_date
+                                        ? formatDate(stats.first_gig_date, 'd MMM')
+                                        : '—'
+                                }
+                                label="First one of the year"
                             />
                         </div>
 
-                        <div className="space-y-4">
-                            <TopList title="Top Artists" icon={Music} entries={stats.top_artists} />
-                            <TopList title="Top Venues" icon={Building2} entries={stats.top_venues} />
+                        <div className="space-y-10">
+                            <TopList title="Most seen artists" entries={stats.top_artists} />
+                            <TopList title="Rooms you kept going back to" entries={stats.top_venues} />
                         </div>
                     </>
                 )

@@ -1,19 +1,16 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { User, Star, Calendar, Globe } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/shared/lib/supabase'
-import { Card, CardContent } from '@/shared/components/ui/Card'
 import { Avatar } from '@/shared/components/ui/Avatar'
-import { Badge } from '@/shared/components/ui/Badge'
-import { RatingDisplay } from '@/shared/components/ui/StarRating'
+import { ScoreStrip } from '@/shared/components/ui/StarRating'
 import { LoadingPage } from '@/shared/components/ui/Loading'
 import { QueryErrorState } from '@/shared/components/QueryErrorState'
-import { Button } from '@/shared/components/ui/Button'
+import { DateSlot, EmptyState } from '@/shared/components/ui/Board'
 import { GigStatsCard } from '../components/GigStatsCard'
-import { formatDate, formatRelativeTime, cn } from '@/shared/lib/utils'
+import { formatRelativeTime, cn } from '@/shared/lib/utils'
 import { sanitizeText } from '@/shared/lib/sanitize'
-import { FollowUserButton, FollowerCounts } from '../components/FollowUserButton'
+import { FollowUserButton } from '../components/FollowUserButton'
 import type { Profile } from '@core/index'
 
 type TabType = 'reviews' | 'lists'
@@ -48,15 +45,21 @@ export function PublicProfilePage() {
 
     // No `= []` defaults: failed queries must surface as error states, not
     // masquerade as empty profiles (audit finding A13).
-    const { data: reviewsData, isError: reviewsError, refetch: refetchReviews } = useQuery({
+    const {
+        data: reviewsData,
+        isError: reviewsError,
+        refetch: refetchReviews,
+    } = useQuery({
         queryKey: ['user-public-reviews', profile?.id],
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('reviews')
-                .select(`
+                .select(
+                    `
           *,
           event:events(*,venue:venues(*))
-        `)
+        `
+                )
                 .eq('user_id', profile!.id)
                 .eq('is_public', true)
                 .eq('status', 'published')
@@ -70,7 +73,11 @@ export function PublicProfilePage() {
 
     const reviews = reviewsData ?? []
 
-    const { data: listsData, isError: listsError, refetch: refetchLists } = useQuery({
+    const {
+        data: listsData,
+        isError: listsError,
+        refetch: refetchLists,
+    } = useQuery({
         queryKey: ['user-public-lists', profile?.id],
         queryFn: async () => {
             const { data, error } = await supabase
@@ -82,7 +89,7 @@ export function PublicProfilePage() {
 
             if (error) throw error
 
-            return ((data ?? []) as PublicListRow[]).map((row) => ({
+            return ((data ?? []) as PublicListRow[]).map(row => ({
                 ...row,
                 item_count: row.list_items?.[0]?.count ?? 0,
             }))
@@ -92,245 +99,235 @@ export function PublicProfilePage() {
 
     const lists = listsData ?? []
 
-    if (profileLoading) return <LoadingPage message="Loading profile..." />
+    if (profileLoading) return <LoadingPage message="Opening the profile" />
 
     if (!profile) {
         return (
-            <div className="page-container">
-                <Card>
-                    <CardContent className="p-12 text-center">
-                        <User className="w-16 h-16 text-surface-600 mx-auto mb-4" />
-                        <h2 className="text-xl font-semibold text-white mb-2">Profile not found</h2>
-                        <p className="text-surface-400 mb-6">
-                            This profile may be private or doesn't exist.
-                        </p>
-                        <Link to="/">
-                            <Button variant="secondary">Discover Events</Button>
+            <div className="page page-body">
+                <EmptyState
+                    title="No such profile"
+                    body="This profile is private, or the username is wrong."
+                    action={
+                        <Link to="/" className="btn-secondary">
+                            See what's on
                         </Link>
-                    </CardContent>
-                </Card>
+                    }
+                />
             </div>
         )
     }
 
+    const name = sanitizeText(profile.display_name || profile.username || 'A gig-goer')
     const showListsTab = lists.length > 0
+    const socialLinks = [
+        profile.website_url && {
+            href: profile.website_url.startsWith('http')
+                ? profile.website_url
+                : `https://${profile.website_url}`,
+            label: 'Website',
+        },
+        profile.twitter_handle && {
+            href: `https://twitter.com/${profile.twitter_handle}`,
+            label: `@${sanitizeText(profile.twitter_handle)}`,
+        },
+        profile.instagram_handle && {
+            href: `https://instagram.com/${profile.instagram_handle}`,
+            label: `@${sanitizeText(profile.instagram_handle)} on Instagram`,
+        },
+    ].filter(Boolean) as { href: string; label: string }[]
 
     return (
-        <div className="page-container max-w-4xl mx-auto">
-            <Card className="mb-8">
-                <CardContent className="p-6 md:p-8">
-                    <div className="flex flex-col md:flex-row items-center gap-6">
-                        <Avatar
-                            src={profile.avatar_url}
-                            name={sanitizeText(profile.display_name || profile.username || 'Anonymous')}
-                            size="xl"
-                        />
-                        <div className="text-center md:text-left flex-1">
-                            <h1 className="text-3xl font-display font-bold text-white mb-1">
-                                {sanitizeText(profile.display_name || profile.username || 'Anonymous')}
-                            </h1>
-                            {profile.username && (
-                                <p className="text-surface-400 mb-3">@{sanitizeText(profile.username)}</p>
-                            )}
-                            {profile.bio && (
-                                <p className="text-surface-300 max-w-xl">{sanitizeText(profile.bio)}</p>
-                            )}
+        <div className="page page-body max-w-4xl">
+            <header className="board-header">
+                <div className="flex flex-wrap items-start gap-5">
+                    <Avatar src={profile.avatar_url} name={name} size="xl" />
 
-                            {(profile.website_url || profile.twitter_handle || profile.instagram_handle) && (
-                                <div className="flex items-center gap-3 mt-3 flex-wrap">
-                                    {profile.website_url && (
-                                        <a
-                                            href={profile.website_url.startsWith('http') ? profile.website_url : `https://${profile.website_url}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="inline-flex items-center gap-1 text-sm text-primary-400 hover:text-primary-300 transition-colors"
-                                        >
-                                            <Globe className="w-4 h-4" />
-                                            Website
-                                        </a>
-                                    )}
-                                    {profile.twitter_handle && (
-                                        <a
-                                            href={`https://twitter.com/${profile.twitter_handle}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-sm text-sky-400 hover:text-sky-300 transition-colors"
-                                        >
-                                            @{sanitizeText(profile.twitter_handle)}
-                                        </a>
-                                    )}
-                                    {profile.instagram_handle && (
-                                        <a
-                                            href={`https://instagram.com/${profile.instagram_handle}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-sm text-pink-400 hover:text-pink-300 transition-colors"
-                                        >
-                                            @{sanitizeText(profile.instagram_handle)}
-                                        </a>
-                                    )}
-                                </div>
-                            )}
+                    <div className="min-w-0 flex-1">
+                        <h1 className="voice-board text-board-lg text-bone text-balance">
+                            {name}
+                        </h1>
+                        {profile.username && (
+                            <p className="voice-data text-ui-sm text-bone-faint mt-1.5">
+                                @{sanitizeText(profile.username)}
+                            </p>
+                        )}
+                        {profile.bio && (
+                            <p className="mt-3 text-ui text-bone-dim max-w-[60ch]">
+                                {sanitizeText(profile.bio)}
+                            </p>
+                        )}
 
-                            <div className="mt-4 flex items-center justify-center md:justify-start gap-4">
-                                <Badge variant="primary">
-                                    {reviews.length} {reviews.length === 1 ? 'Review' : 'Reviews'}
-                                </Badge>
-                                <FollowerCounts userId={profile.id} />
-                            </div>
-                            <div className="mt-4">
-                                <FollowUserButton userId={profile.id} />
-                            </div>
-                        </div>
+                        {socialLinks.length > 0 && (
+                            <ul className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                                {socialLinks.map(link => (
+                                    <li key={link.href}>
+                                        <a
+                                            href={link.href}
+                                            target="_blank"
+                                            rel="noopener noreferrer nofollow"
+                                            className="voice-label text-bone-dim hover:text-strip underline decoration-rail-strong"
+                                        >
+                                            {link.label}
+                                        </a>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
                     </div>
-                </CardContent>
-            </Card>
 
-            <div className="mb-6">
-                <GigStatsCard userId={profile.id} />
-            </div>
+                    <FollowUserButton userId={profile.id} />
+                </div>
 
-            {/* Tabs */}
-            <div className="flex gap-2 mb-6 border-b border-surface-800 overflow-x-auto">
+                <div className="mt-6">
+                    <GigStatsCard userId={profile.id} />
+                </div>
+            </header>
+
+            <div className="tab-rail mb-4" role="tablist" aria-label="Profile sections">
                 <button
+                    type="button"
+                    role="tab"
+                    id="tab-reviews"
+                    aria-selected={activeTab === 'reviews'}
+                    aria-controls="profile-panel"
                     onClick={() => setActiveTab('reviews')}
-                    className={cn(
-                        'tab flex items-center gap-1.5',
-                        activeTab === 'reviews' && 'active'
-                    )}
+                    className={cn('tab', activeTab === 'reviews' && 'tab-active')}
                 >
-                    <Star className="w-4 h-4" />
                     Reviews
                 </button>
                 {showListsTab && (
                     <button
+                        type="button"
+                        role="tab"
+                        id="tab-lists"
+                        aria-selected={activeTab === 'lists'}
+                        aria-controls="profile-panel"
                         onClick={() => setActiveTab('lists')}
-                        className={cn(
-                            'tab flex items-center gap-1.5',
-                            activeTab === 'lists' && 'active'
-                        )}
+                        className={cn('tab', activeTab === 'lists' && 'tab-active')}
                     >
-                        <Globe className="w-4 h-4" />
-                        Lists ({lists.length})
+                        Lists <span className="tnum">{lists.length}</span>
                     </button>
                 )}
             </div>
 
-            {/* Reviews Tab */}
-            {activeTab === 'reviews' && (
-                <section>
-                    {reviewsError ? (
+            <div id="profile-panel" role="tabpanel" aria-labelledby={`tab-${activeTab}`}>
+                {activeTab === 'reviews' &&
+                    (reviewsError ? (
                         <QueryErrorState
-                            title="Couldn't load reviews"
+                            title="Couldn't load their reviews"
                             onRetry={() => refetchReviews()}
                         />
                     ) : reviews.length === 0 ? (
-                        <Card>
-                            <CardContent className="p-8 text-center">
-                                <Star className="w-12 h-12 text-surface-600 mx-auto mb-4" />
-                                <p className="text-surface-400">No public reviews yet</p>
-                            </CardContent>
-                        </Card>
+                        <EmptyState
+                            title="Nothing public yet"
+                            body={`${name} hasn't published a review anyone else can read.`}
+                        />
                     ) : (
-                        <div className="space-y-4">
-                            {reviews.map((review) => (
-                                <Card key={review.id}>
-                                    <CardContent className="p-5">
-                                        <div className="flex items-start justify-between gap-4">
-                                            <div className="flex-1">
-                                                {review.event && (
-                                                    <Link
-                                                        to={`/events/${review.event.id}`}
-                                                        className="font-semibold text-white hover:text-primary-400 transition-colors"
-                                                    >
-                                                        {review.event.name}
-                                                    </Link>
-                                                )}
-                                                <div className="flex items-center gap-3 mt-1 text-sm text-surface-400">
-                                                    {review.event && (
-                                                        <>
-                                                            <span className="flex items-center gap-1">
-                                                                <Calendar className="w-3.5 h-3.5" />
-                                                                {formatDate(review.event.start_at, 'MMM d, yyyy')}
-                                                            </span>
-                                                            {review.event.venue && (
-                                                                <span>
-                                                                    {review.event.venue.name}, {review.event.city}
-                                                                </span>
-                                                            )}
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <RatingDisplay rating={review.rating} />
-                                        </div>
-
-                                        {review.title && (
-                                            <p className="mt-3 font-medium text-white">&ldquo;{sanitizeText(review.title)}&rdquo;</p>
-                                        )}
-
-                                        <p className="mt-2 text-surface-300 line-clamp-3">{sanitizeText(review.body)}</p>
-
-                                        <div className="mt-4 flex items-center justify-between">
-                                            <span className="text-sm text-surface-500">
-                                                {formatRelativeTime(review.created_at)}
+                        <div className="rail-list">
+                            {reviews.map(review => (
+                                <article key={review.id} className="row items-start">
+                                    <span className="row-slot">
+                                        {review.event ? (
+                                            <DateSlot date={review.event.start_at} />
+                                        ) : (
+                                            <span className="voice-label text-bone-faint">
+                                                Review
                                             </span>
+                                        )}
+                                    </span>
+
+                                    <span className="row-body">
+                                        {review.event && (
                                             <Link
-                                                to={`/r/${review.id}`}
-                                                className="text-sm text-primary-400 hover:text-primary-300"
+                                                to={`/events/${review.event.id}`}
+                                                className="row-title hover:text-strip"
                                             >
-                                                Read more →
+                                                {sanitizeText(review.event.name)}
                                             </Link>
-                                        </div>
-                                    </CardContent>
-                                </Card>
+                                        )}
+                                        {review.event?.venue && (
+                                            <span className="row-meta">
+                                                {sanitizeText(review.event.venue.name)} ·{' '}
+                                                {sanitizeText(review.event.city)}
+                                            </span>
+                                        )}
+                                        {review.title && (
+                                            <span className="voice-slot text-ui text-bone mt-1">
+                                                {sanitizeText(review.title)}
+                                            </span>
+                                        )}
+                                        <span className="text-ui text-bone-dim line-clamp-3">
+                                            {sanitizeText(review.body)}
+                                        </span>
+                                        <Link
+                                            to={`/r/${review.id}`}
+                                            className="voice-label text-bone-dim hover:text-strip mt-1"
+                                        >
+                                            Read it · {formatRelativeTime(review.created_at)}
+                                        </Link>
+                                    </span>
+
+                                    <span className="row-end">
+                                        <span className="flex items-center gap-2">
+                                            <span className="voice-board tnum text-board-md text-strip leading-none">
+                                                {review.rating.toFixed(1)}
+                                            </span>
+                                            <ScoreStrip value={review.rating} size="sm" />
+                                        </span>
+                                        <span className="sr-only">
+                                            {review.rating} out of 5
+                                        </span>
+                                    </span>
+                                </article>
                             ))}
                         </div>
-                    )}
-                </section>
-            )}
+                    ))}
 
-            {/* Lists Tab */}
-            {activeTab === 'lists' && (
-                <section>
-                    {listsError ? (
+                {activeTab === 'lists' &&
+                    (listsError ? (
                         <QueryErrorState
-                            title="Couldn't load lists"
+                            title="Couldn't load their lists"
                             onRetry={() => refetchLists()}
                         />
                     ) : lists.length === 0 ? (
-                        <Card>
-                            <CardContent className="p-8 text-center">
-                                <Globe className="w-12 h-12 text-surface-600 mx-auto mb-4" />
-                                <p className="text-surface-400">No public lists yet</p>
-                            </CardContent>
-                        </Card>
+                        <EmptyState
+                            title="No public lists"
+                            body={`${name} hasn't shared a list.`}
+                        />
                     ) : (
-                        <div className="space-y-4">
-                            {lists.map((list) => (
-                                <Link key={list.id} to={`/lists/${list.id}`}>
-                                    <Card hoverable>
-                                        <CardContent className="p-5">
-                                            <h3 className="font-semibold text-white">{sanitizeText(list.name)}</h3>
-                                            {list.description && (
-                                                <p className="text-sm text-surface-400 mt-1">{sanitizeText(list.description)}</p>
-                                            )}
-                                            <div className="flex items-center gap-3 mt-3">
-                                                <Badge variant="surface">
-                                                    {list.item_count} {list.item_count === 1 ? 'event' : 'events'}
-                                                </Badge>
-                                                <span className="text-xs text-surface-500">
-                                                    {formatRelativeTime(list.created_at)}
+                        <ul className="rail-list">
+                            {lists.map(list => (
+                                <li key={list.id}>
+                                    <Link to={`/lists/${list.id}`} className="row row-interactive">
+                                        <span className="row-slot">
+                                            <span className="date-slot">
+                                                <span className="date-slot-day">
+                                                    {list.item_count}
                                                 </span>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                </Link>
+                                                <span className="date-slot-mon">
+                                                    {list.item_count === 1 ? 'gig' : 'gigs'}
+                                                </span>
+                                            </span>
+                                        </span>
+                                        <span className="row-body">
+                                            <span className="row-title">
+                                                {sanitizeText(list.name)}
+                                            </span>
+                                            {list.description && (
+                                                <span className="row-meta">
+                                                    {sanitizeText(list.description)}
+                                                </span>
+                                            )}
+                                            <span className="voice-label text-bone-faint">
+                                                Made {formatRelativeTime(list.created_at)}
+                                            </span>
+                                        </span>
+                                    </Link>
+                                </li>
                             ))}
-                        </div>
-                    )}
-                </section>
-            )}
+                        </ul>
+                    ))}
+            </div>
         </div>
     )
 }

@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { User, Save, Eye, EyeOff, Sparkles } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { supabase } from '@/shared/lib/supabase'
@@ -15,20 +14,20 @@ import { GigStatsCard } from '@/features/profile/components/GigStatsCard'
 import { Button } from '@/shared/components/ui/Button'
 import { Input } from '@/shared/components/ui/Input'
 import { Textarea } from '@/shared/components/ui/Textarea'
-import { Card, CardContent } from '@/shared/components/ui/Card'
 import { LoadingPage } from '@/shared/components/ui/Loading'
+import { BoardHeader } from '@/shared/components/ui/Board'
 import { cn } from '@/shared/lib/utils'
 
 const profileSchema = z.object({
     username: z
         .string()
-        .min(3, 'Username must be at least 3 characters')
-        .max(30, 'Username must be at most 30 characters')
-        .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores')
+        .min(3, 'Usernames are at least 3 characters.')
+        .max(30, 'Usernames are at most 30 characters.')
+        .regex(/^[a-zA-Z0-9_]+$/, 'Letters, numbers and underscores only.')
         .optional()
         .or(z.literal('')),
-    display_name: z.string().max(100).optional(),
-    bio: z.string().max(500).optional(),
+    display_name: z.string().max(100, 'Keep it under 100 characters.').optional(),
+    bio: z.string().max(500, 'Keep it under 500 characters.').optional(),
     is_profile_public: z.boolean(),
 })
 
@@ -54,7 +53,13 @@ export function ProfilePage() {
         enabled: !!user,
     })
 
-    const { register, handleSubmit, setValue, control, formState: { errors } } = useForm<ProfileFormData>({
+    const {
+        register,
+        handleSubmit,
+        setValue,
+        control,
+        formState: { errors },
+    } = useForm<ProfileFormData>({
         resolver: zodResolver(profileSchema),
         defaultValues: {
             username: '',
@@ -75,7 +80,9 @@ export function ProfilePage() {
         }
     }, [profile, setValue])
 
-    const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+    const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(
+        null
+    )
 
     const onSubmit = async (data: ProfileFormData) => {
         if (!user) return
@@ -90,158 +97,191 @@ export function ProfilePage() {
                 is_profile_public: data.is_profile_public,
             },
             {
-                onSuccess: () => setMessage({ type: 'success', text: 'Profile updated successfully!' }),
-                onError: (err) => {
+                onSuccess: () => setMessage({ type: 'success', text: 'Profile saved.' }),
+                onError: err => {
                     if ((err as { code?: string }).code === '23505') {
-                        setMessage({ type: 'error', text: 'This username is already taken' })
+                        setMessage({
+                            type: 'error',
+                            text: 'That username is taken. Try another.',
+                        })
                     } else {
-                        setMessage({ type: 'error', text: 'Failed to update profile' })
+                        setMessage({
+                            type: 'error',
+                            text: 'The profile did not save. Your changes are still here.',
+                        })
                     }
                 },
             }
         )
     }
 
-    if (isLoading) return <LoadingPage message="Loading profile..." />
+    if (isLoading) return <LoadingPage message="Opening your profile" />
 
     return (
-        <div className="page-container max-w-2xl mx-auto">
-            <div className="mb-8">
-                <h1 className="section-title flex items-center gap-3">
-                    <User className="w-8 h-8 text-primary-400" />
-                    Profile Settings
-                </h1>
-                <p className="section-subtitle">Manage your public profile</p>
-            </div>
-
-            <Card className="mb-6">
-                <CardContent className="p-6">
-                    <AvatarUpload
-                        currentAvatarUrl={profile?.avatar_url || null}
-                        userId={user?.id || ''}
-                    />
-                    {user && (
-                        <div className="text-center mt-4">
-                            <p className="text-white font-medium">{user.email}</p>
-                            <p className="text-sm text-surface-400">
-                                Connected via {user.app_metadata?.provider || 'email'}
-                            </p>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
-
-            {user && (
-                <div className="mb-6">
-                    <GigStatsCard userId={user.id} />
-                </div>
-            )}
-
-            {user && (
-                <Card className="mb-6">
-                    <CardContent className="p-6 flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                            <Sparkles className="w-6 h-6 text-accent-400" />
-                            <div>
-                                <p className="font-medium text-white">Your Year in Review</p>
-                                <p className="text-sm text-surface-400">Stats, top artists and venues from each year</p>
-                            </div>
-                        </div>
-                        <Link to="/wrapped">
-                            <Button variant="secondary" size="sm">View</Button>
+        <div className="page page-body max-w-3xl">
+            <BoardHeader
+                title="Your profile"
+                lede="How you show up on the board, and what other people can see."
+                action={
+                    profile?.username && profile.is_profile_public ? (
+                        <Link to={`/u/${profile.username}`} className="btn-secondary">
+                            View public profile
                         </Link>
-                    </CardContent>
-                </Card>
-            )}
+                    ) : undefined
+                }
+            >
+                {user && <GigStatsCard userId={user.id} />}
+            </BoardHeader>
 
-            <Card>
-                <CardContent className="p-6">
-                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                        <Input
-                            label="Username"
-                            placeholder="your_username"
-                            hint="Used for your public profile URL"
-                            error={errors.username?.message}
-                            {...register('username')}
+            <div className="space-y-8">
+                <section className="border border-rail bg-board">
+                    <h2 className="voice-label text-bone-dim px-4 py-2.5 border-b border-rail">
+                        Photo and account
+                    </h2>
+                    <div className="p-4">
+                        <AvatarUpload
+                            currentAvatarUrl={profile?.avatar_url || null}
+                            userId={user?.id || ''}
                         />
-
-                        <Input
-                            label="Display Name"
-                            placeholder="Your Name"
-                            error={errors.display_name?.message}
-                            {...register('display_name')}
-                        />
-
-                        <Textarea
-                            label="Bio"
-                            placeholder="Tell us about yourself..."
-                            error={errors.bio?.message}
-                            {...register('bio')}
-                        />
-
-                        <div className="flex items-center justify-between p-4 rounded-xl bg-surface-800 border border-surface-700">
-                            <div className="flex items-center gap-3">
-                                {isPublic ? (
-                                    <Eye className="w-5 h-5 text-green-400" />
-                                ) : (
-                                    <EyeOff className="w-5 h-5 text-surface-400" />
-                                )}
+                        {user && (
+                            <dl className="mt-5 pt-4 border-t border-rail grid gap-3 sm:grid-cols-2">
                                 <div>
-                                    <p className="font-medium text-white">
-                                        {isPublic ? 'Public Profile' : 'Private Profile'}
-                                    </p>
-                                    <p className="text-sm text-surface-400">
-                                        {isPublic
-                                            ? 'Your profile and public reviews are visible to everyone'
-                                            : 'Your profile is hidden from other users'}
-                                    </p>
+                                    <dt className="voice-label text-bone-faint mb-1">
+                                        Signed in as
+                                    </dt>
+                                    <dd className="text-ui text-bone break-all">{user.email}</dd>
                                 </div>
+                                <div>
+                                    <dt className="voice-label text-bone-faint mb-1">Method</dt>
+                                    <dd className="text-ui text-bone">
+                                        {user.app_metadata?.provider === 'google'
+                                            ? 'Google'
+                                            : 'Magic link'}
+                                    </dd>
+                                </div>
+                            </dl>
+                        )}
+                    </div>
+                </section>
+
+                {user && (
+                    <Link
+                        to="/wrapped"
+                        className="row row-interactive border border-rail items-center"
+                    >
+                        <span className="row-body">
+                            <span className="row-title">Your year in gigs</span>
+                            <span className="row-meta">
+                                Counts, top artists and top rooms, one year at a time.
+                            </span>
+                        </span>
+                        <span className="row-end">
+                            <span className="voice-label text-strip">Open</span>
+                        </span>
+                    </Link>
+                )}
+
+                <form onSubmit={handleSubmit(onSubmit)} noValidate>
+                    <section className="border border-rail bg-board">
+                        <h2 className="voice-label text-bone-dim px-4 py-2.5 border-b border-rail">
+                            Public details
+                        </h2>
+
+                        <div className="p-4 space-y-5">
+                            <Input
+                                label="Username"
+                                placeholder="your_username"
+                                hint="This becomes your profile address: ratemygig.com/u/your_username"
+                                error={errors.username?.message}
+                                {...register('username')}
+                            />
+
+                            <Input
+                                label="Display name"
+                                placeholder="What people should call you"
+                                error={errors.display_name?.message}
+                                {...register('display_name')}
+                            />
+
+                            <Textarea
+                                label="Bio"
+                                placeholder="What you go to see, and where you usually see it."
+                                error={errors.bio?.message}
+                                {...register('bio')}
+                            />
+                        </div>
+
+                        <div className="flex items-center justify-between gap-4 px-4 py-4 border-t border-rail">
+                            <div>
+                                <p className="voice-label text-bone-dim mb-1">
+                                    Who can see your profile
+                                </p>
+                                <p className="text-ui-sm text-bone-faint">
+                                    {isPublic
+                                        ? 'Anyone. Your public reviews show on it.'
+                                        : 'Only you. Your reviews stay off the public board.'}
+                                </p>
                             </div>
                             <button
                                 type="button"
+                                role="switch"
+                                aria-checked={isPublic}
+                                aria-label="Make your profile public"
                                 onClick={() => setValue('is_profile_public', !isPublic)}
                                 className={cn(
-                                    'relative w-12 h-6 rounded-full transition-colors',
-                                    isPublic ? 'bg-green-500' : 'bg-surface-600'
+                                    'relative shrink-0 w-14 h-7 border transition-colors duration-150 ease-board',
+                                    isPublic
+                                        ? 'bg-strip border-strip'
+                                        : 'bg-groove border-rail-strong'
                                 )}
                             >
                                 <span
+                                    aria-hidden="true"
                                     className={cn(
-                                        'absolute top-1 w-4 h-4 rounded-full bg-white transition-transform',
-                                        isPublic ? 'translate-x-7' : 'translate-x-1'
+                                        'absolute top-[3px] w-5 h-5 transition-transform duration-150 ease-board',
+                                        isPublic
+                                            ? 'translate-x-[30px] bg-strip-ink'
+                                            : 'translate-x-[3px] bg-bone-faint'
                                     )}
                                 />
                             </button>
                         </div>
+                    </section>
 
-                        {message && (
-                            <div
+                    {message && (
+                        <p
+                            role="status"
+                            className={cn(
+                                'mt-4 border px-4 py-3 text-ui',
+                                message.type === 'success'
+                                    ? 'border-rail-strong bg-board text-bone'
+                                    : 'border-struck bg-board text-bone'
+                            )}
+                        >
+                            <span
                                 className={cn(
-                                    'p-4 rounded-xl',
-                                    message.type === 'success'
-                                        ? 'bg-green-500/10 border border-green-500/30 text-green-400'
-                                        : 'bg-red-500/10 border border-red-500/30 text-red-400'
+                                    'voice-label mr-2',
+                                    message.type === 'success' ? 'text-strip' : 'text-struck'
                                 )}
                             >
-                                {message.text}
-                            </div>
-                        )}
+                                {message.type === 'success' ? 'Saved' : 'Not saved'}
+                            </span>
+                            {message.text}
+                        </p>
+                    )}
 
-                        <div className="flex justify-end">
-                            <Button type="submit" isLoading={updateProfile.isPending}>
-                                <Save className="w-4 h-4 mr-2" />
-                                Save Changes
-                            </Button>
-                        </div>
-                    </form>
-                </CardContent>
-            </Card>
+                    <div className="mt-4 flex justify-end">
+                        <Button
+                            type="submit"
+                            isLoading={updateProfile.isPending}
+                            loadingLabel="Saving your profile"
+                        >
+                            Save changes
+                        </Button>
+                    </div>
+                </form>
 
-            <div className="mt-6">
                 <SocialLinksForm />
-            </div>
-
-            <div className="mt-6">
                 <PreferencesForm />
             </div>
         </div>

@@ -1,9 +1,8 @@
 import { memo } from 'react'
 import { Link } from 'react-router-dom'
-import { User, Calendar, MapPin } from 'lucide-react'
-import { Card, CardContent } from '@/shared/components/ui/Card'
 import { Avatar } from '@/shared/components/ui/Avatar'
-import { RatingDisplay } from '@/shared/components/ui/StarRating'
+import { ScoreStrip } from '@/shared/components/ui/StarRating'
+import { DateSlot } from '@/shared/components/ui/Board'
 import { formatRelativeTime, formatDate } from '@/shared/lib/utils'
 import { sanitizeText } from '@/shared/lib/sanitize'
 import type { FeedItem, ReviewFeedItem, EventFeedItem, AttendanceFeedItem } from '../api/feed'
@@ -12,151 +11,170 @@ interface FeedCardProps {
     item: FeedItem
 }
 
+/**
+ * Feed rows. The person is the identity of a social row, so the avatar takes
+ * the left slot; an announcement with no person takes the date instead.
+ */
 export const FeedCard = memo(function FeedCard({ item }: FeedCardProps) {
     switch (item.type) {
         case 'review':
-            return <ReviewCard item={item} />
+            return <ReviewRow item={item} />
         case 'event':
-            return <EventCard item={item} />
+            return <EventRow item={item} />
         case 'attendance':
-            return <AttendanceCard item={item} />
+            return <AttendanceRow item={item} />
     }
 })
 
-function ReviewCard({ item }: { item: ReviewFeedItem }) {
+function PersonLink({
+    person,
+}: {
+    person?: { username?: string | null; display_name?: string | null } | null
+}) {
+    const name = sanitizeText(person?.display_name || person?.username || 'Someone')
+    if (person?.username) {
+        return (
+            <Link to={`/u/${person.username}`} className="text-bone hover:text-strip">
+                {name}
+            </Link>
+        )
+    }
+    return <span className="text-bone">{name}</span>
+}
+
+function ReviewRow({ item }: { item: ReviewFeedItem }) {
     const author = item.author
     const review = item.review
 
     return (
-        <Card hoverable>
-            <CardContent className="p-5">
-                <div className="flex items-center gap-3 mb-3">
-                    {author ? (
-                        <Link to={author.username ? `/u/${author.username}` : '#'}>
-                            <Avatar src={author.avatar_url} name={sanitizeText(author.display_name || 'User')} size="sm" />
-                        </Link>
-                    ) : (
-                        <div className="w-8 h-8 rounded-full bg-surface-700 flex items-center justify-center">
-                            <User className="w-4 h-4 text-surface-400" />
-                        </div>
-                    )}
-                    <div>
-                        {author?.username ? (
-                            <Link to={`/u/${author.username}`} className="font-medium text-white hover:text-primary-400 transition-colors">
-                                {sanitizeText(author.display_name || author.username)}
-                            </Link>
-                        ) : (
-                            <span className="font-medium text-white">{sanitizeText(author?.display_name || 'Anonymous')}</span>
-                        )}
-                        <span className="text-surface-500 mx-2">reviewed</span>
-                        {item.event && (
-                            <Link to={`/events/${item.event.id}`} className="font-medium text-primary-400 hover:text-primary-300">
-                                {sanitizeText(item.event.name)}
-                            </Link>
-                        )}
-                        <p className="text-xs text-surface-500">{formatRelativeTime(item.created_at)}</p>
-                    </div>
-                </div>
+        <article className="row items-start">
+            <span className="row-slot !w-11 sm:!w-14">
+                <Avatar
+                    src={author?.avatar_url}
+                    name={author?.display_name || author?.username || null}
+                    size="md"
+                />
+            </span>
 
-                <div className="flex items-center gap-2 mb-2">
-                    <RatingDisplay rating={review.rating} />
-                </div>
+            <span className="row-body">
+                <span className="text-ui text-bone-dim">
+                    <PersonLink person={author} /> rated{' '}
+                    {item.event && (
+                        <Link
+                            to={`/events/${item.event.id}`}
+                            className="text-bone hover:text-strip"
+                        >
+                            {sanitizeText(item.event.name)}
+                        </Link>
+                    )}
+                </span>
+
+                <span className="flex items-center gap-2 my-1">
+                    <span className="voice-board tnum text-board-md text-strip leading-none">
+                        {review.rating.toFixed(1)}
+                    </span>
+                    <ScoreStrip value={review.rating} size="sm" />
+                    <span className="sr-only">{review.rating} out of 5</span>
+                </span>
 
                 {review.title && (
-                    <p className="font-medium text-white mb-1">&ldquo;{sanitizeText(review.title)}&rdquo;</p>
-                )}
-                <p className="text-surface-300 line-clamp-2">{sanitizeText(review.body)}</p>
-
-                <Link to={`/r/${review.id}`} className="inline-block mt-3 text-sm text-primary-400 hover:text-primary-300">
-                    Read more →
-                </Link>
-            </CardContent>
-        </Card>
-    )
-}
-
-function EventCard({ item }: { item: EventFeedItem }) {
-    return (
-        <Card hoverable>
-            <CardContent className="p-5">
-                <div className="flex items-center gap-2 text-surface-400 text-sm mb-2">
-                    <Calendar className="w-4 h-4 text-primary-400" />
-                    <span>Upcoming event</span>
-                    <span className="text-surface-500">•</span>
-                    <span>{formatRelativeTime(item.created_at)}</span>
-                </div>
-
-                <Link to={`/events/${item.event.id}`} className="text-lg font-semibold text-white hover:text-primary-400 transition-colors">
-                    {item.event.name}
-                </Link>
-
-                <div className="flex items-center gap-3 mt-2 text-sm text-surface-400">
-                    <span className="flex items-center gap-1">
-                        <Calendar className="w-3.5 h-3.5" />
-                        {formatDate(item.event.start_at, 'MMM d, yyyy')}
+                    <span className="voice-slot text-ui text-bone">
+                        {sanitizeText(review.title)}
                     </span>
-                    {item.venue && (
-                        <span className="flex items-center gap-1">
-                            <MapPin className="w-3.5 h-3.5" />
-                            {sanitizeText(item.venue.name)}, {sanitizeText(item.venue.city)}
-                        </span>
-                    )}
-                </div>
-            </CardContent>
-        </Card>
+                )}
+                <span className="text-ui text-bone-dim line-clamp-2">
+                    {sanitizeText(review.body)}
+                </span>
+
+                <Link
+                    to={`/r/${review.id}`}
+                    className="voice-label text-bone-dim hover:text-strip mt-1"
+                >
+                    Read it
+                </Link>
+            </span>
+
+            <span className="row-end">
+                <span className="voice-label text-bone-faint">
+                    {formatRelativeTime(item.created_at)}
+                </span>
+            </span>
+        </article>
     )
 }
 
-function AttendanceCard({ item }: { item: AttendanceFeedItem }) {
+function EventRow({ item }: { item: EventFeedItem }) {
+    return (
+        <article className="row items-start">
+            <span className="row-slot">
+                <DateSlot date={item.event.start_at} />
+            </span>
+
+            <span className="row-body">
+                <span className="voice-label text-strip">New date announced</span>
+                <Link
+                    to={`/events/${item.event.id}`}
+                    className="row-title hover:text-strip"
+                >
+                    {sanitizeText(item.event.name)}
+                </Link>
+                {item.venue && (
+                    <span className="row-meta">
+                        {sanitizeText(item.venue.name)} · {sanitizeText(item.venue.city)}
+                    </span>
+                )}
+            </span>
+
+            <span className="row-end">
+                <span className="voice-label text-bone-faint">
+                    {formatRelativeTime(item.created_at)}
+                </span>
+            </span>
+        </article>
+    )
+}
+
+function AttendanceRow({ item }: { item: AttendanceFeedItem }) {
     const user = item.user
+    // 'attended' is past tense; 'planned' is future. The original copy had
+    // these the wrong way round.
+    const verb = item.status === 'attended' ? 'was at' : 'is going to'
 
     return (
-        <Card hoverable>
-            <CardContent className="p-5">
-                <div className="flex items-center gap-3 mb-3">
-                    {user ? (
-                        <Link to={user.username ? `/u/${user.username}` : '#'}>
-                            <Avatar src={user.avatar_url} name={sanitizeText(user.display_name || 'User')} size="sm" />
-                        </Link>
-                    ) : (
-                        <div className="w-8 h-8 rounded-full bg-surface-700 flex items-center justify-center">
-                            <User className="w-4 h-4 text-surface-400" />
-                        </div>
-                    )}
-                    <div>
-                        {user?.username ? (
-                            <Link to={`/u/${user.username}`} className="font-medium text-white hover:text-primary-400 transition-colors">
-                                {sanitizeText(user.display_name || user.username)}
-                            </Link>
-                        ) : (
-                            <span className="font-medium text-white">{sanitizeText(user?.display_name || 'Someone')}</span>
-                        )}
-                        <span className="text-surface-400"> is {item.status === 'attended' ? 'going to' : 'planning to attend'}</span>
-                        <p className="text-xs text-surface-500">{formatRelativeTime(item.created_at)}</p>
-                    </div>
-                </div>
+        <article className="row items-start">
+            <span className="row-slot !w-11 sm:!w-14">
+                <Avatar
+                    src={user?.avatar_url}
+                    name={user?.display_name || user?.username || null}
+                    size="md"
+                />
+            </span>
 
-                {item.event && (
-                    <Link to={`/events/${item.event.id}`} className="text-base font-semibold text-white hover:text-primary-400 transition-colors">
-                        {sanitizeText(item.event.name)}
-                    </Link>
-                )}
-
-                <div className="flex items-center gap-3 mt-2 text-sm text-surface-400">
+            <span className="row-body">
+                <span className="text-ui text-bone-dim">
+                    <PersonLink person={user} /> {verb}{' '}
                     {item.event && (
-                        <span className="flex items-center gap-1">
-                            <Calendar className="w-3.5 h-3.5" />
-                            {formatDate(item.event.start_at, 'MMM d, yyyy')}
-                        </span>
+                        <Link
+                            to={`/events/${item.event.id}`}
+                            className="text-bone hover:text-strip"
+                        >
+                            {sanitizeText(item.event.name)}
+                        </Link>
                     )}
-                    {item.venue && (
-                        <span className="flex items-center gap-1">
-                            <MapPin className="w-3.5 h-3.5" />
-                            {sanitizeText(item.venue.name)}, {sanitizeText(item.venue.city)}
-                        </span>
-                    )}
-                </div>
-            </CardContent>
-        </Card>
+                </span>
+
+                <span className="row-meta">
+                    {item.event && formatDate(item.event.start_at, 'EEE d MMM yyyy')}
+                    {item.venue &&
+                        ` · ${sanitizeText(item.venue.name)}, ${sanitizeText(item.venue.city)}`}
+                </span>
+            </span>
+
+            <span className="row-end">
+                <span className="voice-label text-bone-faint">
+                    {formatRelativeTime(item.created_at)}
+                </span>
+            </span>
+        </article>
     )
 }

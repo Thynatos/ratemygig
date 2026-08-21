@@ -1,7 +1,6 @@
 import { useRef, useState, useEffect } from 'react'
-import { Camera, Trash2, Loader2 } from 'lucide-react'
 import { useUploadAvatar, useRemoveAvatar } from '@/features/profile/api/avatar'
-import { cn } from '@/shared/lib/utils'
+import { LoadingSpinner } from '@/shared/components/ui/Loading'
 import { FILE_LIMITS } from '@/shared/lib/constants'
 
 interface AvatarUploadProps {
@@ -35,12 +34,12 @@ export function AvatarUpload({ currentAvatarUrl, userId }: AvatarUploadProps) {
         setError(null)
 
         if (!ACCEPTED_TYPES.includes(file.type)) {
-            setError('Please select a JPEG, PNG, or WebP image')
+            setError('That file is not a JPEG, PNG or WebP.')
             return
         }
 
         if (file.size > MAX_FILE_SIZE) {
-            setError('Image must be under 5MB')
+            setError('That image is over 5MB. Shrink it and try again.')
             return
         }
 
@@ -55,7 +54,7 @@ export function AvatarUpload({ currentAvatarUrl, userId }: AvatarUploadProps) {
                 },
                 onError: () => {
                     setPreviewUrl(null)
-                    setError('Failed to upload avatar')
+                    setError('The photo did not upload. Try again.')
                 },
             }
         )
@@ -72,75 +71,63 @@ export function AvatarUpload({ currentAvatarUrl, userId }: AvatarUploadProps) {
     }
 
     return (
-        <div className="flex flex-col items-center gap-4">
-            <div className="relative group">
-                <div className="w-24 h-24 rounded-full overflow-hidden bg-surface-800 border-2 border-surface-700">
-                    {displayUrl ? (
-                        <img
-                            src={displayUrl}
-                            alt="Avatar"
-                            className="w-full h-full object-cover"
-                        />
-                    ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                            <Camera className="w-8 h-8 text-surface-500" />
-                        </div>
-                    )}
-                    {isLoading && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-surface-900/60 rounded-full">
-                            <Loader2 className="w-8 h-8 text-primary-400 animate-spin" />
-                        </div>
-                    )}
-                </div>
+        <div className="flex items-start gap-4">
+            {/* Square, like the photo on a tour laminate. */}
+            <div className="relative w-20 h-20 shrink-0 border border-rail-strong bg-board-raised overflow-hidden">
+                {displayUrl ? (
+                    <img src={displayUrl} alt="Your profile photo" className="w-full h-full object-cover" />
+                ) : (
+                    <span className="w-full h-full flex items-center justify-center voice-label text-bone-faint">
+                        None
+                    </span>
+                )}
+                {isLoading && (
+                    <span className="absolute inset-0 flex items-center justify-center bg-board/80">
+                        <LoadingSpinner size="sm" />
+                    </span>
+                )}
+            </div>
 
-                <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isLoading}
-                    className={cn(
-                        'absolute bottom-0 right-0 w-8 h-8 rounded-full',
-                        'bg-primary-500 text-white flex items-center justify-center',
-                        'opacity-0 group-hover:opacity-100 transition-opacity',
-                        'hover:bg-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400',
-                        'disabled:opacity-50'
-                    )}
-                >
-                    <Camera className="w-4 h-4" />
-                </button>
-
+            <div>
                 <input
                     ref={fileInputRef}
                     type="file"
                     accept="image/jpeg,image/png,image/webp"
-                    className="hidden"
+                    className="sr-only"
                     onChange={handleFileSelect}
+                    aria-label="Choose a profile photo"
                 />
 
-                {currentAvatarUrl && (
+                <div className="flex flex-wrap gap-2">
                     <button
                         type="button"
-                        onClick={handleRemove}
+                        onClick={() => fileInputRef.current?.click()}
                         disabled={isLoading}
-                        className={cn(
-                            'absolute top-0 right-0 w-8 h-8 rounded-full',
-                            'bg-red-500/80 text-white flex items-center justify-center',
-                            'opacity-0 group-hover:opacity-100 transition-opacity',
-                            'hover:bg-red-400 focus:outline-none focus:ring-2 focus:ring-red-400',
-                            'disabled:opacity-50'
-                        )}
+                        className="btn-secondary"
                     >
-                        <Trash2 className="w-4 h-4" />
+                        {currentAvatarUrl ? 'Change photo' : 'Add a photo'}
                     </button>
+
+                    {currentAvatarUrl && (
+                        <button
+                            type="button"
+                            onClick={handleRemove}
+                            disabled={isLoading}
+                            className="btn-ghost text-bone-faint hover:text-struck"
+                        >
+                            Remove
+                        </button>
+                    )}
+                </div>
+
+                {error ? (
+                    <p className="input-error" role="alert">
+                        {error}
+                    </p>
+                ) : (
+                    <p className="input-hint">JPEG, PNG or WebP, up to 5MB.</p>
                 )}
             </div>
-
-            {error && (
-                <p className="text-sm text-red-400">{error}</p>
-            )}
-
-            <p className="text-xs text-surface-500">
-                JPEG, PNG, or WebP. Max 5MB.
-            </p>
         </div>
     )
 }

@@ -1,18 +1,16 @@
 import { useState } from 'react'
-import { Globe, Save } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { supabase } from '@/shared/lib/supabase'
 import { useUpdateProfile } from '@/features/profile/api/profile'
 import { Button } from '@/shared/components/ui/Button'
 import { Input } from '@/shared/components/ui/Input'
-import { Card, CardContent } from '@/shared/components/ui/Card'
 import { cn } from '@/shared/lib/utils'
 
 export function SocialLinksForm() {
     const { user } = useAuth()
     const updateProfile = useUpdateProfile()
-    const [message, setMessage] = useState<string | null>(null)
+    const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
     const [dirty, setDirty] = useState(false)
 
     const [websiteUrl, setWebsiteUrl] = useState('')
@@ -59,69 +57,74 @@ export function SocialLinksForm() {
                 instagram_handle: instagramHandle || null,
             },
             {
-                onSuccess: () => setMessage('Social links saved!'),
-                onError: () => setMessage('Failed to save social links'),
+                onSuccess: () => setMessage({ ok: true, text: 'Links saved.' }),
+                onError: () =>
+                    setMessage({
+                        ok: false,
+                        text: 'The links did not save. Your entries are still here.',
+                    }),
             }
         )
     }
 
-    const handleChange = (setter: (v: string) => void) => (e: React.ChangeEvent<HTMLInputElement>) => {
-        setDirty(true)
-        setter(e.target.value)
-    }
+    const handleChange =
+        (setter: (v: string) => void) => (e: React.ChangeEvent<HTMLInputElement>) => {
+            setDirty(true)
+            setter(e.target.value)
+        }
 
     return (
-        <Card>
-            <CardContent className="p-6">
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                    <Globe className="w-5 h-5 text-primary-400" />
-                    Social Links
-                </h3>
+        <section className="border border-rail bg-board">
+            <h2 className="voice-label text-bone-dim px-4 py-2.5 border-b border-rail">
+                Where else to find you
+            </h2>
 
-                <div className="space-y-4">
-                    <Input
-                        label="Website"
-                        placeholder="https://yourwebsite.com"
-                        value={websiteUrl}
-                        onChange={handleChange(setWebsiteUrl)}
-                    />
+            <div className="p-4 space-y-5">
+                <Input
+                    label="Website"
+                    name="website_url"
+                    type="url"
+                    placeholder="https://"
+                    value={websiteUrl}
+                    onChange={handleChange(setWebsiteUrl)}
+                />
 
-                    <Input
-                        label="Twitter / X"
-                        placeholder="@handle"
-                        value={twitterHandle}
-                        onChange={handleChange(setTwitterHandle)}
-                    />
+                <Input
+                    label="X / Twitter"
+                    name="twitter_handle"
+                    placeholder="@handle"
+                    value={twitterHandle}
+                    onChange={handleChange(setTwitterHandle)}
+                />
 
-                    <Input
-                        label="Instagram"
-                        placeholder="@handle"
-                        value={instagramHandle}
-                        onChange={handleChange(setInstagramHandle)}
-                    />
+                <Input
+                    label="Instagram"
+                    name="instagram_handle"
+                    placeholder="@handle"
+                    value={instagramHandle}
+                    onChange={handleChange(setInstagramHandle)}
+                />
 
-                    {message && (
-                        <p className={cn(
-                            'text-sm',
-                            message.includes('Failed') ? 'text-red-400' : 'text-green-400'
-                        )}>
-                            {message}
-                        </p>
-                    )}
+                {message && (
+                    <p
+                        role="status"
+                        className={cn('text-ui-sm', message.ok ? 'text-bone-dim' : 'text-struck')}
+                    >
+                        {message.text}
+                    </p>
+                )}
 
-                    <div className="flex justify-end">
-                        <Button
-                            type="button"
-                            size="sm"
-                            onClick={handleSave}
-                            isLoading={updateProfile.isPending}
-                        >
-                            <Save className="w-4 h-4 mr-2" />
-                            Save Links
-                        </Button>
-                    </div>
+                <div className="flex justify-end">
+                    <Button
+                        type="button"
+                        onClick={handleSave}
+                        isLoading={updateProfile.isPending}
+                        loadingLabel="Saving your links"
+                    >
+                        Save links
+                    </Button>
                 </div>
-            </CardContent>
-        </Card>
+            </div>
+        </section>
     )
 }

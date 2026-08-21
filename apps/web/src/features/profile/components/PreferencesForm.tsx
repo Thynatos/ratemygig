@@ -1,20 +1,50 @@
 import { useState } from 'react'
-import { MapPin, RotateCcw, Bell } from 'lucide-react'
-import { useUserPreferences, useUpdatePreferences, useClearPreferences } from '@/features/discovery/api/preferences'
+import {
+    useUserPreferences,
+    useUpdatePreferences,
+    useClearPreferences,
+} from '@/features/discovery/api/preferences'
 import { useGeolocation } from '@/shared/hooks/useGeolocation'
 import { Button } from '@/shared/components/ui/Button'
 import { Input } from '@/shared/components/ui/Input'
-import { Card, CardContent } from '@/shared/components/ui/Card'
+import { cn } from '@/shared/lib/utils'
 import type { UserPreferences } from '@core/index'
 
-type NotifyKey = keyof Pick<UserPreferences, 'notify_artist_events' | 'notify_venue_events' | 'notify_new_reviews' | 'notify_comments' | 'notify_reactions'>
+type NotifyKey = keyof Pick<
+    UserPreferences,
+    | 'notify_artist_events'
+    | 'notify_venue_events'
+    | 'notify_new_reviews'
+    | 'notify_comments'
+    | 'notify_reactions'
+>
 
 const NOTIFICATION_TOGGLES: { key: NotifyKey; label: string; description: string }[] = [
-    { key: 'notify_artist_events', label: 'Artist events', description: 'New events from artists you follow' },
-    { key: 'notify_venue_events', label: 'Venue events', description: 'New events at venues you follow' },
-    { key: 'notify_new_reviews', label: 'New reviews', description: 'Reviews from people you follow' },
-    { key: 'notify_comments', label: 'Comments', description: 'Comments on your reviews' },
-    { key: 'notify_reactions', label: 'Reactions', description: 'Reactions to your reviews' },
+    {
+        key: 'notify_artist_events',
+        label: 'New dates from artists you follow',
+        description: 'When someone you follow announces a gig.',
+    },
+    {
+        key: 'notify_venue_events',
+        label: 'New dates at rooms you follow',
+        description: 'When a venue you follow puts something on.',
+    },
+    {
+        key: 'notify_new_reviews',
+        label: 'Reviews from people you follow',
+        description: 'When a gig-goer you follow rates a night.',
+    },
+    {
+        key: 'notify_comments',
+        label: 'Replies to your reviews',
+        description: 'When someone replies to something you wrote.',
+    },
+    {
+        key: 'notify_reactions',
+        label: 'Reactions to your reviews',
+        description: 'When someone marks one of your reviews.',
+    },
 ]
 
 interface ToggleSwitchProps {
@@ -23,6 +53,7 @@ interface ToggleSwitchProps {
     label: string
 }
 
+/** The same printed switch used everywhere: amber when on, groove when off. */
 function ToggleSwitch({ checked, onChange, label }: ToggleSwitchProps) {
     return (
         <button
@@ -31,9 +62,18 @@ function ToggleSwitch({ checked, onChange, label }: ToggleSwitchProps) {
             aria-checked={checked}
             aria-label={label}
             onClick={() => onChange(!checked)}
-            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${checked ? 'bg-primary-500' : 'bg-surface-600'}`}
+            className={cn(
+                'relative shrink-0 w-14 h-7 border transition-colors duration-150 ease-board',
+                checked ? 'bg-strip border-strip' : 'bg-groove border-rail-strong'
+            )}
         >
-            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'}`} />
+            <span
+                aria-hidden="true"
+                className={cn(
+                    'absolute top-[3px] w-5 h-5 transition-transform duration-150 ease-board',
+                    checked ? 'translate-x-[30px] bg-strip-ink' : 'translate-x-[3px] bg-bone-faint'
+                )}
+            />
         </button>
     )
 }
@@ -68,92 +108,104 @@ export function PreferencesForm() {
 
     if (isLoading) return null
 
+    const hasPreference = Boolean(
+        preferences && (preferences.preferred_city || preferences.preferred_lat)
+    )
+
     return (
-        <Card>
-            <CardContent className="p-6">
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                    <MapPin className="w-5 h-5 text-accent-400" />
-                    Discovery Preferences
-                </h3>
+        <section className="border border-rail bg-board">
+            <h2 className="voice-label text-bone-dim px-4 py-2.5 border-b border-rail">
+                Where you go, and what to tell you
+            </h2>
 
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-sm text-surface-400 mb-1">Preferred City</label>
-                        <div className="flex gap-2">
-                            <Input
-                                value={city}
-                                onChange={e => setCity(e.target.value)}
-                                placeholder="e.g. London"
-                                className="flex-1"
-                            />
-                            <Button
-                                variant="secondary"
-                                onClick={handleSaveCity}
-                                isLoading={updatePrefs.isPending}
-                                size="sm"
-                            >
-                                Save
-                            </Button>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-3">
+            <div className="p-4 border-b border-rail space-y-4">
+                <div>
+                    <label htmlFor="preferred-city" className="input-label">
+                        Your city
+                    </label>
+                    <div className="flex gap-2">
+                        <Input
+                            id="preferred-city"
+                            value={city}
+                            onChange={e => setCity(e.target.value)}
+                            placeholder="Manchester"
+                            className="flex-1"
+                        />
                         <Button
                             variant="secondary"
-                            onClick={handleUseMyLocation}
-                            isLoading={geoLoading}
-                            size="sm"
+                            onClick={handleSaveCity}
+                            isLoading={updatePrefs.isPending}
+                            loadingLabel="Saving your city"
                         >
-                            <MapPin className="w-4 h-4 mr-2" />
-                            Use My Location
+                            Save
                         </Button>
-                        {preferences?.preferred_lat && preferences?.preferred_lng && (
-                            <span className="text-xs text-surface-500">
-                                Location saved ({preferences.preferred_lat.toFixed(2)}, {preferences.preferred_lng.toFixed(2)})
-                            </span>
-                        )}
                     </div>
-
-                    {preferences && (preferences.preferred_city || preferences.preferred_lat) && (
-                        <div className="pt-2 border-t border-surface-700">
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm text-surface-300">
-                                    Current preference: {preferences.preferred_city || 'Location-based'}
-                                </span>
-                                <Button variant="ghost" size="sm" onClick={handleClear}>
-                                    <RotateCcw className="w-3 h-3 mr-1" />
-                                    Reset
-                                </Button>
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="pt-4 border-t border-surface-700">
-                        <h4 className="text-sm font-medium text-white mb-1 flex items-center gap-2">
-                            <Bell className="w-4 h-4 text-primary-400" />
-                            Notifications
-                        </h4>
-                        <p className="text-xs text-surface-500 mb-3">
-                            Choose what you want to be notified about.
-                        </p>
-                        <div className="space-y-3">
-                            {NOTIFICATION_TOGGLES.map(toggle => (
-                                <div key={toggle.key} className="flex items-center justify-between gap-4">
-                                    <div>
-                                        <div className="text-sm text-surface-200">{toggle.label}</div>
-                                        <div className="text-xs text-surface-500">{toggle.description}</div>
-                                    </div>
-                                    <ToggleSwitch
-                                        checked={preferences?.[toggle.key] ?? true}
-                                        onChange={value => updatePrefs.mutate({ [toggle.key]: value })}
-                                        label={toggle.label}
-                                    />
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+                    <p className="input-hint">
+                        Discover opens here, and recommendations start from it.
+                    </p>
                 </div>
-            </CardContent>
-        </Card>
+
+                <div className="flex flex-wrap items-center gap-3">
+                    <Button
+                        variant="secondary"
+                        onClick={handleUseMyLocation}
+                        isLoading={geoLoading}
+                        loadingLabel="Finding you"
+                    >
+                        Use my location instead
+                    </Button>
+                    {preferences?.preferred_lat && preferences?.preferred_lng && (
+                        <span className="voice-data text-ui-sm text-bone-faint">
+                            {preferences.preferred_lat.toFixed(2)},{' '}
+                            {preferences.preferred_lng.toFixed(2)}
+                        </span>
+                    )}
+                </div>
+
+                {hasPreference && (
+                    <div className="flex items-center justify-between gap-4 pt-3 border-t border-rail">
+                        <p className="text-ui-sm text-bone-dim">
+                            Currently set to{' '}
+                            <span className="text-bone">
+                                {preferences!.preferred_city || 'your location'}
+                            </span>
+                            .
+                        </p>
+                        <button
+                            type="button"
+                            onClick={handleClear}
+                            className="voice-label text-bone-faint hover:text-bone underline"
+                        >
+                            Clear
+                        </button>
+                    </div>
+                )}
+            </div>
+
+            <div className="p-4">
+                <h3 className="voice-label text-bone-dim mb-1">Notifications</h3>
+                <p className="text-ui-sm text-bone-faint mb-4">
+                    Turn off anything you don't want to hear about.
+                </p>
+                <ul className="divide-y divide-rail">
+                    {NOTIFICATION_TOGGLES.map(toggle => (
+                        <li
+                            key={toggle.key}
+                            className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
+                        >
+                            <div>
+                                <p className="text-ui text-bone">{toggle.label}</p>
+                                <p className="text-ui-sm text-bone-faint">{toggle.description}</p>
+                            </div>
+                            <ToggleSwitch
+                                checked={preferences?.[toggle.key] ?? true}
+                                onChange={value => updatePrefs.mutate({ [toggle.key]: value })}
+                                label={toggle.label}
+                            />
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        </section>
     )
 }
