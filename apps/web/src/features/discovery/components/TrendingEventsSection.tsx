@@ -1,12 +1,19 @@
-import { TrendingUp } from 'lucide-react'
 import { useTrendingEvents } from '../api/discovery'
 import { useFriendsGoing } from '@/features/events/api/useFriendsGoing'
 import { EventCard } from '@/features/events/components/EventCard'
-import { Skeleton } from '@/shared/components/ui/Loading'
+import { RowSkeletonList } from '@/shared/components/ui/Loading'
 import { QueryErrorState } from '@/shared/components/QueryErrorState'
 
 interface TrendingEventsSectionProps {
     limit?: number
+}
+
+function Heading({ children }: { children: React.ReactNode }) {
+    return (
+        <div className="flex items-baseline justify-between gap-4 mb-3">
+            <h2 className="voice-label text-bone-dim">{children}</h2>
+        </div>
+    )
 }
 
 export function TrendingEventsSection({ limit = 6 }: TrendingEventsSectionProps) {
@@ -19,15 +26,8 @@ export function TrendingEventsSection({ limit = 6 }: TrendingEventsSectionProps)
     if (isLoading) {
         return (
             <section>
-                <h2 className="section-title mb-4 flex items-center gap-2">
-                    <TrendingUp className="w-6 h-6 text-primary-400" />
-                    Trending
-                </h2>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {[1, 2, 3].map(i => (
-                        <Skeleton key={i} className="h-48 rounded-xl" />
-                    ))}
-                </div>
+                <Heading>Most logged this week</Heading>
+                <RowSkeletonList count={3} label="Loading trending gigs" />
             </section>
         )
     }
@@ -35,12 +35,9 @@ export function TrendingEventsSection({ limit = 6 }: TrendingEventsSectionProps)
     if (isError) {
         return (
             <section>
-                <h2 className="section-title mb-4 flex items-center gap-2">
-                    <TrendingUp className="w-6 h-6 text-primary-400" />
-                    Trending
-                </h2>
+                <Heading>Most logged this week</Heading>
                 <QueryErrorState
-                    title="Couldn't load trending events"
+                    title="Couldn't load what's trending"
                     onRetry={() => refetch()}
                 />
             </section>
@@ -51,13 +48,14 @@ export function TrendingEventsSection({ limit = 6 }: TrendingEventsSectionProps)
 
     return (
         <section>
-            <h2 className="section-title mb-4 flex items-center gap-2">
-                <TrendingUp className="w-6 h-6 text-primary-400" />
-                Trending
-            </h2>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <Heading>Most logged this week</Heading>
+            <div className="rail-list">
                 {trending.map(({ event }) => (
-                    <EventCard key={event.id} event={event} friendsGoing={friendsGoing?.get(event.id)} />
+                    <EventCard
+                        key={event.id}
+                        event={event}
+                        friendsGoing={friendsGoing?.get(event.id)}
+                    />
                 ))}
             </div>
         </section>

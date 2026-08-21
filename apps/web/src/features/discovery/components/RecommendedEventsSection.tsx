@@ -1,9 +1,8 @@
-import { Sparkles } from 'lucide-react'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { useRecommendedEvents } from '../api/discovery'
 import { useFriendsGoing } from '@/features/events/api/useFriendsGoing'
 import { EventCard } from '@/features/events/components/EventCard'
-import { Skeleton } from '@/shared/components/ui/Loading'
+import { RowSkeletonList } from '@/shared/components/ui/Loading'
 import { QueryErrorState } from '@/shared/components/QueryErrorState'
 
 interface RecommendedEventsSectionProps {
@@ -11,10 +10,14 @@ interface RecommendedEventsSectionProps {
 }
 
 const reasonLabels: Record<string, string> = {
-    followed_artist: 'Because you follow this artist',
-    followed_venue: 'Because you follow this venue',
-    preferred_city: 'In your preferred city',
-    trending: 'Trending',
+    followed_artist: 'You follow them',
+    followed_venue: 'You follow this room',
+    preferred_city: 'Your city',
+    trending: 'Being logged a lot',
+}
+
+function Heading({ children }: { children: React.ReactNode }) {
+    return <h2 className="voice-label text-bone-dim mb-3">{children}</h2>
 }
 
 export function RecommendedEventsSection({ limit = 8 }: RecommendedEventsSectionProps) {
@@ -30,15 +33,8 @@ export function RecommendedEventsSection({ limit = 8 }: RecommendedEventsSection
     if (isLoading) {
         return (
             <section>
-                <h2 className="section-title mb-4 flex items-center gap-2">
-                    <Sparkles className="w-6 h-6 text-accent-400" />
-                    Recommended For You
-                </h2>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    {[1, 2, 3, 4].map(i => (
-                        <Skeleton key={i} className="h-48 rounded-xl" />
-                    ))}
-                </div>
+                <Heading>Picked for you</Heading>
+                <RowSkeletonList count={3} label="Loading your recommendations" />
             </section>
         )
     }
@@ -46,12 +42,9 @@ export function RecommendedEventsSection({ limit = 8 }: RecommendedEventsSection
     if (isError) {
         return (
             <section>
-                <h2 className="section-title mb-4 flex items-center gap-2">
-                    <Sparkles className="w-6 h-6 text-accent-400" />
-                    Recommended For You
-                </h2>
+                <Heading>Picked for you</Heading>
                 <QueryErrorState
-                    title="Couldn't load recommendations"
+                    title="Couldn't load your recommendations"
                     onRetry={() => refetch()}
                 />
             </section>
@@ -62,15 +55,12 @@ export function RecommendedEventsSection({ limit = 8 }: RecommendedEventsSection
 
     return (
         <section>
-            <h2 className="section-title mb-4 flex items-center gap-2">
-                <Sparkles className="w-6 h-6 text-accent-400" />
-                Recommended For You
-            </h2>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Heading>Picked for you</Heading>
+            <div className="rail-list">
                 {recommendations.map(({ event, reason }) => (
                     <div key={event.id} className="relative">
                         <EventCard event={event} friendsGoing={friendsGoing?.get(event.id)} />
-                        <span className="absolute top-2 right-2 bg-accent-500/20 text-accent-300 border border-accent-500/30 text-xs px-2 py-0.5 rounded-full">
+                        <span className="pointer-events-none absolute right-3 top-2 voice-label text-bone-faint">
                             {reasonLabels[reason] || reason}
                         </span>
                     </div>

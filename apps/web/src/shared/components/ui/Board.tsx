@@ -101,7 +101,8 @@ export function DateSlot({ date, className }: DateSlotProps) {
             </span>
             <span className="date-slot-day">{d.getDate()}</span>
             <span className="date-slot-mon">
-                {d.toLocaleDateString('en-GB', { month: 'short' })}
+                {/* Sliced to three so every month occupies the same slot width. */}
+                {d.toLocaleDateString('en-GB', { month: 'short' }).slice(0, 3)}
                 {d.getFullYear() !== new Date().getFullYear() && (
                     <span className="text-bone-faint"> {String(d.getFullYear()).slice(2)}</span>
                 )}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Search, Calendar, SlidersHorizontal, X } from 'lucide-react'
+import { Search, X } from 'lucide-react'
 import { useEvents } from '../api/events'
 import { useFriendsGoing } from '../api/useFriendsGoing'
 import { EventCard } from '../components/EventCard'
@@ -7,21 +7,40 @@ import { CitySelector } from '../components/CitySelector'
 import { RecommendedEventsSection } from '@/features/discovery/components/RecommendedEventsSection'
 import { TrendingEventsSection } from '@/features/discovery/components/TrendingEventsSection'
 import { NearbyVenuesSection } from '@/features/discovery/components/NearbyVenuesSection'
+import { useAuth } from '@/features/auth/hooks/useAuth'
 import { Button } from '@/shared/components/ui/Button'
-import { EventCardSkeleton } from '@/shared/components/ui/Loading'
+import { RowSkeletonList } from '@/shared/components/ui/Loading'
+import { BoardHeader, EmptyState, ErrorState } from '@/shared/components/ui/Board'
 import { env } from '@/shared/lib/env'
-import { allowsTicketmasterLive, getProviderModeLabel, isAllMode, isTicketmasterMode } from '@/shared/lib/provider-policy'
-import { cn } from '@/shared/lib/utils'
+import {
+    allowsTicketmasterLive,
+    getProviderModeLabel,
+    isAllMode,
+    isTicketmasterMode,
+} from '@/shared/lib/provider-policy'
 import { PAGE_SIZES, DEBOUNCE_MS } from '@/shared/lib/constants'
 
+/** The live fact on the board: tonight's date, in the room's own vernacular. */
+function todayStrip(city: string): string {
+    const now = new Date()
+    const date = now
+        .toLocaleDateString('en-GB', {
+            weekday: 'short',
+            day: 'numeric',
+            month: 'short',
+        })
+        .replace(',', '')
+    return city ? `${date} · ${city}` : date
+}
+
 export function DiscoverPage() {
+    const { user } = useAuth()
     const [city, setCity] = useState('')
     const [searchQuery, setSearchQuery] = useState('')
     const [debouncedQuery, setDebouncedQuery] = useState('')
     const [page, setPage] = useState(1)
-    const [showFilters, setShowFilters] = useState(false)
 
-    const { data, isLoading, error } = useEvents({
+    const { data, isLoading, error, refetch } = useEvents({
         city,
         query: debouncedQuery,
         page,
@@ -51,225 +70,226 @@ export function DiscoverPage() {
         setPage(1)
     }
 
-    const hasActiveFilters = city || debouncedQuery
+    const hasActiveFilters = Boolean(city || debouncedQuery)
     const isTicketmasterOnly = isTicketmasterMode()
     const isMixedMode = isAllMode()
     const hasTicketmasterKey = Boolean(env.TICKETMASTER_API_KEY?.trim())
+    const totalPages = data ? Math.max(1, Math.ceil(data.count / PAGE_SIZES.EVENTS)) : 1
 
-    const emptyStateDescription = hasActiveFilters
-        ? 'Try adjusting your filters or search query.'
+    const emptyBody = hasActiveFilters
+        ? 'Nothing matches those filters. Widen the city or clear the search.'
         : isTicketmasterOnly
-          ? hasTicketmasterKey
-              ? 'No Ticketmaster events matched this search. The app checked your DB first, then the live Ticketmaster API.'
-              : 'No Ticketmaster events are available. Add DB rows or set VITE_TICKETMASTER_API_KEY to enable live fallback.'
-          : isMixedMode
-            ? 'No events were found across your configured providers.'
-            : 'No demo events matched this search.'
+            ? hasTicketmasterKey
+                ? 'The database had no matching rows and the live Ticketmaster lookup came back empty.'
+                : 'No Ticketmaster events are loaded, and live lookup is switched off.'
+            : isMixedMode
+                ? 'None of the configured sources returned an event.'
+                : 'The demo catalogue has nothing matching.'
 
     return (
-        <div className="page-container">
-            {/* Hero Section */}
-            <section className="text-center py-12 md:py-16">
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold text-white mb-4">
-                    Discover <span className="text-gradient">Amazing Gigs</span>
-                </h1>
-                <p className="text-lg text-surface-400 max-w-2xl mx-auto mb-8">
-                    Find upcoming concerts, get tickets, and share your experiences with the community.
-                </p>
+        <div className="page page-body">
+            <BoardHeader
+                strip={todayStrip(city)}
+                title="What's on"
+                lede={
+                    user
+                        ? 'Upcoming gigs, soonest first. Been to one? Open it and log the night.'
+                        : 'Upcoming gigs, soonest first. Sign in to keep a record of the ones you go to.'
+                }
+            >
+                <div className="grid gap-2 sm:grid-cols-[minmax(0,14rem)_1fr]">
+                    <CitySelector value={city} onChange={handleCityChange} />
 
-                {/* Search Bar */}
-                <div className="max-w-2xl mx-auto">
-                    <div className="flex flex-col sm:flex-row gap-3">
-                        <CitySelector value={city} onChange={handleCityChange} />
-
-                        <div className="relative flex-1">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-surface-500" />
-                            <input
-                                type="text"
-                                value={searchQuery}
-                                onChange={e => setSearchQuery(e.target.value)}
-                                placeholder="Search artists, venues, events..."
-                                className="input-field pl-12 pr-4"
-                            />
-                        </div>
-
-                        <Button
-                            variant="secondary"
-                            onClick={() => setShowFilters(!showFilters)}
-                            className={cn(showFilters && 'border-primary-500')}
-                        >
-                            <SlidersHorizontal className="w-5 h-5" />
-                        </Button>
+                    <div className="relative">
+                        <label htmlFor="event-search" className="sr-only">
+                            Search artists, venues and gigs
+                        </label>
+                        <Search
+                            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-bone-faint"
+                            aria-hidden="true"
+                        />
+                        <input
+                            id="event-search"
+                            type="search"
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                            placeholder="Artist, venue or gig"
+                            className="input-field h-full pl-9"
+                        />
                     </div>
-
-                    {/* Active Filters */}
-                    {hasActiveFilters && (
-                        <div className="mt-4 flex items-center justify-center gap-2 flex-wrap">
-                            <span className="text-sm text-surface-400">Active filters:</span>
-                            {city && (
-                                <button
-                                    onClick={() => setCity('')}
-                                    className="badge-primary flex items-center gap-1"
-                                >
-                                    {city}
-                                    <X className="w-3 h-3" />
-                                </button>
-                            )}
-                            {debouncedQuery && (
-                                <button
-                                    onClick={() => { setSearchQuery(''); setDebouncedQuery('') }}
-                                    className="badge-accent flex items-center gap-1"
-                                >
-                                    "{debouncedQuery}"
-                                    <X className="w-3 h-3" />
-                                </button>
-                            )}
-                            <button
-                                onClick={clearFilters}
-                                className="text-sm text-surface-500 hover:text-surface-300"
-                            >
-                                Clear all
-                            </button>
-                        </div>
-                    )}
                 </div>
-            </section>
 
-            {/* Recommended & Trending */}
-            <RecommendedEventsSection limit={4} />
-            <TrendingEventsSection limit={6} />
+                {hasActiveFilters && (
+                    <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                        <span className="voice-label text-bone-faint">Filtering by</span>
+                        {city && (
+                            <button
+                                type="button"
+                                onClick={() => setCity('')}
+                                className="strip-quiet hover:text-bone hover:border-bone-faint transition-colors duration-150 ease-board"
+                            >
+                                {city}
+                                <X className="w-3 h-3" aria-hidden="true" />
+                                <span className="sr-only">Remove city filter</span>
+                            </button>
+                        )}
+                        {debouncedQuery && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setSearchQuery('')
+                                    setDebouncedQuery('')
+                                }}
+                                className="strip-quiet hover:text-bone hover:border-bone-faint transition-colors duration-150 ease-board"
+                            >
+                                “{debouncedQuery}”
+                                <X className="w-3 h-3" aria-hidden="true" />
+                                <span className="sr-only">Remove search filter</span>
+                            </button>
+                        )}
+                        <button
+                            type="button"
+                            onClick={clearFilters}
+                            className="voice-label text-bone-faint underline hover:text-bone"
+                        >
+                            Clear all
+                        </button>
+                    </div>
+                )}
+            </BoardHeader>
 
-            {/* Results */}
-            <div className="grid gap-8 lg:grid-cols-3">
+            <div className="grid gap-8 lg:gap-10 lg:grid-cols-3">
                 <div className="lg:col-span-2">
-                    <div className="flex items-center justify-between mb-6">
-                        <h2 className="section-title flex items-center gap-2">
-                            <Calendar className="w-6 h-6 text-primary-400" />
-                            Upcoming Events
+                    <div className="flex items-baseline justify-between gap-4 mb-3">
+                        <h2 className="voice-label text-bone-dim">
+                            {city ? `Gigs in ${city}` : 'All upcoming gigs'}
                         </h2>
-                        {data && (
-                            <span className="text-surface-400">
-                                {data.count} {data.count === 1 ? 'event' : 'events'} found
-                            </span>
-                        )}
-                    </div>
-
-                {/* Error State */}
-                {error && (
-                    <div className="glass-card p-8 text-center">
-                        <p className="text-red-400 mb-4">Failed to load events</p>
-                        <Button variant="secondary" onClick={() => window.location.reload()}>
-                            Try Again
-                        </Button>
-                    </div>
-                )}
-
-                {/* Loading State */}
-                {isLoading && (
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {Array.from({ length: 6 }).map((_, i) => (
-                            <EventCardSkeleton key={i} />
-                        ))}
-                    </div>
-                )}
-
-                {/* Empty State */}
-                {!isLoading && data?.data.length === 0 && (
-                    <div className="glass-card p-12 text-center">
-                        <Calendar className="w-16 h-16 text-surface-600 mx-auto mb-4" />
-                        <h3 className="text-xl font-semibold text-white mb-2">No events found</h3>
-                        {isTicketmasterOnly && (
-                            <div className="mb-6 max-w-2xl mx-auto rounded-xl border border-surface-600 bg-surface-800/40 p-4 text-left text-sm text-surface-300 space-y-2">
-                                <p className="font-medium text-surface-200">
-                                    Ticketmaster mode checks your Supabase database first (rows with{' '}
-                                    <code className="text-primary-300">provider = ticketmaster</code>). If this
-                                    project is empty, sync Ticketmaster data into Supabase or enable browser-side live fallback.
-                                </p>
-                                <p>
-                                    From the repo root, run{' '}
-                                    <code className="rounded bg-surface-900 px-1.5 py-0.5 text-surface-100">
-                                        npm run jobs:ingest
-                                    </code>
-                                    . Configure <code className="text-primary-300">packages/jobs</code> with{' '}
-                                    <code className="text-primary-300">TICKETMASTER_API_KEY</code>,{' '}
-                                    <code className="text-primary-300">SUPABASE_URL</code>, and{' '}
-                                    <code className="text-primary-300">SUPABASE_SERVICE_ROLE_KEY</code> (see root{' '}
-                                    <code className="text-primary-300">.env.example</code>).
-                                </p>
-                                {allowsTicketmasterLive() && (
-                                    <p>
-                                        To query Ticketmaster directly in the browser when the DB has no rows, set{' '}
-                                        <code className="text-primary-300">VITE_TICKETMASTER_API_KEY</code> in{' '}
-                                        <code className="text-primary-300">apps/web/.env.local</code>.
-                                    </p>
-                                )}
-                            </div>
-                        )}
-                        {isMixedMode && (
-                            <div className="mb-6 max-w-2xl mx-auto rounded-xl border border-surface-600 bg-surface-800/40 p-4 text-left text-sm text-surface-300 space-y-2">
-                                <p className="font-medium text-surface-200">
-                                    Mixed mode reads all provider rows from Supabase first, then can fall back to live Ticketmaster and demo data when nothing matches.
-                                </p>
-                                <p>
-                                    This helps during setup, but an empty result still means none of the configured sources produced matching events.
-                                </p>
-                            </div>
-                        )}
-                        <p className="text-surface-400 mb-6">
-                            {emptyStateDescription}
-                        </p>
-                        {hasActiveFilters && (
-                            <Button variant="secondary" onClick={clearFilters}>
-                                Clear Filters
-                            </Button>
-                        )}
-                        {!hasActiveFilters && (
-                            <p className="text-xs uppercase tracking-[0.2em] text-surface-500">
-                                Current source: {getProviderModeLabel()}
+                        {data && !isLoading && (
+                            <p className="voice-label text-bone-faint tnum" aria-live="polite">
+                                {data.count} {data.count === 1 ? 'gig' : 'gigs'}
                             </p>
                         )}
                     </div>
-                )}
 
-                {/* Events Grid */}
-                {!isLoading && data && data.data.length > 0 && (
-                    <>
-                        <div className="grid gap-4 md:grid-cols-2">
-                            {data.data.map(event => (
-                                <EventCard key={event.id} event={event} friendsGoing={friendsGoing?.get(event.id)} />
-                            ))}
-                        </div>
+                    {error && (
+                        <ErrorState
+                            title="Couldn't load the listings"
+                            body="The gig list didn't come back. Your filters are still set — try again."
+                            onRetry={() => refetch()}
+                        />
+                    )}
 
-                        {/* Pagination */}
-                        {(data.hasMore || page > 1) && (
-                            <div className="mt-8 flex items-center justify-center gap-4">
-                                <Button
-                                    variant="secondary"
-                                    onClick={() => setPage(p => p - 1)}
-                                    disabled={page === 1}
-                                >
-                                    Previous
-                                </Button>
-                                <span className="text-surface-400">
-                                    Page {page} of {Math.ceil(data.count / 12)}
-                                </span>
-                                <Button
-                                    variant="secondary"
-                                    onClick={() => setPage(p => p + 1)}
-                                    disabled={!data.hasMore}
-                                >
-                                    Next
-                                </Button>
+                    {isLoading && <RowSkeletonList count={6} />}
+
+                    {!isLoading && !error && data?.data.length === 0 && (
+                        <EmptyState
+                            title="Nothing on the board"
+                            body={emptyBody}
+                            action={
+                                hasActiveFilters ? (
+                                    <Button variant="secondary" onClick={clearFilters}>
+                                        Clear filters
+                                    </Button>
+                                ) : (
+                                    <p className="voice-label text-bone-faint">
+                                        Source: {getProviderModeLabel()}
+                                    </p>
+                                )
+                            }
+                        />
+                    )}
+
+                    {!isLoading && !error && data && data.data.length > 0 && (
+                        <>
+                            <div className="rail-list">
+                                {data.data.map(event => (
+                                    <EventCard
+                                        key={event.id}
+                                        event={event}
+                                        friendsGoing={friendsGoing?.get(event.id)}
+                                    />
+                                ))}
                             </div>
-                        )}
-                    </>
-                )}
+
+                            {(data.hasMore || page > 1) && (
+                                <nav
+                                    aria-label="Listing pages"
+                                    className="mt-4 flex items-center justify-between gap-4"
+                                >
+                                    <Button
+                                        variant="secondary"
+                                        onClick={() => setPage(p => p - 1)}
+                                        disabled={page === 1}
+                                    >
+                                        Earlier
+                                    </Button>
+                                    <p className="voice-label text-bone-faint tnum">
+                                        Page {page} of {totalPages}
+                                    </p>
+                                    <Button
+                                        variant="secondary"
+                                        onClick={() => setPage(p => p + 1)}
+                                        disabled={!data.hasMore}
+                                    >
+                                        Later
+                                    </Button>
+                                </nav>
+                            )}
+                        </>
+                    )}
+
+                    {!isLoading && data?.data.length === 0 && (isTicketmasterOnly || isMixedMode) && (
+                        <details className="mt-4 border border-rail bg-board">
+                            <summary className="cursor-pointer px-4 py-2.5 voice-label text-bone-dim hover:text-bone">
+                                Why is this empty?
+                            </summary>
+                            <div className="px-4 pb-4 space-y-3 text-ui-sm text-bone-dim">
+                                {isTicketmasterOnly ? (
+                                    <>
+                                        <p>
+                                            Ticketmaster mode reads your Supabase rows first, matching{' '}
+                                            <code className="voice-data text-strip">provider = ticketmaster</code>.
+                                            An empty project returns nothing.
+                                        </p>
+                                        <p>
+                                            Run{' '}
+                                            <code className="voice-data text-bone bg-groove px-1.5 py-0.5">
+                                                npm run jobs:ingest
+                                            </code>{' '}
+                                            from the repo root with{' '}
+                                            <code className="voice-data text-strip">TICKETMASTER_API_KEY</code>,{' '}
+                                            <code className="voice-data text-strip">SUPABASE_URL</code> and{' '}
+                                            <code className="voice-data text-strip">SUPABASE_SERVICE_ROLE_KEY</code>{' '}
+                                            configured in <code className="voice-data text-strip">packages/jobs</code>.
+                                        </p>
+                                        {allowsTicketmasterLive() && (
+                                            <p>
+                                                For live browser lookups when the database is empty, set{' '}
+                                                <code className="voice-data text-strip">VITE_TICKETMASTER_API_KEY</code>{' '}
+                                                in <code className="voice-data text-strip">apps/web/.env.local</code>.
+                                            </p>
+                                        )}
+                                    </>
+                                ) : (
+                                    <p>
+                                        Mixed mode reads every provider row in Supabase, then falls back to
+                                        live Ticketmaster and the demo catalogue. An empty result means none
+                                        of those three matched.
+                                    </p>
+                                )}
+                            </div>
+                        </details>
+                    )}
                 </div>
 
-                {/* Sidebar */}
-                <div className="space-y-6">
+                <div className="space-y-8">
+                    <RecommendedEventsSection limit={4} />
                     <NearbyVenuesSection />
                 </div>
+            </div>
+
+            <div className="mt-10">
+                <TrendingEventsSection limit={6} />
             </div>
         </div>
     )
