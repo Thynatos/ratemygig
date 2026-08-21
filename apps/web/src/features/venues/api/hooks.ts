@@ -5,7 +5,6 @@ import { env } from '@/shared/lib/env'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { validateRpcResponse } from '@/shared/lib/utils'
 import { venueRatingSummarySchema, venueLeaderboardEntrySchema } from '@/shared/validation/schemas'
-import type { VenueRatingSummary } from '@core/index'
 import {
     venueKeys,
     resolveVenues,
@@ -41,7 +40,7 @@ export function useVenueRatingSummary(venueId: string, filters?: VenueRatingQuer
 
             if (error) throw error
             if (!data || data.length === 0) return null
-            return validateRpcResponse(venueRatingSummarySchema, data[0], 'get_venue_rating_summary') as VenueRatingSummary
+            return validateRpcResponse(venueRatingSummarySchema, data[0], 'get_venue_rating_summary')
         },
         enabled: !!venueId,
     })
@@ -73,7 +72,7 @@ export function useTopVenues(city?: string, year?: number) {
 export const venueFollowKeys = {
     all: ['venue-follows'] as const,
     isFollowing: (venueId: string) => [...venueFollowKeys.all, 'is-following', venueId] as const,
-    followedVenues: () => [...venueFollowKeys.all, 'followed'] as const,
+    followedVenues: (userId: string) => [...venueFollowKeys.all, 'followed', userId] as const,
 }
 
 export function useIsFollowingVenue(venueId: string) {
@@ -100,7 +99,7 @@ export function useIsFollowingVenue(venueId: string) {
 export function useFollowedVenues() {
     const { user } = useAuth()
     return useQuery({
-        queryKey: venueFollowKeys.followedVenues(),
+        queryKey: venueFollowKeys.followedVenues(user?.id ?? 'anonymous'),
         queryFn: async () => {
             if (!user) return []
 

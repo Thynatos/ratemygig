@@ -3,7 +3,7 @@ import { Calendar, MapPin, Share2, ChevronLeft } from 'lucide-react'
 import { useReview } from '../api/reviews'
 import { ReactionButtons } from '../components/ReactionButtons'
 import { CommentSection } from '@/features/comments/components/CommentSection'
-import { usePhotoUrls } from '@/shared/hooks'
+import { usePhotoUrls, usePageMeta } from '@/shared/hooks'
 import { Button } from '@/shared/components/ui/Button'
 import { Card, CardContent } from '@/shared/components/ui/Card'
 import { StarRating } from '@/shared/components/ui/StarRating'
@@ -11,6 +11,8 @@ import { Avatar } from '@/shared/components/ui/Avatar'
 import { LoadingPage } from '@/shared/components/ui/Loading'
 import { formatDate, formatRelativeTime } from '@/shared/lib/utils'
 import { sanitizeText } from '@/shared/lib/sanitize'
+import { buildOgImageUrl } from '@/shared/lib/og'
+import { env } from '@/shared/lib/env'
 
 export function PublicReviewPage() {
     const { reviewId } = useParams<{ reviewId: string }>()
@@ -18,6 +20,22 @@ export function PublicReviewPage() {
     const storagePaths = review?.photos?.map((p: { storage_path: string }) => p.storage_path) ?? []
     const thumbPaths = review?.photos?.map((p: { thumbnail_path: string | null }) => p.thumbnail_path) ?? []
     const { urls: photoUrls, thumbUrls, isLoading: photosLoading } = usePhotoUrls(storagePaths, thumbPaths)
+
+    const isPublicReview = !!review && review.is_public && review.status !== 'draft'
+    usePageMeta(
+        isPublicReview && reviewId
+            ? {
+                  title: review.event?.name
+                      ? `Review of ${review.event.name}`
+                      : review.title || 'Review',
+                  description: `${review.profile?.display_name || 'Anonymous'} rated ${
+                      review.event?.name || review.title || 'an event'
+                  } ${review.rating}/5`,
+                  canonicalPath: `/r/${reviewId}`,
+                  ogImage: buildOgImageUrl(env.SUPABASE_URL, reviewId),
+              }
+            : null
+    )
 
     const handleShare = async () => {
         if (navigator.share) {

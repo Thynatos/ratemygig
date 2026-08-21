@@ -66,13 +66,13 @@ export function NotificationsPage() {
     )
 }
 
-function groupByDate(notifications: { created_at: string; [key: string]: unknown }[]) {
+function groupByDate<T extends { created_at: string }>(notifications: T[]) {
     const now = new Date()
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const yesterday = new Date(today.getTime() - 86400000)
     const thisWeek = new Date(today.getTime() - 7 * 86400000)
 
-    const groups: { label: string; items: typeof notifications }[] = [
+    const groups: { label: string; items: T[] }[] = [
         { label: 'Today', items: [] },
         { label: 'Yesterday', items: [] },
         { label: 'This Week', items: [] },

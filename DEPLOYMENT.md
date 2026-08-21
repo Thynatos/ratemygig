@@ -48,6 +48,7 @@ In your Supabase project, go to the **SQL Editor** and run each migration file i
 012_review_photos_thumbnail.sql
 013_notification_triggers.sql
 014_friends_attendance.sql
+015_user_year_stats.sql
 ```
 
 > **Important:** Run them one at a time in order. Each file is idempotent (can be re-run safely).
@@ -210,6 +211,7 @@ After `npm run build`, upload the contents of `apps/web/dist/` to:
 - [ ] Can write a review with rating
 - [ ] Photo upload works
 - [ ] Public review page loads (`/r/:reviewId`)
+- [ ] Share card renders for a public review URL (Edge Function `og-image` + Vercel crawler injection)
 - [ ] CSV export works on My Gigs page
 - [ ] Venue/artist rating pages load
 - [ ] Mobile responsive
@@ -267,6 +269,109 @@ metros you care about (each city is a separate paged query; same city name as on
 
 ---
 
+## Share Cards / OG Images
+
+Pasting a `/r/:reviewId` link into social/chat apps shows a rich preview card
+(rating, author, event name, 1200×630 image).
+
+### Architecture
+
+```
+Browser  ───────────────▶ /r/:reviewId ─▶ SPA (no behavior change; usePageMeta sets client-side meta)
+Crawler  ── user-agent ──▶ vercel.json UA-gated rewrite
+                              └─▶ api/og-inject (Vercel Node function)
+                                    ├─ PostgREST (anon key; status=published AND is_public=true)
+                                    ├─ reads dist/og-shell.html (postbuild copy of dist/index.html)
+                                    └─ injects buildOgTags() output before </head>
+og:image ───────────────▶ Supabase Edge Function og-image (satori + resvg via @vercel/og)
+                              ├─ service role (bypasses RLS → manual published/public filter)
+                              ├─ Inter 400/700 subsets base64-embedded in fonts.ts
+                              └─ 1200×630 PNG, Cache-Control: public, max-age=86400, s-maxage=86400
+```
+
+| Piece | Path | Notes |
+|---|---|---|
+| Pure tag builders | `apps/web/src/shared/lib/og.ts` | `buildOgTags` (HTML-attribute-escaped, ≤200-char description), `buildOgImageUrl` |
+| Crawler UA detection | `apps/web/src/shared/lib/crawler.ts` | used by `api/og-inject.ts`; unit-tested in vitest |
+| Client meta hook | `apps/web/src/shared/hooks/usePageMeta.ts` | title/description/canonical/og on review, event, artist, venue pages |
+| Image renderer | `supabase/functions/og-image/` | Deno Edge Function, `?reviewId=` → PNG; branded fallback card for missing/private reviews |
+| Crawler injection | `apps/web/api/og-inject.ts` | serves the SPA shell with injected OG tags to crawler user agents |
+| Shell copy step | `apps/web/scripts/copy-og-shell.mjs` | `postbuild`: `dist/index.html` → `dist/og-shell.html` (generated build output, gitignored) |
+| Static fallback | `apps/web/public/og-fallback.png` | 1200×630 branded image (<100 kB), also embedded in the function for 500s |
+
+### Deploy the Edge Function
+
+```bash
+supabase functions deploy og-image --project-ref lpfyzjfqyyrdknzgxoul
+```
+
+`verify_jwt = false` is set for `og-image` in `supabase/config.toml` (the
+endpoint is intentionally public); the function itself filters
+`status = 'published' AND is_public = true` because the service role client
+bypasses RLS. Private/draft/missing review IDs get the branded fallback card —
+no data leak. A missing `reviewId` parameter returns 400.
+
+Verify:
+
+```bash
+curl -I "https://lpfyzjfqyyrdknzgxoul.supabase.co/functions/v1/og-image?reviewId=<published-review-id>"
+# 200 · content-type: image/png · cache-control: public, max-age=86400, s-maxage=86400
+```
+
+### Vercel environment variables
+
+Server-side (no `VITE_` prefix) — used by `api/og-inject.ts`:
+
+| Variable | Value |
+|---|---|
+| `SUPABASE_URL` | e.g. `https://lpfyzjfqyyrdknzgxoul.supabase.co` |
+| `SUPABASE_ANON_KEY` | anon key (works because published reviews are RLS-readable by anon) |
+
+The existing client-side `VITE_SUPABASE_URL` is unchanged — the client og:image
+base URL comes from it. `vercel.json` rewrites `/r/:reviewId` to
+`/api/og-inject` only when the `user-agent` header matches the crawler regex,
+so browsers never hit the rewrite ("no behavior change" acceptance).
+
+### Netlify / static-host caveats
+
+- **Netlify**: `_redirects` cannot inspect user agents, so the equivalent needs
+  a Netlify Edge Function doing the same injection. Not implemented this
+  sprint.
+- **Static hosts (S3/CloudFront/GitHub Pages)**: no server-side injection is
+  possible — crawlers see the generic `index.html` meta; only the client-side
+  `usePageMeta` tags help. The Edge Function image URL is absolute and works
+  from any host if tags are hand-authored.
+
+### Fonts
+
+Inter Regular/Bold subsets are base64-embedded in
+`supabase/functions/og-image/fonts.ts` (generated from
+`supabase/functions/og-image/assets/*.ttf`). Source: [rsms/inter v3.19](https://github.com/rsms/inter/releases/tag/v3.19)
+static TTFs (SIL OFL), subset with fonttools to ASCII + Latin-1 + punctuation +
+★/☆. Rendering uses `npm:@vercel/og`, which ships its own fallback font
+(Geist) and wasm binaries — no font files are fetched at runtime.
+
+### In-sprint decision record
+
+- **Primary architecture (chosen):** per-review PNGs rendered by the Supabase
+  Edge Function `og-image`. This also establishes the server-side function
+  pattern Sprint 8 (setlist.fm import) needs. The static-fallback-only escape
+  hatch was not needed.
+- **Renderer:** `npm:@vercel/og` (satori + resvg-wasm under the hood) instead
+  of raw `npm:satori` + `npm:@resvg/resvg-wasm`. With server-side CLI bundling
+  (no Docker), function static assets are not readable at runtime (verified:
+  `Deno.readFileSync` → path not found, `fetch(file://)` → blocked,
+  `readDirSync` → blocklisted), while `@vercel/og`'s internal `?module` wasm
+  imports and font fetch are supported by the edge runtime. This matches
+  Supabase's official OG image example.
+- **Fonts:** base64-embedded subsets instead of bundled asset files (same
+  reason as above).
+- **Review photos:** the `review-photos` bucket is private, so the function
+  generates short-lived signed URLs (300 s) for card photos instead of public
+  URLs.
+
+---
+
 ## Troubleshooting
 
 ### "No events found"
@@ -301,6 +406,6 @@ metros you care about (each city is a separate paged query; same city name as on
 | Auth | Magic Link + Google OAuth | ✅ |
 | Storage | Photos + Avatars | ✅ |
 | Data | Mock seed + Ticketmaster ingestion | ✅ |
-| Tests | 234 passing | ✅ |
+| Tests | 310 passing | ✅ |
 
 **You're ready to go live! 🚀**

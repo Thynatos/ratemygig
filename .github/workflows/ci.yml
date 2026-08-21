@@ -26,6 +26,9 @@ jobs:
 
       - run: npm run lint
 
+      - run: npx tsc -b --noEmit
+        working-directory: apps/web
+
       - run: npm run test
 
       - run: npm run build
@@ -34,3 +37,27 @@ jobs:
       # is no mock-server strategy (see SPRINTS.md "Deferred / rejected").
       # Unit tests, lint, and build all run without secrets — env.ts falls back
       # to placeholder Supabase values when VITE_* vars are unset.
+
+  # Live-schema smoke + RPC contract tests: anon REST calls against the real
+  # Supabase project, asserting that every profile embed resolves and every
+  # RPC's rows parse with the Zod schema the app uses. Needs SUPABASE_URL and
+  # SUPABASE_ANON_KEY repo secrets, so it is skipped (not failed) on fork PRs,
+  # which do not receive secrets.
+  live-schema:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - run: npm ci
+
+      - run: npm run test:live --workspace=apps/web
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}

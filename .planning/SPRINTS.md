@@ -30,10 +30,18 @@
 | 3 | Friends Going + calendar export | M | [x] |
 | 4 | UX correctness pack (known issues) | S | [x] |
 | 5 | Performance & CI hardening | M | [x] |
-| 6 | Gig Wrapped (year-in-review stats) | M | [ ] |
-| 7 | Share cards / OG images | L | [ ] |
+| 6 | Gig Wrapped (year-in-review stats) | M | [x] |
+| 7 | Share cards / OG images | L | [x] |
 | 8 | setlist.fm import | M | [ ] |
 | 9 | PWA + Web Push | L | [ ] |
+| 10 | Make it work on a real database (audit Tier 0) | M | [x] |
+
+> **Ordering note:** Sprint 10 was inserted by the 2026-08-21 audit (`docs/AUDIT_REPORT.md` §6)
+> and deliberately executed **before** Sprints 8 and 9 — Sprint 8 writes data into display
+> paths that returned HTTP 400 until Sprint 10's migration 016. Spec:
+> `.planning/SPRINT10_PROMPT.md`. Its migration (`packages/db/migrations/016_schema_fixes.sql`)
+> was applied to the live project on 2026-08-21 and verified (`npm run test:live` 22/22).
+> The `live-schema` CI job additionally needs `SUPABASE_URL` / `SUPABASE_ANON_KEY` repo secrets.
 
 ---
 

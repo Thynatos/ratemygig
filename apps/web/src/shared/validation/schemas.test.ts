@@ -7,6 +7,7 @@ import {
     ratingFiltersSchema,
     attendanceSchema,
     ticketUrlSchema,
+    yearStatsSchema,
     ALLOWED_IMAGE_TYPES,
     MAX_IMAGE_SIZE_MB,
     MAX_PHOTOS_PER_REVIEW,
@@ -208,6 +209,55 @@ describe('ticketUrlSchema', () => {
             label: '',
             url: 'https://example.com',
         })
+        expect(result.success).toBe(false)
+    })
+})
+
+describe('yearStatsSchema', () => {
+    const fullRow = {
+        gigs_attended: 12,
+        reviews_written: 8,
+        avg_rating_given: 4.2,
+        photos_uploaded: 15,
+        distinct_cities: 3,
+        first_gig_date: '2026-02-01T19:00:00+00:00',
+        last_gig_date: '2026-11-20T20:30:00+00:00',
+        top_artists: [
+            { name: 'Artist A', count: 4 },
+            { name: 'Artist B', count: 2 },
+        ],
+        top_venues: [{ name: 'Venue X', count: 5 }],
+    }
+
+    it('parses a full valid RPC row', () => {
+        expect(yearStatsSchema.safeParse(fullRow).success).toBe(true)
+    })
+
+    it('parses a zero-data row with null dates and empty lists', () => {
+        const result = yearStatsSchema.safeParse({
+            gigs_attended: 0,
+            reviews_written: 0,
+            avg_rating_given: 0,
+            photos_uploaded: 0,
+            distinct_cities: 0,
+            first_gig_date: null,
+            last_gig_date: null,
+            top_artists: [],
+            top_venues: [],
+        })
+        expect(result.success).toBe(true)
+    })
+
+    it('rejects a row where a stat entry misses count', () => {
+        const result = yearStatsSchema.safeParse({
+            ...fullRow,
+            top_artists: [{ name: 'Artist A' }],
+        })
+        expect(result.success).toBe(false)
+    })
+
+    it('rejects a numeric-string avg_rating (PostgREST numeric leak guard)', () => {
+        const result = yearStatsSchema.safeParse({ ...fullRow, avg_rating_given: '4.2' })
         expect(result.success).toBe(false)
     })
 })

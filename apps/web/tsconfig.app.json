@@ -22,6 +22,10 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
+    "types": [
+      "vite/client",
+      "vitest/globals"
+    ],
     "baseUrl": ".",
     "paths": {
       "@/*": [
@@ -35,6 +39,9 @@
       ],
       "@core/*": [
         "../../packages/core/src/*"
+      ],
+      "@jobs/*": [
+        "../../packages/jobs/src/*"
       ]
     }
   },

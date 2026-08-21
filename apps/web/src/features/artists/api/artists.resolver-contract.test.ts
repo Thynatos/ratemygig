@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { resolveArtists, resolveArtist, resolveArtistEvents } from './resolver'
 
-describe('artists integration (mock-only flow)', () => {
+describe('artists resolver contract (injected deps)', () => {
     it('resolveArtists returns mock artists when Supabase is not configured', async () => {
         const result = await resolveArtists(undefined, {
             mode: 'mock',

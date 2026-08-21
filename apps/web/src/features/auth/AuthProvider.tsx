@@ -1,6 +1,8 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { supabase } from '@/shared/lib/supabase'
+import { queryClient } from '@/shared/lib/queryClient'
+import { shouldClearQueryCache } from './cache-policy'
 
 interface AuthContextType {
     user: User | null
@@ -21,10 +23,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const [user, setUser] = useState<User | null>(null)
     const [session, setSession] = useState<Session | null>(null)
     const [isLoading, setIsLoading] = useState(true)
+    const lastUserIdRef = useRef<string | null>(null)
 
     useEffect(() => {
         // Get initial session
         supabase.auth.getSession().then(({ data: { session } }) => {
+            lastUserIdRef.current = session?.user?.id ?? null
             setSession(session)
             setUser(session?.user ?? null)
             setIsLoading(false)
@@ -32,7 +36,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            (_event, session) => {
+            (event, session) => {
+                const nextUserId = session?.user?.id ?? null
+                if (shouldClearQueryCache(event, lastUserIdRef.current, nextUserId)) {
+                    queryClient.clear()
+                }
+                lastUserIdRef.current = nextUserId
                 setSession(session)
                 setUser(session?.user ?? null)
                 setIsLoading(false)
@@ -66,6 +75,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     const signOut = async () => {
         await supabase.auth.signOut()
+        queryClient.clear()
     }
 
     return (

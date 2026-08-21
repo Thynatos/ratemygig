@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
 import { supabase } from '@/shared/lib/supabase'
+import { useAuth } from '@/features/auth/hooks/useAuth'
 import { isSupabaseConfigured } from '@/shared/lib/env'
 import { validateRpcResponse } from '@/shared/lib/utils'
 import { mapEventRow } from '@/features/events/api/events'
@@ -16,8 +17,9 @@ export const discoveryKeys = {
 }
 
 export function useRecommendedEvents(limit: number = 12) {
+    const { user: authUser } = useAuth()
     return useQuery({
-        queryKey: discoveryKeys.recommended('current'),
+        queryKey: discoveryKeys.recommended(authUser?.id ?? 'anonymous'),
         queryFn: async () => {
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) return []

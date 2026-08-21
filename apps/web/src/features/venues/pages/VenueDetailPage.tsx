@@ -10,6 +10,7 @@ import { LoadingPage } from '@/shared/components/ui/Loading'
 import { EventCard } from '@/features/events/components/EventCard'
 import { useFriendsGoing } from '@/features/events/api/useFriendsGoing'
 import { Input } from '@/shared/components/ui/Input'
+import { usePageMeta } from '@/shared/hooks'
 import { env } from '@/shared/lib/env'
 import { getProviderModeLabel, isTicketmasterMode } from '@/shared/lib/provider-policy'
 import { sanitizeText } from '@/shared/lib/sanitize'
@@ -36,6 +37,16 @@ export function VenueDetailPage() {
         return [...upcoming, ...past].map(e => e.id)
     }, [events])
     const { data: friendsGoing } = useFriendsGoing(visibleEventIds)
+
+    usePageMeta(
+        venue
+            ? {
+                  title: venue.name,
+                  description: `${venue.name}, ${venue.city} — ratings, upcoming events`,
+                  canonicalPath: `/venues/${venue.id}`,
+              }
+            : null
+    )
 
     if (venueLoading) return <LoadingPage message="Loading venue..." />
 

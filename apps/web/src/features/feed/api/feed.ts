@@ -1,9 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/shared/lib/supabase'
+import { useAuth } from '@/features/auth/hooks/useAuth'
 
 export const feedKeys = {
     all: ['feed'] as const,
-    timeline: (page: number) => [...feedKeys.all, 'timeline', page] as const,
+    timeline: (userId: string, page: number) => [...feedKeys.all, 'timeline', userId, page] as const,
 }
 
 export type FeedItemType = 'review' | 'event' | 'attendance'
@@ -76,6 +77,13 @@ export interface FeedResult {
     hasErrors: boolean
 }
 
+interface FeedProfile {
+    id: string
+    display_name: string | null
+    username: string | null
+    avatar_url: string | null
+}
+
 export type FeedItem = ReviewFeedItem | EventFeedItem | AttendanceFeedItem
 
 const PAGE_SIZE = 20
@@ -125,7 +133,7 @@ async function fetchReviewFeed(
             .select('id, display_name, username, avatar_url')
             .in('id', authorIds)
 
-        const authorMap = new Map((authors || []).map((a: { id: string }) => [a.id, a]))
+        const authorMap = new Map((authors || []).map((a: FeedProfile) => [a.id, a]))
 
         return reviews.map((review: { id: string; rating: number; title: string | null; body: string; created_at: string; user_id: string; event: unknown }) => {
             const event = Array.isArray(review.event) ? review.event[0] : review.event
@@ -175,21 +183,22 @@ async function fetchAttendanceFeed(
             .select('id, display_name, username, avatar_url')
             .in('id', attUserIds)
 
-        const attUserMap = new Map((attUsers || []).map((u: { id: string }) => [u.id, u]))
+        const attUserMap = new Map((attUsers || []).map((u: FeedProfile) => [u.id, u]))
 
-        return attendance.map((att: { id: string; status: string; created_at: string; user_id: string; event: unknown }) => {
+        return attendance.flatMap((att: { id: string; status: string; created_at: string; user_id: string; event: unknown }) => {
             const event = Array.isArray(att.event) ? att.event[0] : att.event
             const ev = event as { id: string; name: string; start_at: string; venue?: unknown } | null
-            const venue = ev?.venue ? (Array.isArray(ev.venue) ? ev.venue[0] : ev.venue) as { id: string; name: string; city: string } | null : null
-            return {
+            if (!ev) return []
+            const venue = ev.venue ? (Array.isArray(ev.venue) ? ev.venue[0] : ev.venue) as { id: string; name: string; city: string } | null : null
+            return [{
                 type: 'attendance' as const,
                 id: att.id,
                 created_at: att.created_at,
                 user: attUserMap.get(att.user_id) || null,
-                event: ev ? { id: ev.id, name: ev.name, start_at: ev.start_at } : null,
+                event: { id: ev.id, name: ev.name, start_at: ev.start_at },
                 venue: venue ? { id: venue.id, name: venue.name, city: venue.city } : null,
                 status: att.status as 'planned' | 'attended',
-            }
+            }]
         })
     } catch {
         return []
@@ -265,8 +274,9 @@ async function fetchUpcomingVenueEvents(followedVenueIds: string[]): Promise<Eve
 }
 
 export function useActivityFeed(page: number = 1) {
+    const { user: authUser } = useAuth()
     return useQuery({
-        queryKey: feedKeys.timeline(page),
+        queryKey: feedKeys.timeline(authUser?.id ?? 'anonymous', page),
         queryFn: async (): Promise<FeedResult> => {
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) return { items: [], hasMore: false, hasErrors: false }
@@ -313,9 +323,10 @@ export function useActivityFeed(page: number = 1) {
 
 export function usePrefetchNextFeedPage(page: number) {
     const queryClient = useQueryClient()
+    const { user } = useAuth()
     return () => {
         queryClient.prefetchQuery({
-            queryKey: feedKeys.timeline(page + 1),
+            queryKey: feedKeys.timeline(user?.id ?? 'anonymous', page + 1),
         })
     }
 }

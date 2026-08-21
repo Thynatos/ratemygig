@@ -29,6 +29,9 @@ graphify-out/
 opencode.json
 latest_prompt.txt
 
+# Supabase CLI artifacts
+supabase/.temp/
+
 # OS files
 Thumbs.db
 

@@ -31,6 +31,7 @@ const SetlistPage = lazy(() => import('@/features/setlists/pages/SetlistPage').t
 const SongPage = lazy(() => import('@/features/setlists/pages/SongPage').then(m => ({ default: m.SongPage })))
 const NotificationsPage = lazy(() => import('@/features/notifications/pages/NotificationsPage').then(m => ({ default: m.NotificationsPage })))
 const ListPage = lazy(() => import('@/features/lists/pages/ListPage').then(m => ({ default: m.ListPage })))
+const WrappedPage = lazy(() => import('@/features/wrapped/pages/WrappedPage').then(m => ({ default: m.WrappedPage })))
 
 function App() {
     return (
@@ -65,6 +66,7 @@ function App() {
                         <Route path="/review/:eventId" element={<FeatureErrorBoundary title="Write Review"><WriteReviewPage /></FeatureErrorBoundary>} />
                         <Route path="/review/:eventId/edit" element={<FeatureErrorBoundary title="Edit Review"><WriteReviewPage /></FeatureErrorBoundary>} />
                         <Route path="/profile" element={<FeatureErrorBoundary title="Profile"><ProfilePage /></FeatureErrorBoundary>} />
+                        <Route path="/wrapped" element={<FeatureErrorBoundary title="Gig Wrapped"><WrappedPage /></FeatureErrorBoundary>} />
                     </Route>
                 </Route>
 

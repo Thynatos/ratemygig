@@ -242,3 +242,71 @@
 
 ### CI runs lint/test/build only — E2E stays local
 - `ci.yml` intentionally skips Playwright: the suite needs a live Supabase instance and no mock-server strategy exists (SPRINTS.md "Deferred / rejected"). All three CI steps run without secrets — `env.ts` falls back to placeholder Supabase values when `VITE_*` vars are unset. Commented in the workflow file.
+
+## Sprint 7 — Share Cards / OG Images (Notes & Tradeoffs)
+
+### The crawler UA list is best-effort
+- `CRAWLER_UA_PATTERN` (and the parallel regex in `vercel.json`) matches the major crawlers (Googlebot, facebookexternalhit, Twitterbot, WhatsApp, Slack, LinkedIn, Discord, Telegram, Pinterest, embed/preview probes). New or obscure bots that don't match get the plain SPA shell — no rich card, but no breakage either. Revisit the list when a specific validator shows a blank card.
+- The two lists (TS + vercel.json) must stay in sync manually; the Vercel `has` value cannot import from `src/`.
+
+### og-shell.html is generated build output
+- `dist/og-shell.html` is created by the `postbuild` step (`scripts/copy-og-shell.mjs`) copying `dist/index.html`. If `index.html` ever changes structure, the copy tracks it automatically (it is regenerated on every build) — the only drift risk is a stale `og-shell.html` when someone serves `dist/` from a build that predates the script. `dist/` is gitignored, so CI/deploy builds always regenerate it.
+
+### Public Edge Function relies on a manual visibility filter
+- `og-image` runs with the service role key (`verify_jwt = false` in `supabase/config.toml`), which bypasses RLS. The function therefore re-checks `status = 'published' && is_public = true` itself before rendering any review data; everything else gets the branded fallback card. Any future change to review visibility semantics must be mirrored in this filter (and in `api/og-inject.ts`, which uses the anon key + explicit PostgREST filters).
+
+### Cold-start latency
+- First request to `og-image` after idle pays Deno cold start + wasm init (~200–500 ms). Acceptable for crawlers; the `Cache-Control: public, max-age=86400, s-maxage=86400` response headers mean each review image is fetched at most once per day per CDN edge.
+
+### Renderer deviation from the sprint plan (recorded in DEPLOYMENT.md)
+- The plan specified raw `npm:satori` + `npm:@resvg/resvg-wasm`; the shipped function uses `npm:@vercel/og` (the same stack, bundled) because server-side CLI bundling does not expose function static assets to the runtime (verified empirically — see DEPLOYMENT.md "In-sprint decision record"). Inter subsets are base64-embedded in `fonts.ts` instead of read from `assets/`.
+
+### ~~Pre-existing bugs found during Sprint 7 e2e verification~~ — FIXED (Sprint 10)
+
+#### ~~ArtistDetailPage crashes whenever the venues query succeeds~~ — FIXED
+- **Resolved (Sprint 10 / audit A4)**: `ArtistDetailPage` now destructures `venuesResult?.data ?? []`. The class of bug is gated by `tsc -b --noEmit` in `npm run build` and CI.
+
+#### ~~reviews → profiles PostgREST embed fails (PGRST200)~~ — FIXED
+- **Resolved (Sprint 10 / audit A1)**: migration `016_schema_fixes.sql` adds FKs to `public.profiles` from `reviews`, `comments`, `lists`, `setlists`, and both `user_follows` columns. `user_follows` embeds now hint the new constraint names (`user_follows_follower_profile_fkey` / `user_follows_following_profile_fkey`). All nine embed sites are covered by the `live-schema` CI job.
+
+## Sprint 10 — Make it work on a real database (Notes & Tradeoffs)
+
+### Production had NO SPA fallback — every deep link 404'd (found during the Sprint 10 merge)
+- Verified against `https://ratemygig-web.vercel.app` on 2026-08-21 while running the G3 checklist: `/` returned 200 but `/venues`, `/artists`, `/events/:id` and `/r/:id` all returned a **platform** 404 (`X-Vercel-Error: NOT_FOUND`, `Server: Vercel`, plain-text body — not the app's NotFoundPage, which would be a 200 SPA shell). Cause: `apps/web/vercel.json` declared `framework: "vite"` but no catch-all rewrite, and Vercel's Vite preset does not add one (Vite can be an MPA).
+- This had nothing to do with Sprint 10, but it would have made Sprint 7's share cards look broken on their first production deploy: the UA-gated `/r/:reviewId` rewrite serves crawlers correctly, so a Slack/Twitter preview renders — while a human clicking that same link fell through to the filesystem and got the 404. Fixed by appending `{"source": "/(.*)", "destination": "/index.html"}` **after** the crawler rewrite (order matters; Vercel evaluates rewrites top-down).
+- Safe against the `api/og-inject` function and static assets because Vercel checks redirects → headers → **filesystem** → rewrites, so anything that exists on disk or as a function is matched before the catch-all is considered.
+- **G3 remains partly unverified:** Vercel preview deployments on this account are SSO-protected (every request, crawler UA included, 302s to `vercel.com/sso-api`), so the crawler rewrite cannot be exercised on a preview. It can only be checked on the production alias after a merge — run the four-step G3 checklist there.
+
+### user_follows keeps TWO FK targets per column — embed hints are mandatory
+- After 016, `follower_id`/`following_id` each have FKs to both `auth.users` and `public.profiles`. PostgREST only embeds through the `profiles` ones, but the table now has two relationships to `profiles`, so `useFollowers`/`useFollowing` must keep disambiguating hints — and those hints name the **new** constraints (`user_follows_follower_profile_fkey` / `user_follows_following_profile_fkey`), because the old `*_id_fkey` names belong to the `auth.users` constraints.
+
+### get_artist_setlist_stats returns zero rows for artists with no setlist songs
+- The 016 redefinition adds a `HAVING` clause so an artist with no setlists yields an empty result set instead of one all-NULL row. This matches the client (`useArtistSetlistStats` returns `null` on empty) and keeps `artistSetlistStatsSchema` non-nullable. Without it, fixing the RPC's 42703 would have traded a 400 for a Zod validation failure on every artist without setlists.
+
+### Query-cache clearing is gated on identity change, not on every auth event
+- `AuthProvider` clears the React Query cache in `signOut` and on `onAuthStateChange` — but only when `shouldClearQueryCache()` (pure, unit-tested in `cache-policy.test.ts`) says so: `SIGNED_OUT`, or a previous user id that differs from the next. `TOKEN_REFRESHED` (~hourly) and `INITIAL_SESSION` never wipe the cache. User-scoped query keys (`my-gigs`, `user-review`, drafts, feed timeline, recommended, followed artists/venues, user-follow `isFollowing`) additionally carry the user id as defense in depth.
+
+### The live-schema job needs repo secrets and skips forks
+- `.github/workflows/ci.yml` `live-schema` job runs `npm run test:live` (anon REST smoke for all nine profile embeds + Zod contract parse for every RPC the app calls) with `SUPABASE_URL`/`SUPABASE_ANON_KEY` from repo secrets. Fork PRs don't receive secrets, so the job is `if`-gated to skip (not fail) there. Both secrets were set on `Thynatos/ratemygig` on 2026-08-21. Locally, `npm run test:live -w apps/web` reads `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` from `apps/web/.env.local` via `vitest.live.config.ts`; `process.env` takes precedence, which is the path CI uses (verified by injecting a wrong key and watching all 22 assertions turn into 401s).
+- The anon key is Supabase's **publishable** key (`sb_publishable_…`) — public by design and already inlined into the client bundle by Vite. It lives in repo secrets for log hygiene and to keep the job's env contract explicit, not because it is confidential. The `sb_secret_…` / service-role key must never appear in this workflow: `build-test` is deliberately secret-free.
+- Migration 016 was applied to the live project 2026-08-21; the suite went from 10/22 to **22/22** across that change, which is the regression signal the job exists to preserve.
+
+### tsconfig `types` is now restrictive
+- `tsconfig.app.json` sets `"types": ["vite/client", "vitest/globals"]`, which turns OFF automatic inclusion of every `@types/*` package for `src/`. Nothing in `src/` uses Node globals (verified), but if that changes, `node` must be added to the array explicitly. `vitest-axe` matchers are typed by `src/test/vitest-axe.d.ts` (the package's own augmentation targets the pre-1.0 `Vi` namespace that Vitest 2 ignores).
+
+### B1 is closed at the enforcement layer, not every mirror
+- 016 adds `status = 'published'` to the reviews SELECT policy (anon branch only — the owner branch stays unqualified so `useDrafts()` works), to all five aggregation RPCs, to `get_trending_events`, and to the storage read policy (which now also matches `thumbnail_path`, fixing A8). The `review_photos`/`review_tags`/`comments` SELECT policies still consult only `is_public` — metadata rows (paths, tag ids, comment bodies) for a hypothetical draft remain readable; the photos themselves are not. Tracked under B9/Tier 1.
+
+## Sprint 6 — Gig Wrapped (Notes & Tradeoffs)
+
+### get_user_year_stats ignores its p_user_id parameter (deliberate, same as 014)
+- The RPC signature keeps `p_user_id UUID` per the Sprint 6 spec, but the function body scopes every query to `auth.uid()` only. It is `SECURITY DEFINER` (attendance RLS is owner-only and `review_photos` access is gated through the parent review's `is_public`), so honoring `p_user_id` would let any caller read any user's stats. Documented in the migration header comment; the client always passes the caller's own id.
+
+### Year windows are UTC; local-time midnight gigs can bleed across years
+- Events count toward the year of their `start_at` in UTC (`[Jan 1 00:00 UTC, next Jan 1 00:00 UTC)`). A local-time midnight show on Dec 31 will usually fall on the next UTC day and count for the wrong year from the user's perspective. Accepted for v1 — per-user timezone storage doesn't exist.
+
+### PostgREST numeric serialization guards in the RPC
+- jsonb rejects `bigint`, so every `COUNT(*)` inside `jsonb_build_object` is cast `::INT`. `AVG(rating)` is `numeric`; the TABLE column is `DOUBLE PRECISION` so PostgREST serializes a JSON number instead of a numeric string (the client Zod schema rejects strings as a guard).
+
+### Photos are counted against the review's year
+- `photos_uploaded` joins `review_photos` through the reviews written that year (same window as `reviews_written`), not the photo's own `created_at`, so Wrapped totals reconcile with the review count even for photos uploaded later.

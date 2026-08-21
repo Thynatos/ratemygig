@@ -8,8 +8,8 @@ describe('userFollowKeys', () => {
         expect(userFollowKeys.all).toEqual(['user-follows'])
     })
 
-    it('generates isFollowing key', () => {
-        expect(userFollowKeys.isFollowing('user-1')).toEqual(['user-follows', 'is-following', 'user-1'])
+    it('generates isFollowing key scoped to the viewer', () => {
+        expect(userFollowKeys.isFollowing('user-1', 'viewer-1')).toEqual(['user-follows', 'is-following', 'user-1', 'viewer-1'])
     })
 
     it('generates followers key', () => {
@@ -38,8 +38,8 @@ describe('artistFollowKeys', () => {
         expect(artistFollowKeys.isFollowing('artist-1')).toEqual(['artist-follows', 'is-following', 'artist-1'])
     })
 
-    it('generates followedArtists key', () => {
-        expect(artistFollowKeys.followedArtists()).toEqual(['artist-follows', 'followed'])
+    it('generates followedArtists key scoped to the user', () => {
+        expect(artistFollowKeys.followedArtists('user-1')).toEqual(['artist-follows', 'followed', 'user-1'])
     })
 })
 
@@ -52,7 +52,7 @@ describe('venueFollowKeys', () => {
         expect(venueFollowKeys.isFollowing('venue-1')).toEqual(['venue-follows', 'is-following', 'venue-1'])
     })
 
-    it('generates followedVenues key', () => {
-        expect(venueFollowKeys.followedVenues()).toEqual(['venue-follows', 'followed'])
+    it('generates followedVenues key scoped to the user', () => {
+        expect(venueFollowKeys.followedVenues('user-1')).toEqual(['venue-follows', 'followed', 'user-1'])
     })
 })
