@@ -48,6 +48,7 @@ In your Supabase project, go to the **SQL Editor** and run each migration file i
 012_review_photos_thumbnail.sql
 013_notification_triggers.sql
 014_friends_attendance.sql
+015_user_year_stats.sql
 ```
 
 > **Important:** Run them one at a time in order. Each file is idempotent (can be re-run safely).

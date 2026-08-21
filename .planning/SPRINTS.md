@@ -30,7 +30,7 @@
 | 3 | Friends Going + calendar export | M | [x] |
 | 4 | UX correctness pack (known issues) | S | [x] |
 | 5 | Performance & CI hardening | M | [x] |
-| 6 | Gig Wrapped (year-in-review stats) | M | [ ] |
+| 6 | Gig Wrapped (year-in-review stats) | M | [x] |
 | 7 | Share cards / OG images | L | [ ] |
 | 8 | setlist.fm import | M | [ ] |
 | 9 | PWA + Web Push | L | [ ] |

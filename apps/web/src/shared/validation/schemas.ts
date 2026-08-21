@@ -239,3 +239,20 @@ export const songStatsEntrySchema = z.object({
     first_played: z.string().datetime(),
     last_played: z.string().datetime(),
 })
+
+export const yearStatEntrySchema = z.object({
+    name: z.string(),
+    count: z.number().int(),
+})
+
+export const yearStatsSchema = z.object({
+    gigs_attended: z.number().int(),
+    reviews_written: z.number().int(),
+    avg_rating_given: z.number(),
+    photos_uploaded: z.number().int(),
+    distinct_cities: z.number().int(),
+    first_gig_date: z.string().datetime({ offset: true }).nullable(),
+    last_gig_date: z.string().datetime({ offset: true }).nullable(),
+    top_artists: z.array(yearStatEntrySchema),
+    top_venues: z.array(yearStatEntrySchema),
+})

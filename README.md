@@ -246,6 +246,7 @@ The app uses a custom dark theme with:
 - [x] Friend follow system — follow users, artists, and venues
 - [x] Export gig history as CSV — from My Gigs page
 - [x] Scheduled event sync (GitHub Actions cron) — see `.github/workflows/ingest.yml` and `packages/jobs`
+- [x] Gig Wrapped — personal year-in-review stats at `/wrapped` (`015_user_year_stats.sql`)
 
 ## 📄 License
 

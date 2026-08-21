@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { User, Save, Eye, EyeOff } from 'lucide-react'
+import { User, Save, Eye, EyeOff, Sparkles } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { supabase } from '@/shared/lib/supabase'
@@ -134,6 +135,23 @@ export function ProfilePage() {
                 <div className="mb-6">
                     <GigStatsCard userId={user.id} />
                 </div>
+            )}
+
+            {user && (
+                <Card className="mb-6">
+                    <CardContent className="p-6 flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <Sparkles className="w-6 h-6 text-accent-400" />
+                            <div>
+                                <p className="font-medium text-white">Your Year in Review</p>
+                                <p className="text-sm text-surface-400">Stats, top artists and venues from each year</p>
+                            </div>
+                        </div>
+                        <Link to="/wrapped">
+                            <Button variant="secondary" size="sm">View</Button>
+                        </Link>
+                    </CardContent>
+                </Card>
             )}
 
             <Card>

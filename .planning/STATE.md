@@ -2,7 +2,7 @@
 
 ## Current Phase
 **Phase:** Post-M5 Sprints (see .planning/SPRINTS.md)
-**Status:** Sprint 5 complete — next up: Sprint 6 (Gig Wrapped / year-in-review)
+**Status:** Sprint 6 complete — next up: Sprint 7 (Share cards / OG images)
 **Last Activity:** 2026-08-21
 
 ## Completed
@@ -59,7 +59,10 @@
 - Sprint 5: bundle splitting via manualChunks (react-vendor / query-vendor / supabase-vendor) — index chunk 404 kB (gzip 122 kB), under 500 kB threshold
 - Sprint 5: vitest-axe wired into test setup; checkA11y helper (test/axe.ts, color-contrast disabled for jsdom); axe assertions on Button, Input, Modal, EventCard, Layout
 - Sprint 5: .github/workflows/ci.yml (push/PR: Node 22, npm ci, lint, test, build; E2E intentionally local-only)
-- 260 unit tests passing, 0 lint errors, 0 lint warnings
+- Sprint 6: migration 015 get_user_year_stats RPC (SECURITY DEFINER, caller-scoped, one-row year stats: gigs/reviews/avg rating/photos/cities/first+last dates + top_artists/top_venues JSONB)
+- Sprint 6: /wrapped page (lazy, ProtectedRoute) with ?year= param + prev/next year nav (min 2000, max current), January→previous-year default via pure resolveWrappedYear, stat cards reusing GigStatsCard visual language, top artist/venue lists, empty state CTA to Discover
+- Sprint 6: ProfilePage "Your Year in Review" entry card linking to /wrapped; UserYearStats/YearStatEntry core types; yearStatsSchema Zod validation on the RPC row
+- 281 unit tests passing, 0 lint errors, 0 lint warnings
 
 ## Decisions
 - Direct Supabase client queries (no custom API layer)

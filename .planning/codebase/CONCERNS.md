@@ -242,3 +242,17 @@
 
 ### CI runs lint/test/build only — E2E stays local
 - `ci.yml` intentionally skips Playwright: the suite needs a live Supabase instance and no mock-server strategy exists (SPRINTS.md "Deferred / rejected"). All three CI steps run without secrets — `env.ts` falls back to placeholder Supabase values when `VITE_*` vars are unset. Commented in the workflow file.
+
+## Sprint 6 — Gig Wrapped (Notes & Tradeoffs)
+
+### get_user_year_stats ignores its p_user_id parameter (deliberate, same as 014)
+- The RPC signature keeps `p_user_id UUID` per the Sprint 6 spec, but the function body scopes every query to `auth.uid()` only. It is `SECURITY DEFINER` (attendance RLS is owner-only and `review_photos` access is gated through the parent review's `is_public`), so honoring `p_user_id` would let any caller read any user's stats. Documented in the migration header comment; the client always passes the caller's own id.
+
+### Year windows are UTC; local-time midnight gigs can bleed across years
+- Events count toward the year of their `start_at` in UTC (`[Jan 1 00:00 UTC, next Jan 1 00:00 UTC)`). A local-time midnight show on Dec 31 will usually fall on the next UTC day and count for the wrong year from the user's perspective. Accepted for v1 — per-user timezone storage doesn't exist.
+
+### PostgREST numeric serialization guards in the RPC
+- jsonb rejects `bigint`, so every `COUNT(*)` inside `jsonb_build_object` is cast `::INT`. `AVG(rating)` is `numeric`; the TABLE column is `DOUBLE PRECISION` so PostgREST serializes a JSON number instead of a numeric string (the client Zod schema rejects strings as a guard).
+
+### Photos are counted against the review's year
+- `photos_uploaded` joins `review_photos` through the reviews written that year (same window as `reviews_written`), not the photo's own `created_at`, so Wrapped totals reconcile with the review count even for photos uploaded later.
