@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { CalendarPlus, Download, ExternalLink } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import type { Event } from '@core/index'
 import { buildGoogleCalendarUrl, buildIcs } from '@/shared/lib/ical'
 import type { IcalEventInput } from '@/shared/lib/ical'
@@ -27,6 +26,19 @@ function slugify(text: string): string {
 
 export function AddToCalendarButton({ event }: AddToCalendarButtonProps) {
     const [isOpen, setIsOpen] = useState(false)
+    const triggerRef = useRef<HTMLButtonElement>(null)
+
+    useEffect(() => {
+        if (!isOpen) return
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                setIsOpen(false)
+                triggerRef.current?.focus()
+            }
+        }
+        document.addEventListener('keydown', onKeyDown)
+        return () => document.removeEventListener('keydown', onKeyDown)
+    }, [isOpen])
 
     const handleDownload = () => {
         const ics = buildIcs([toIcalInput(event)])
@@ -42,17 +54,14 @@ export function AddToCalendarButton({ event }: AddToCalendarButtonProps) {
     return (
         <div className="relative">
             <button
+                ref={triggerRef}
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className={cn(
-                    'inline-flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all',
-                    'bg-surface-800 border border-surface-600 text-surface-200',
-                    'hover:bg-surface-700 hover:border-surface-500',
-                    isOpen && 'border-primary-500/50'
-                )}
+                aria-expanded={isOpen}
+                aria-haspopup="menu"
+                className={cn('btn-secondary', isOpen && 'bg-board-raised border-strip')}
             >
-                <CalendarPlus className="w-4 h-4" />
-                Add to Calendar
+                Add to calendar
             </button>
 
             {isOpen && (
@@ -60,24 +69,28 @@ export function AddToCalendarButton({ event }: AddToCalendarButtonProps) {
                     <div
                         className="fixed inset-0 z-40"
                         onClick={() => setIsOpen(false)}
+                        aria-hidden="true"
                     />
-                    <div className="absolute left-0 top-full mt-2 z-50 w-56 rounded-xl border border-surface-700 bg-surface-900 shadow-xl animate-scale-in">
-                        <div className="p-2 space-y-1">
-                            <button
-                                onClick={handleDownload}
-                                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-surface-800 transition-colors text-left"
-                            >
-                                <Download className="w-4 h-4 text-surface-400 shrink-0" />
-                                <span className="text-sm text-white">Download .ics</span>
-                            </button>
-                            <button
-                                onClick={handleGoogleCalendar}
-                                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-surface-800 transition-colors text-left"
-                            >
-                                <ExternalLink className="w-4 h-4 text-surface-400 shrink-0" />
-                                <span className="text-sm text-white">Google Calendar</span>
-                            </button>
-                        </div>
+                    <div
+                        role="menu"
+                        className="absolute left-0 top-full mt-1 z-50 w-56 border border-rail-strong bg-board shadow-lift"
+                    >
+                        <button
+                            type="button"
+                            role="menuitem"
+                            onClick={handleDownload}
+                            className="w-full px-3 py-2.5 text-left text-ui text-bone border-b border-rail transition-colors duration-150 ease-board hover:bg-board-raised"
+                        >
+                            Download .ics file
+                        </button>
+                        <button
+                            type="button"
+                            role="menuitem"
+                            onClick={handleGoogleCalendar}
+                            className="w-full px-3 py-2.5 text-left text-ui text-bone transition-colors duration-150 ease-board hover:bg-board-raised"
+                        >
+                            Open in Google Calendar
+                        </button>
                     </div>
                 </>
             )}

@@ -187,6 +187,8 @@
 
   .board-title {
     @apply voice-board text-board-xl text-bone;
+    text-wrap: balance;
+    overflow-wrap: break-word;
   }
 
   .board-lede {

@@ -1,7 +1,12 @@
-import { useState } from 'react'
-import { ListPlus, Check, Plus } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Check } from 'lucide-react'
 import { useAuth } from '@/features/auth/hooks/useAuth'
-import { useUserLists, useEventLists, useAddEventToList, useRemoveEventFromList } from '@/features/lists/api/lists'
+import {
+    useUserLists,
+    useEventLists,
+    useAddEventToList,
+    useRemoveEventFromList,
+} from '@/features/lists/api/lists'
 import { CreateListModal } from './CreateListModal'
 import { cn } from '@/shared/lib/utils'
 import { sanitizeText } from '@/shared/lib/sanitize'
@@ -14,11 +19,24 @@ export function AddToListButton({ eventId }: AddToListButtonProps) {
     const { user } = useAuth()
     const [isOpen, setIsOpen] = useState(false)
     const [showCreateModal, setShowCreateModal] = useState(false)
+    const triggerRef = useRef<HTMLButtonElement>(null)
 
     const { data: lists = [] } = useUserLists(user?.id || '')
     const { data: listIdsWithEvent = [] } = useEventLists(eventId)
     const addToList = useAddEventToList()
     const removeFromList = useRemoveEventFromList()
+
+    useEffect(() => {
+        if (!isOpen) return
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                setIsOpen(false)
+                triggerRef.current?.focus()
+            }
+        }
+        document.addEventListener('keydown', onKeyDown)
+        return () => document.removeEventListener('keydown', onKeyDown)
+    }, [isOpen])
 
     if (!user) return null
 
@@ -34,17 +52,14 @@ export function AddToListButton({ eventId }: AddToListButtonProps) {
         <>
             <div className="relative">
                 <button
+                    ref={triggerRef}
                     type="button"
                     onClick={() => setIsOpen(!isOpen)}
-                    className={cn(
-                        'inline-flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all',
-                        'bg-surface-800 border border-surface-600 text-surface-200',
-                        'hover:bg-surface-700 hover:border-surface-500',
-                        isOpen && 'border-primary-500/50'
-                    )}
+                    aria-expanded={isOpen}
+                    aria-haspopup="menu"
+                    className={cn('btn-secondary', isOpen && 'bg-board-raised border-strip')}
                 >
-                    <ListPlus className="w-4 h-4" />
-                    Add to List
+                    Add to list
                 </button>
 
                 {isOpen && (
@@ -52,52 +67,68 @@ export function AddToListButton({ eventId }: AddToListButtonProps) {
                         <div
                             className="fixed inset-0 z-40"
                             onClick={() => setIsOpen(false)}
+                            aria-hidden="true"
                         />
-                        <div className="absolute right-0 top-full mt-2 z-50 w-64 rounded-xl border border-surface-700 bg-surface-900 shadow-xl animate-scale-in">
-                            <div className="p-2">
-                                {lists.length === 0 ? (
-                                    <p className="text-sm text-surface-400 p-3 text-center">
-                                        No lists yet
-                                    </p>
-                                ) : (
-                                    <div className="space-y-1">
-                                        {lists.map((list) => (
+                        <div
+                            role="menu"
+                            className="absolute right-0 top-full mt-1 z-50 w-64 border border-rail-strong bg-board shadow-lift"
+                        >
+                            {lists.length === 0 ? (
+                                <p className="px-3 py-4 text-ui-sm text-bone-dim">
+                                    You haven't made a list yet.
+                                </p>
+                            ) : (
+                                <div className="max-h-64 overflow-y-auto">
+                                    {lists.map(list => {
+                                        const inList = listIdsWithEvent.includes(list.id)
+                                        return (
                                             <button
                                                 key={list.id}
+                                                type="button"
+                                                role="menuitemcheckbox"
+                                                aria-checked={inList}
                                                 onClick={() => handleToggle(list.id)}
-                                                disabled={addToList.isPending || removeFromList.isPending}
-                                                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-surface-800 transition-colors text-left"
+                                                disabled={
+                                                    addToList.isPending || removeFromList.isPending
+                                                }
+                                                className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left border-b border-rail transition-colors duration-150 ease-board hover:bg-board-raised disabled:opacity-50"
                                             >
-                                                <div className={cn(
-                                                    'w-5 h-5 rounded border flex items-center justify-center shrink-0',
-                                                    listIdsWithEvent.includes(list.id)
-                                                        ? 'bg-primary-500 border-primary-500'
-                                                        : 'border-surface-600'
-                                                )}>
-                                                    {listIdsWithEvent.includes(list.id) && (
-                                                        <Check className="w-3.5 h-3.5 text-white" />
+                                                <span
+                                                    aria-hidden="true"
+                                                    className={cn(
+                                                        'w-4 h-4 border flex items-center justify-center shrink-0',
+                                                        inList
+                                                            ? 'bg-strip border-strip'
+                                                            : 'border-rail-strong'
                                                     )}
-                                                </div>
-                                                <span className="text-sm text-white truncate">{sanitizeText(list.name)}</span>
-                                                <span className="text-xs text-surface-500 ml-auto">{list.item_count}</span>
+                                                >
+                                                    {inList && (
+                                                        <Check className="w-3 h-3 text-strip-ink" />
+                                                    )}
+                                                </span>
+                                                <span className="text-ui text-bone truncate">
+                                                    {sanitizeText(list.name)}
+                                                </span>
+                                                <span className="voice-data text-ui-sm text-bone-faint ml-auto tabular-nums">
+                                                    {list.item_count}
+                                                </span>
                                             </button>
-                                        ))}
-                                    </div>
-                                )}
-
-                                <div className="border-t border-surface-700 mt-2 pt-2">
-                                    <button
-                                        onClick={() => {
-                                            setIsOpen(false)
-                                            setShowCreateModal(true)
-                                        }}
-                                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-surface-800 transition-colors text-sm text-primary-400"
-                                    >
-                                        <Plus className="w-4 h-4" />
-                                        New list
-                                    </button>
+                                        )
+                                    })}
                                 </div>
-                            </div>
+                            )}
+
+                            <button
+                                type="button"
+                                role="menuitem"
+                                onClick={() => {
+                                    setIsOpen(false)
+                                    setShowCreateModal(true)
+                                }}
+                                className="w-full px-3 py-2.5 text-left voice-label text-strip transition-colors duration-150 ease-board hover:bg-board-raised"
+                            >
+                                New list
+                            </button>
                         </div>
                     </>
                 )}
@@ -106,7 +137,7 @@ export function AddToListButton({ eventId }: AddToListButtonProps) {
             <CreateListModal
                 isOpen={showCreateModal}
                 onClose={() => setShowCreateModal(false)}
-                onCreated={(listId) => addToList.mutate({ listId, eventId })}
+                onCreated={listId => addToList.mutate({ listId, eventId })}
             />
         </>
     )
