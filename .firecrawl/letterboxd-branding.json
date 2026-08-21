@@ -1,0 +1,195 @@
+{
+  "branding": {
+    "colorScheme": "dark",
+    "fonts": [
+      {
+        "family": "GraphikWeb",
+        "role": "body"
+      },
+      {
+        "family": "Georgia",
+        "role": "heading"
+      }
+    ],
+    "colors": {
+      "primary": "#445566",
+      "secondary": "#00AC1C",
+      "accent": "#00AC1C",
+      "background": "#14181C",
+      "textPrimary": "#14181C",
+      "link": "#202830"
+    },
+    "typography": {
+      "fontFamilies": {
+        "primary": "GraphikWeb",
+        "heading": "Georgia"
+      },
+      "fontStacks": {
+        "heading": [
+          "GraphikWeb",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "Segoe UI",
+          "Hiragino Sans",
+          "Meiryo",
+          "sans-serif",
+          "ColorEmoji"
+        ],
+        "body": [
+          "GraphikWeb",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "Segoe UI",
+          "Hiragino Sans",
+          "Meiryo",
+          "sans-serif",
+          "ColorEmoji"
+        ],
+        "paragraph": [
+          "GraphikWeb",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "Segoe UI",
+          "Hiragino Sans",
+          "Meiryo",
+          "sans-serif",
+          "ColorEmoji"
+        ]
+      },
+      "fontSizes": {
+        "h1": "24px",
+        "h2": "36px",
+        "body": "12px"
+      }
+    },
+    "spacing": {
+      "baseUnit": 4,
+      "borderRadius": "3px"
+    },
+    "components": {
+      "input": {
+        "background": "#4F5255",
+        "textColor": "#556677",
+        "borderColor": null,
+        "borderRadius": "15px",
+        "borderRadiusCorners": {
+          "topLeft": "15px",
+          "topRight": "15px",
+          "bottomRight": "15px",
+          "bottomLeft": "15px"
+        },
+        "shadow": "none"
+      },
+      "buttonPrimary": {
+        "background": "#00AC1C",
+        "textColor": "#FFFFFF",
+        "borderRadius": "4px",
+        "borderRadiusCorners": {
+          "topLeft": "4px",
+          "topRight": "4px",
+          "bottomRight": "4px",
+          "bottomLeft": "4px"
+        },
+        "shadow": "rgba(255, 255, 255, 0.1) 0px 1px 0px 0px inset"
+      },
+      "buttonSecondary": {
+        "background": "#445566",
+        "textColor": "#FFFFFF",
+        "borderRadius": "3px",
+        "borderRadiusCorners": {
+          "topLeft": "3px",
+          "topRight": "3px",
+          "bottomRight": "3px",
+          "bottomLeft": "3px"
+        },
+        "shadow": "rgba(255, 255, 255, 0.1) 0px 1px 0px 0px inset"
+      }
+    },
+    "images": {
+      "logo": "https://s.ltrbxd.com/static/img/sprite-DzUy8pgb.svg",
+      "favicon": "https://s.ltrbxd.com/static/img/letterboxd-decal-l-16px-DorUFlWn.svg",
+      "ogImage": "https://s.ltrbxd.com/static/img/default-share-7md9L34t.png",
+      "logoHref": "/"
+    },
+    "__llm_logo_reasoning": {
+      "selectedIndex": 1,
+      "reasoning": "Selected #1 because it is located in the header, is visible, and links to the homepage, matching the brand 'Letterboxd'.",
+      "confidence": 0.9,
+      "source": "llm"
+    },
+    "__llm_button_reasoning": {
+      "primary": {
+        "index": 0,
+        "text": "Get started — it‘s free!",
+        "reasoning": "Button #0 has a vibrant green color (#00AC1C) and action-oriented text 'Get started — it‘s free!', making it the primary CTA."
+      },
+      "secondary": {
+        "index": 1,
+        "text": "Keep track of every film you’ve ever watched (or just start from the day you join)",
+        "reasoning": "Button #1 has a different color (#445566) and serves as a secondary action with informative text, making it suitable as a secondary button."
+      },
+      "confidence": 0.95
+    },
+    "personality": {
+      "tone": "modern",
+      "energy": "medium",
+      "targetAudience": "film enthusiasts and social media users"
+    },
+    "designSystem": {
+      "framework": "custom",
+      "componentLibrary": ""
+    },
+    "confidence": {
+      "buttons": 0.95,
+      "colors": 0.9,
+      "overall": 0.925
+    },
+    "__llm_metadata": {
+      "logoSelection": {
+        "llmCalled": true,
+        "llmSucceeded": true,
+        "finalSource": "llm",
+        "rawLogoSelection": {
+          "selectedLogoIndex": 1,
+          "selectedLogoReasoning": "Selected #1 because it is located in the header, is visible, and links to the homepage, matching the brand 'Letterboxd'.",
+          "confidence": 0.9
+        }
+      },
+      "buttonClassification": {
+        "llmCalled": true,
+        "llmSucceeded": true
+      }
+    },
+    "brandName": "Letterboxd • Social film discovery.",
+    "logo": "https://s.ltrbxd.com/static/img/sprite-DzUy8pgb.svg"
+  },
+  "metadata": {
+    "mobile-web-app-capable": "yes",
+    "og:title": "Letterboxd • Your life in film",
+    "fb:app_id": "173683136069040",
+    "ogTitle": "Letterboxd • Your life in film",
+    "language": "en",
+    "og:image": "https://s.ltrbxd.com/static/img/default-share-7md9L34t.png",
+    "title": "Letterboxd • Social film discovery.",
+    "msapplication-TileColor": "#445566",
+    "viewport": "width=1024",
+    "application-name": "Letterboxd",
+    "theme-color": "#14181C",
+    "apple-itunes-app": "app-id=1054271011, affiliate-data=11l5KW",
+    "og:url": "https://letterboxd.com/",
+    "ogUrl": "https://letterboxd.com/",
+    "description": "Letterboxd is a social platform for sharing your taste in film. Use it as a diary to record your opinion about films as you watch them, or just to keep track of films you’ve seen in the past. Rate, review and tag films as you add them. Find and follow your friends to see what they’re enjoying. Keep a watchlist of films you’d like to see, and create lists/collections on any topic.",
+    "ogImage": "https://s.ltrbxd.com/static/img/default-share-7md9L34t.png",
+    "favicon": "https://s.ltrbxd.com/static/img/letterboxd-decal-l-16px-DorUFlWn.svg",
+    "scrapeId": "01a0261c-3d52-779b-b640-4f35b95e9e1e",
+    "sourceURL": "https://letterboxd.com",
+    "url": "https://letterboxd.com/",
+    "statusCode": 200,
+    "contentType": "text/html;charset=utf-8",
+    "timezone": "America/New_York",
+    "proxyUsed": "basic",
+    "indexId": "89ec5a48-d59b-44e2-8673-4fc633bfa233",
+    "creditsUsed": 1,
+    "concurrencyLimited": false
+  }
+}

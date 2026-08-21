@@ -1,0 +1,169 @@
+{
+  "branding": {
+    "colorScheme": "light",
+    "fonts": [
+      {
+        "family": "Helvetica Neue",
+        "role": "body"
+      },
+      {
+        "family": "Inter",
+        "role": "unknown"
+      }
+    ],
+    "colors": {
+      "primary": "#E70154",
+      "secondary": "#F80046",
+      "accent": "#E70154",
+      "background": "#0C0D0D",
+      "textPrimary": "#0C0D0D",
+      "link": "#066792"
+    },
+    "typography": {
+      "fontFamilies": {
+        "primary": "Helvetica Neue",
+        "heading": "Helvetica Neue"
+      },
+      "fontStacks": {
+        "heading": [
+          "Archivo",
+          "sans-serif"
+        ],
+        "body": [
+          "Helvetica Neue",
+          "helvetica",
+          "arial",
+          "sans-serif"
+        ],
+        "paragraph": [
+          "Inter",
+          "sans-serif"
+        ]
+      },
+      "fontSizes": {
+        "h1": "84.98px",
+        "h2": "18px",
+        "body": "12px"
+      }
+    },
+    "spacing": {
+      "baseUnit": 8,
+      "borderRadius": "3px"
+    },
+    "components": {
+      "buttonPrimary": {
+        "background": "#E70154",
+        "textColor": "#FFFFFF",
+        "borderRadius": "9999px",
+        "borderRadiusCorners": {
+          "topLeft": "9999px",
+          "topRight": "9999px",
+          "bottomRight": "9999px",
+          "bottomLeft": "9999px"
+        },
+        "shadow": "none"
+      },
+      "buttonSecondary": {
+        "background": "#2E2E2E",
+        "textColor": "#F6F5F5",
+        "borderRadius": "20px",
+        "borderRadiusCorners": {
+          "topLeft": "20px",
+          "topRight": "20px",
+          "bottomRight": "20px",
+          "bottomLeft": "20px"
+        },
+        "shadow": "rgba(0, 0, 0, 0.15) 0px 0px 1px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px"
+      }
+    },
+    "images": {
+      "logo": "https://assets.sk-static.com/images/nw/components/navigation/header-logo.svg",
+      "favicon": "https://assets.sk-static.com/images/favicon.ico",
+      "ogImage": "http://assets.sk-static.com/images/nw/1200-x-600-Wordmark-White.png",
+      "logoHref": "/",
+      "logoAlt": "Songkick"
+    },
+    "__llm_logo_reasoning": {
+      "selectedIndex": 1,
+      "reasoning": "Selected #1 because it is a visible logo in the header area, matches the brand name 'Songkick', and links to the homepage.",
+      "confidence": 0.9,
+      "source": "llm"
+    },
+    "__llm_button_reasoning": {
+      "primary": {
+        "index": 0,
+        "text": "Sign up",
+        "reasoning": "Button #0 with text 'Sign up' uses the vibrant brand color #E70154, making it the most prominent CTA on the page."
+      },
+      "secondary": {
+        "index": 1,
+        "text": "Instagram",
+        "reasoning": "Button #2 with text 'Instagram' has a different background color (#2E2E2E) and serves as a secondary action, linking to social media."
+      },
+      "confidence": 0.95
+    },
+    "personality": {
+      "tone": "modern",
+      "energy": "high",
+      "targetAudience": "music enthusiasts"
+    },
+    "designSystem": {
+      "framework": "custom",
+      "componentLibrary": ""
+    },
+    "confidence": {
+      "buttons": 0.95,
+      "colors": 0.9,
+      "overall": 0.925
+    },
+    "__llm_metadata": {
+      "logoSelection": {
+        "llmCalled": true,
+        "llmSucceeded": true,
+        "finalSource": "llm",
+        "rawLogoSelection": {
+          "selectedLogoIndex": 1,
+          "selectedLogoReasoning": "Selected #1 because it is a visible logo in the header area, matches the brand name 'Songkick', and links to the homepage.",
+          "confidence": 0.9
+        }
+      },
+      "buttonClassification": {
+        "llmCalled": true,
+        "llmSucceeded": true
+      }
+    },
+    "brandName": "Songkick",
+    "logo": "https://assets.sk-static.com/images/nw/components/navigation/header-logo.svg"
+  },
+  "metadata": {
+    "ogSiteName": "Songkick",
+    "csrf-param": "authenticity_token",
+    "viewport": "user-scalable=no, initial-scale=1.0, maximum-scale=1.0, width=device-width",
+    "twitter:description": "Find live music near you, track your favorite artists, get instant concert alerts and buy tickets for all the best upcoming concerts.",
+    "twitter:title": "Find the Best Concerts Near You, Tour Dates & Tickets Worldwide | Songkick",
+    "twitter:image": "http://assets.sk-static.com/images/nw/1200-x-600-Wordmark-White.png",
+    "og:site_name": "Songkick",
+    "description": "Find live music near you, track your favorite artists, get instant concert alerts and buy tickets for all the best upcoming concerts.",
+    "og:image": "http://assets.sk-static.com/images/nw/1200-x-600-Wordmark-White.png",
+    "og:title": "Find the Best Concerts Near You, Tour Dates & Tickets Worldwide | Songkick",
+    "og:image:width": "225",
+    "twitter:site": "@songkick",
+    "language": "en",
+    "og:image:height": "300",
+    "csrf-token": "GROVVhFSaeBUeLZGf64z_xx1f4mQQqCg-R0XBKPKph-p4Wy53Imn1kpQxPAr5hpU2ht3y2tGmBy-MXMObnfeyQ",
+    "title": "Find the Best Concerts Near You, Tour Dates & Tickets Worldwide | Songkick",
+    "twitter:card": "Songkick",
+    "og:description": "Find live music near you, track your favorite artists, get instant concert alerts and buy tickets for all the best upcoming concerts.",
+    "mobile-web-app-capable": "yes",
+    "scrapeId": "01a0261c-345a-70c9-a379-b1af97d9c659",
+    "sourceURL": "https://www.songkick.com",
+    "url": "https://www.songkick.com/",
+    "statusCode": 200,
+    "contentType": "text/html; charset=utf-8",
+    "timezone": "America/New_York",
+    "proxyUsed": "basic",
+    "indexId": "0b16f558-1ade-44f2-b3e8-535a770869b3",
+    "creditsUsed": 1,
+    "concurrencyLimited": false
+  }
+}

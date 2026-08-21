@@ -117,20 +117,20 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
                 tabIndex={-1}
             >
                 {title && (
-                    <div className="flex items-center justify-between px-5 py-4 border-b border-surface-700/50">
-                        <h2 id="modal-title" className="text-lg font-semibold text-white">
+                    <div className="flex items-center justify-between gap-4 px-4 py-3 border-b border-rail">
+                        <h2 id="modal-title" className="voice-slot text-ui text-bone">
                             {title}
                         </h2>
                         <button
                             onClick={onClose}
-                            className="btn-icon"
+                            className="btn-icon shrink-0"
                             aria-label="Close modal"
                         >
-                            <X className="w-5 h-5" />
+                            <X className="w-5 h-5" aria-hidden="true" />
                         </button>
                     </div>
                 )}
-                <div className="p-5">{children}</div>
+                <div className="p-4">{children}</div>
             </div>
         </div>
     )

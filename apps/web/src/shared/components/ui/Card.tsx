@@ -8,13 +8,18 @@ interface CardProps {
     hoverable?: boolean
 }
 
+/**
+ * A board panel. Not a card: no radius, no shadow, no glass. Bounded by one
+ * device pixel of rail. Kept under the Card name so existing call sites keep
+ * working while pages migrate to the row contract.
+ */
 export function Card({ children, className, onClick, hoverable }: CardProps) {
     return (
         <div
             className={cn(
-                'glass-card',
-                hoverable && 'transition-all duration-300 hover:border-primary-500/50 hover:shadow-glow cursor-pointer',
-                onClick && 'cursor-pointer',
+                'bg-board border border-rail',
+                (hoverable || onClick) &&
+                'transition-colors duration-150 ease-board hover:bg-board-raised hover:border-rail-strong cursor-pointer',
                 className
             )}
             onClick={onClick}
@@ -24,41 +29,56 @@ export function Card({ children, className, onClick, hoverable }: CardProps) {
     )
 }
 
-interface CardHeaderProps {
+interface CardSectionProps {
     children: ReactNode
     className?: string
 }
 
-export function CardHeader({ children, className }: CardHeaderProps) {
+export function CardHeader({ children, className }: CardSectionProps) {
     return (
-        <div className={cn('px-5 py-4 border-b border-surface-700/50', className)}>
+        <div className={cn('px-4 py-3 border-b border-rail', className)}>
             {children}
         </div>
     )
 }
 
-interface CardContentProps {
-    children: ReactNode
-    className?: string
+export function CardContent({ children, className }: CardSectionProps) {
+    return <div className={cn('p-4', className)}>{children}</div>
 }
 
-export function CardContent({ children, className }: CardContentProps) {
+export function CardFooter({ children, className }: CardSectionProps) {
     return (
-        <div className={cn('p-5', className)}>
+        <div className={cn('px-4 py-3 border-t border-rail', className)}>
             {children}
         </div>
     )
 }
 
-interface CardFooterProps {
+interface PanelProps {
+    /** Rendered in the panel's rail header, in board voice. */
+    title?: ReactNode
+    /** Sits opposite the title on the same rail. */
+    action?: ReactNode
     children: ReactNode
     className?: string
+    bodyClassName?: string
 }
 
-export function CardFooter({ children, className }: CardFooterProps) {
+/**
+ * The canonical grouping device: a titled board panel. The title sits on a
+ * rail above the content, the way a section label is screwed above its column
+ * of dates.
+ */
+export function Panel({ title, action, children, className, bodyClassName }: PanelProps) {
     return (
-        <div className={cn('px-5 py-4 border-t border-surface-700/50', className)}>
-            {children}
-        </div>
+        <section className={cn('bg-board border border-rail', className)}>
+            {(title || action) && (
+                <header className="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-rail">
+                    {title && <h2 className="voice-label text-bone-dim">{title}</h2>}
+                    {action}
+                </header>
+            )}
+            <div className={cn('p-4', bodyClassName)}>{children}</div>
+        </section>
     )
 }

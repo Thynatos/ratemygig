@@ -1,4 +1,4 @@
-import { forwardRef, TextareaHTMLAttributes } from 'react'
+import { forwardRef, TextareaHTMLAttributes, useId } from 'react'
 import { cn } from '@/shared/lib/utils'
 
 export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
@@ -9,10 +9,13 @@ export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElemen
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
     ({ className, label, error, hint, id, ...props }, ref) => {
-        const textareaId = id || props.name
+        const generatedId = useId()
+        const textareaId = id || props.name || generatedId
+        const hintId = `${textareaId}-hint`
+        const errorId = `${textareaId}-error`
 
         return (
-            <div className="space-y-1">
+            <div>
                 {label && (
                     <label htmlFor={textareaId} className="input-label">
                         {label}
@@ -21,18 +24,25 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
                 <textarea
                     ref={ref}
                     id={textareaId}
+                    aria-invalid={error ? true : undefined}
+                    aria-describedby={
+                        cn(error && errorId, hint && !error && hintId).trim() || undefined
+                    }
                     className={cn(
-                        'input-field min-h-[120px] resize-y',
-                        error && 'border-red-500 focus:border-red-500 focus:ring-red-500/20',
+                        'input-field min-h-[140px] resize-y leading-relaxed',
                         className
                     )}
                     {...props}
                 />
                 {hint && !error && (
-                    <p className="text-sm text-surface-500">{hint}</p>
+                    <p id={hintId} className="input-hint">
+                        {hint}
+                    </p>
                 )}
                 {error && (
-                    <p className="input-error">{error}</p>
+                    <p id={errorId} className="input-error">
+                        {error}
+                    </p>
                 )}
             </div>
         )

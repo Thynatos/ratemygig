@@ -8,20 +8,27 @@ interface BadgeProps {
     className?: string
 }
 
+/**
+ * A strip slid into a slot. Flat, square, board-coloured ink on amber for the
+ * live variant; hairline outline for everything else.
+ *
+ * Amber is earned, never decorative — see DESIGN.md §3. `primary` is the only
+ * variant that fills, and it should appear at most once per view.
+ */
 export function Badge({ children, variant = 'surface', className }: BadgeProps) {
     const variants: Record<BadgeVariant, string> = {
-        primary: 'bg-primary-500/20 text-primary-300 border border-primary-500/30',
-        accent: 'bg-accent-500/20 text-accent-300 border border-accent-500/30',
-        surface: 'bg-surface-700/50 text-surface-300 border border-surface-600',
-        success: 'bg-green-500/20 text-green-300 border border-green-500/30',
-        warning: 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30',
-        danger: 'bg-red-500/20 text-red-300 border border-red-500/30',
+        primary: 'bg-strip text-strip-ink border-strip',
+        accent: 'text-strip border-strip',
+        surface: 'text-bone-dim border-rail',
+        success: 'text-bone border-bone-faint',
+        warning: 'text-strip border-strip',
+        danger: 'text-struck border-struck',
     }
 
     return (
         <span
             className={cn(
-                'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium',
+                'inline-flex items-center gap-1.5 voice-label border px-2 py-[0.3125rem]',
                 variants[variant],
                 className
             )}

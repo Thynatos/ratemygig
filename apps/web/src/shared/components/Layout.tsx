@@ -1,199 +1,212 @@
 import { Link, Outlet, useLocation } from 'react-router-dom'
-import { Music, Calendar, MapPin, Users, Trophy, User, LogOut, Menu, X, Rss } from 'lucide-react'
-import { useState } from 'react'
+import { LogOut, Menu, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { NotificationBell } from '@/features/notifications/components/NotificationBell'
+import { Avatar } from '@/shared/components/ui/Avatar'
 import { cn } from '@/shared/lib/utils'
 
-const NAV_LINKS = [
-    { to: '/', label: 'Discover', icon: Calendar },
-    { to: '/venues', label: 'Venues', icon: MapPin },
-    { to: '/venues/top', label: 'Top Venues', icon: Trophy },
-    { to: '/artists', label: 'Artists', icon: Users },
-    { to: '/artists/top', label: 'Top Artists', icon: Trophy },
+const PUBLIC_NAV = [
+    { to: '/', label: 'Discover' },
+    { to: '/artists', label: 'Artists' },
+    { to: '/venues', label: 'Venues' },
 ]
+
+const MEMBER_NAV = [
+    { to: '/feed', label: 'Feed' },
+    { to: '/my-gigs', label: 'My gigs' },
+]
+
+/** The wordmark: bone capitals with an amber strip slid in beneath them. */
+function Wordmark({ className }: { className?: string }) {
+    return (
+        <span className={cn('inline-flex flex-col items-start gap-1', className)}>
+            <span className="voice-board text-bone leading-none text-[1.0625rem] sm:text-[1.1875rem]">
+                ratemygig
+            </span>
+            <span className="block h-[3px] w-full bg-strip" aria-hidden="true" />
+        </span>
+    )
+}
 
 export function Layout() {
     const { user, signOut, isLoading } = useAuth()
     const location = useLocation()
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+    const menuButtonRef = useRef<HTMLButtonElement>(null)
 
     const isActive = (path: string) => {
         if (path === '/') return location.pathname === '/'
         return location.pathname.startsWith(path)
     }
 
+    // Close the menu on navigation and on Escape; return focus to its trigger.
+    useEffect(() => {
+        setMobileMenuOpen(false)
+    }, [location.pathname])
+
+    useEffect(() => {
+        if (!mobileMenuOpen) return
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                setMobileMenuOpen(false)
+                menuButtonRef.current?.focus()
+            }
+        }
+        document.addEventListener('keydown', onKeyDown)
+        return () => document.removeEventListener('keydown', onKeyDown)
+    }, [mobileMenuOpen])
+
+    const navItems = user ? [...PUBLIC_NAV, ...MEMBER_NAV] : PUBLIC_NAV
+
     return (
-        <div className="min-h-screen flex flex-col">
-            {/* Skip to content */}
+        <div className="min-h-screen flex flex-col bg-groove">
             <a
                 href="#main-content"
-                className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary-500 focus:text-white focus:rounded-lg"
+                className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 focus:bg-strip focus:text-strip-ink focus:px-3 focus:py-2 focus:voice-label"
             >
                 Skip to content
             </a>
 
-            {/* Header */}
-            <header className="sticky top-0 z-40 bg-surface-900/80 backdrop-blur-xl border-b border-surface-800">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex items-center justify-between h-16">
-                        {/* Logo */}
-                        <Link
-                            to="/"
-                            className="flex items-center gap-2 text-xl font-display font-bold text-white hover:text-primary-400 transition-colors"
-                            aria-label="ratemygig home"
-                        >
-                            <Music className="w-7 h-7 text-accent-500" aria-hidden="true" />
-                            <span className="text-gradient">ratemygig</span>
-                        </Link>
+            <header className="sticky top-0 z-40 bg-board border-b border-rail-strong">
+                <div className="page">
+                    <div className="flex items-center justify-between gap-4 h-16">
+                        <div className="flex items-center gap-6 lg:gap-8 min-w-0">
+                            <Link
+                                to="/"
+                                className="shrink-0 py-2"
+                                aria-label="ratemygig — home"
+                            >
+                                <Wordmark />
+                            </Link>
 
-                        {/* Desktop Navigation */}
-                        <nav className="hidden md:flex items-center gap-1" aria-label="Main navigation">
-                            {NAV_LINKS.map(({ to, label, icon: Icon }) => (
-                                <Link
-                                    key={to}
-                                    to={to}
-                                    className={cn(
-                                        'nav-link flex items-center gap-2',
-                                        isActive(to) && 'active'
-                                    )}
-                                    aria-current={isActive(to) ? 'page' : undefined}
-                                >
-                                    <Icon className="w-4 h-4" aria-hidden="true" />
-                                    {label}
-                                </Link>
-                            ))}
-                        </nav>
+                            <nav
+                                className="hidden md:flex items-center h-16"
+                                aria-label="Main"
+                            >
+                                {navItems.map(({ to, label }) => (
+                                    <Link
+                                        key={to}
+                                        to={to}
+                                        className={cn(
+                                            'nav-link h-16 inline-flex items-center',
+                                            isActive(to) && 'nav-link-active'
+                                        )}
+                                        aria-current={isActive(to) ? 'page' : undefined}
+                                    >
+                                        {label}
+                                    </Link>
+                                ))}
+                            </nav>
+                        </div>
 
-                        {/* User Menu */}
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                             {isLoading ? (
-                                <div className="w-8 h-8 skeleton rounded-full" aria-hidden="true" />
+                                <div
+                                    className="skeleton w-8 h-8"
+                                    aria-label="Checking your session"
+                                    role="status"
+                                />
                             ) : user ? (
                                 <>
-                                    <Link
-                                        to="/feed"
-                                        className={cn(
-                                            'hidden md:flex nav-link items-center gap-2',
-                                            isActive('/feed') && 'active'
-                                        )}
-                                        aria-current={isActive('/feed') ? 'page' : undefined}
-                                    >
-                                        <Rss className="w-4 h-4" aria-hidden="true" />
-                                        Feed
-                                    </Link>
-                                    <Link
-                                        to="/my-gigs"
-                                        className={cn(
-                                            'hidden md:flex nav-link items-center gap-2',
-                                            isActive('/my-gigs') && 'active'
-                                        )}
-                                        aria-current={isActive('/my-gigs') ? 'page' : undefined}
-                                    >
-                                        <Calendar className="w-4 h-4" aria-hidden="true" />
-                                        My Gigs
-                                    </Link>
                                     <NotificationBell />
                                     <Link
                                         to="/profile"
-                                        className="btn-icon"
-                                        title="Profile"
-                                        aria-label="Profile"
+                                        className={cn(
+                                            'inline-flex items-center gap-2 px-1.5 py-1 transition-colors duration-150 ease-board hover:bg-board-raised',
+                                            isActive('/profile') && 'bg-board-raised'
+                                        )}
+                                        aria-current={isActive('/profile') ? 'page' : undefined}
                                     >
-                                        <User className="w-5 h-5" aria-hidden="true" />
+                                        <Avatar
+                                            src={
+                                                (user.user_metadata?.avatar_url as string) ??
+                                                undefined
+                                            }
+                                            name={
+                                                (user.user_metadata?.full_name as string) ??
+                                                user.email ??
+                                                null
+                                            }
+                                            size="sm"
+                                        />
+                                        <span className="sr-only">Your profile</span>
                                     </Link>
                                     <button
                                         onClick={() => signOut()}
-                                        className="btn-icon"
+                                        className="btn-icon hidden sm:inline-flex"
                                         title="Sign out"
                                         aria-label="Sign out"
                                     >
-                                        <LogOut className="w-5 h-5" aria-hidden="true" />
+                                        <LogOut className="w-[18px] h-[18px]" aria-hidden="true" />
                                     </button>
                                 </>
                             ) : (
-                                <Link to="/login" className="btn-primary text-sm">
-                                    Sign In
+                                <Link to="/login" className="btn-primary">
+                                    Sign in
                                 </Link>
                             )}
 
-                            {/* Mobile menu button */}
                             <button
+                                ref={menuButtonRef}
                                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                                 className="md:hidden btn-icon"
                                 aria-expanded={mobileMenuOpen}
                                 aria-controls="mobile-menu"
-                                aria-label="Toggle menu"
+                                aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
                             >
                                 {mobileMenuOpen ? (
-                                    <X className="w-6 h-6" aria-hidden="true" />
+                                    <X className="w-5 h-5" aria-hidden="true" />
                                 ) : (
-                                    <Menu className="w-6 h-6" aria-hidden="true" />
+                                    <Menu className="w-5 h-5" aria-hidden="true" />
                                 )}
                             </button>
                         </div>
                     </div>
                 </div>
 
-                {/* Mobile Navigation */}
                 {mobileMenuOpen && (
-                    <div id="mobile-menu" className="md:hidden border-t border-surface-800 bg-surface-900/95 animate-slide-down">
-                        <nav className="px-4 py-4 space-y-2" aria-label="Mobile navigation">
-                            {NAV_LINKS.map(({ to, label, icon: Icon }) => (
+                    <div
+                        id="mobile-menu"
+                        className="md:hidden border-t border-rail bg-board"
+                    >
+                        <nav aria-label="Mobile" className="rail-list border-y-0">
+                            {navItems.map(({ to, label }) => (
                                 <Link
                                     key={to}
                                     to={to}
-                                    onClick={() => setMobileMenuOpen(false)}
                                     className={cn(
-                                        'flex items-center gap-3 px-4 py-3 rounded-xl transition-colors',
-                                        isActive(to)
-                                            ? 'bg-primary-500/10 text-primary-400'
-                                            : 'text-surface-300 hover:bg-surface-800 hover:text-surface-100'
+                                        'row row-interactive voice-slot text-ui',
+                                        isActive(to) ? 'text-strip row-current' : 'text-bone'
                                     )}
                                     aria-current={isActive(to) ? 'page' : undefined}
                                 >
-                                    <Icon className="w-5 h-5" aria-hidden="true" />
-                                    {label}
+                                    <span className="row-body">{label}</span>
                                 </Link>
                             ))}
                             {user && (
                                 <>
                                     <Link
-                                        to="/feed"
-                                        onClick={() => setMobileMenuOpen(false)}
-                                        className={cn(
-                                            'flex items-center gap-3 px-4 py-3 rounded-xl transition-colors',
-                                            isActive('/feed')
-                                                ? 'bg-primary-500/10 text-primary-400'
-                                                : 'text-surface-300 hover:bg-surface-800 hover:text-surface-100'
-                                        )}
-                                        aria-current={isActive('/feed') ? 'page' : undefined}
-                                    >
-                                        <Rss className="w-5 h-5" aria-hidden="true" />
-                                        Feed
-                                    </Link>
-                                    <Link
-                                        to="/my-gigs"
-                                        onClick={() => setMobileMenuOpen(false)}
-                                        className={cn(
-                                            'flex items-center gap-3 px-4 py-3 rounded-xl transition-colors',
-                                            isActive('/my-gigs')
-                                                ? 'bg-primary-500/10 text-primary-400'
-                                                : 'text-surface-300 hover:bg-surface-800 hover:text-surface-100'
-                                        )}
-                                        aria-current={isActive('/my-gigs') ? 'page' : undefined}
-                                    >
-                                        <Calendar className="w-5 h-5" aria-hidden="true" />
-                                        My Gigs
-                                    </Link>
-                                    <Link
                                         to="/notifications"
-                                        onClick={() => setMobileMenuOpen(false)}
-                                        className="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-surface-300 hover:bg-surface-800 hover:text-surface-100"
+                                        className={cn(
+                                            'row row-interactive voice-slot text-ui',
+                                            isActive('/notifications')
+                                                ? 'text-strip row-current'
+                                                : 'text-bone'
+                                        )}
+                                        aria-current={
+                                            isActive('/notifications') ? 'page' : undefined
+                                        }
                                     >
-                                        <Rss className="w-5 h-5" aria-hidden="true" />
-                                        Notifications
+                                        <span className="row-body">Notifications</span>
                                     </Link>
+                                    <button
+                                        type="button"
+                                        onClick={() => signOut()}
+                                        className="row row-interactive voice-slot text-ui text-bone-dim"
+                                    >
+                                        <span className="row-body">Sign out</span>
+                                    </button>
                                 </>
                             )}
                         </nav>
@@ -201,30 +214,53 @@ export function Layout() {
                 )}
             </header>
 
-            {/* Main Content */}
             <main id="main-content" className="flex-1" tabIndex={-1}>
                 <Outlet />
             </main>
 
-            {/* Footer */}
-            <footer className="border-t border-surface-800 bg-surface-900/50">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                    <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                        <div className="flex items-center gap-2 text-surface-400">
-                            <Music className="w-5 h-5 text-accent-500" aria-hidden="true" />
-                            <span className="font-display font-medium">ratemygig</span>
-                            <span className="text-surface-600">•</span>
-                            <span className="text-sm">Discover, attend, rate</span>
+            <footer className="mt-16 border-t border-rail-strong bg-board">
+                <div className="page py-10">
+                    <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+                        <div>
+                            <Wordmark className="mb-3" />
+                            <p className="text-ui-sm text-bone-dim max-w-[26ch]">
+                                Every gig you've been to, kept. Log the night, rate the room.
+                            </p>
                         </div>
-                        <div className="flex items-center gap-6 text-sm text-surface-500">
-                            <Link to="/about" className="hover:text-surface-300 transition-colors">About</Link>
-                            <Link to="/privacy" className="hover:text-surface-300 transition-colors">Privacy</Link>
-                            <Link to="/terms" className="hover:text-surface-300 transition-colors">Terms</Link>
-                        </div>
+
+                        <nav aria-label="Browse">
+                            <h2 className="voice-label text-bone-faint mb-3">Browse</h2>
+                            <ul className="space-y-2 text-ui-sm">
+                                <li><Link to="/" className="text-bone-dim hover:text-bone">Upcoming gigs</Link></li>
+                                <li><Link to="/artists" className="text-bone-dim hover:text-bone">Artists</Link></li>
+                                <li><Link to="/venues" className="text-bone-dim hover:text-bone">Venues</Link></li>
+                            </ul>
+                        </nav>
+
+                        <nav aria-label="Charts">
+                            <h2 className="voice-label text-bone-faint mb-3">Charts</h2>
+                            <ul className="space-y-2 text-ui-sm">
+                                <li><Link to="/artists/top" className="text-bone-dim hover:text-bone">Top rated artists</Link></li>
+                                <li><Link to="/venues/top" className="text-bone-dim hover:text-bone">Top rated venues</Link></li>
+                                {user && (
+                                    <li><Link to="/wrapped" className="text-bone-dim hover:text-bone">Your year in gigs</Link></li>
+                                )}
+                            </ul>
+                        </nav>
+
+                        <nav aria-label="About">
+                            <h2 className="voice-label text-bone-faint mb-3">About</h2>
+                            <ul className="space-y-2 text-ui-sm">
+                                <li><Link to="/about" className="text-bone-dim hover:text-bone">What this is</Link></li>
+                                <li><Link to="/privacy" className="text-bone-dim hover:text-bone">Privacy</Link></li>
+                                <li><Link to="/terms" className="text-bone-dim hover:text-bone">Terms</Link></li>
+                            </ul>
+                        </nav>
                     </div>
-                    <div className="mt-4 text-center text-xs text-surface-600">
-                        © {new Date().getFullYear()} ratemygig. All rights reserved.
-                    </div>
+
+                    <p className="mt-10 pt-5 border-t border-rail voice-label text-bone-faint">
+                        © {new Date().getFullYear()} ratemygig · Tickets are sold by other people
+                    </p>
                 </div>
             </footer>
         </div>

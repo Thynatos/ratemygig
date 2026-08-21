@@ -1,4 +1,15 @@
 /** @type {import('tailwindcss').Config} */
+/*
+ * THE BOARD — see DESIGN.md.
+ *
+ * Two naming layers coexist on purpose:
+ *   1. Semantic names (board / bone / rail / strip / struck) — the canonical set.
+ *   2. The legacy `surface` / `primary` / `accent` ramps, remapped onto the same
+ *      world so any not-yet-rebuilt view degrades into the board rather than
+ *      into the old neon theme. `primary` and `accent` are BOTH amber, which
+ *      quietly collapses every leftover `from-primary-500 to-accent-500`
+ *      gradient into a flat fill.
+ */
 export default {
     content: [
         "./index.html",
@@ -8,92 +19,139 @@ export default {
     theme: {
         extend: {
             colors: {
-                // Primary brand colors
-                primary: {
-                    50: '#f0f9ff',
-                    100: '#e0f2fe',
-                    200: '#bae6fd',
-                    300: '#7dd3fc',
-                    400: '#38bdf8',
-                    500: '#0ea5e9',
-                    600: '#0284c7',
-                    700: '#0369a1',
-                    800: '#075985',
-                    900: '#0c4a6e',
-                    950: '#082f49',
+                // ---- Canonical world -------------------------------------
+                groove: '#0C0A08',
+                board: {
+                    DEFAULT: '#16130F',
+                    raised: '#221D17',
+                    groove: '#0C0A08',
                 },
-                // Accent colors for highlights
-                accent: {
-                    50: '#fdf4ff',
-                    100: '#fae8ff',
-                    200: '#f5d0fe',
-                    300: '#f0abfc',
-                    400: '#e879f9',
-                    500: '#d946ef',
-                    600: '#c026d3',
-                    700: '#a21caf',
-                    800: '#86198f',
-                    900: '#701a75',
-                    950: '#4a044e',
+                rail: {
+                    DEFAULT: '#3A342B',
+                    strong: '#6B6153',
                 },
-                // Dark mode surface colors
+                bone: {
+                    DEFAULT: '#F2EBDD',
+                    mid: '#C7BFAF',
+                    dim: '#A79E8C',
+                    faint: '#8A8172',
+                },
+                strip: {
+                    DEFAULT: '#FFB020',
+                    bright: '#FFC24D',
+                    deep: '#E09400',
+                    ink: '#16130F',
+                },
+                struck: {
+                    DEFAULT: '#F0584A',
+                    deep: '#B3271B',
+                },
+
+                // ---- Legacy ramps, remapped ------------------------------
                 surface: {
-                    50: '#f8fafc',
-                    100: '#f1f5f9',
-                    200: '#e2e8f0',
-                    300: '#cbd5e1',
-                    400: '#94a3b8',
-                    500: '#64748b',
-                    600: '#475569',
-                    700: '#334155',
-                    800: '#1e293b',
-                    900: '#0f172a',
-                    950: '#020617',
+                    50: '#FBF7EF',
+                    100: '#F2EBDD',
+                    200: '#E0D9CA',
+                    300: '#C7BFAF',
+                    400: '#A79E8C',
+                    500: '#8A8172',
+                    600: '#6B6153',
+                    700: '#3A342B',
+                    800: '#221D17',
+                    900: '#16130F',
+                    950: '#0C0A08',
+                },
+                primary: {
+                    50: '#FFF6E5',
+                    100: '#FFE9BF',
+                    200: '#FFD894',
+                    300: '#FFC966',
+                    400: '#FFC24D',
+                    500: '#FFB020',
+                    600: '#E09400',
+                    700: '#B37600',
+                    800: '#805400',
+                    900: '#4D3200',
+                    950: '#2B1C00',
+                },
+                accent: {
+                    50: '#FFF6E5',
+                    100: '#FFE9BF',
+                    200: '#FFD894',
+                    300: '#FFC966',
+                    400: '#FFC24D',
+                    500: '#FFB020',
+                    600: '#E09400',
+                    700: '#B37600',
+                    800: '#805400',
+                    900: '#4D3200',
+                    950: '#2B1C00',
                 },
             },
             fontFamily: {
-                sans: ['Inter', 'system-ui', 'sans-serif'],
-                display: ['Outfit', 'system-ui', 'sans-serif'],
+                sans: ['Archivo', 'system-ui', 'sans-serif'],
+                display: ['Archivo', 'system-ui', 'sans-serif'],
+                mono: ['"Fragment Mono"', 'ui-monospace', 'monospace'],
+            },
+            fontSize: {
+                label: ['0.6875rem', { lineHeight: '1', letterSpacing: '0.08em' }],
+                'ui-sm': ['0.8125rem', { lineHeight: '1.35' }],
+                ui: ['0.9375rem', { lineHeight: '1.45' }],
+                'ui-lg': ['1.0625rem', { lineHeight: '1.6' }],
+                'board-md': ['1.25rem', { lineHeight: '1.2' }],
+                'board-lg': ['clamp(1.75rem, 4vw, 2.5rem)', { lineHeight: '1.02' }],
+                'board-xl': ['clamp(2.5rem, 7vw, 4.25rem)', { lineHeight: '0.94' }],
+            },
+            borderRadius: {
+                // The board has no rounded corners. Every scale collapses to 0
+                // so a stray `rounded-xl` in unrebuilt code cannot reintroduce one.
+                none: '0', sm: '0', DEFAULT: '0', md: '0', lg: '0',
+                xl: '0', '2xl': '0', '3xl': '0', full: '0',
+            },
+            spacing: {
+                slot: '5.5rem',
+                'slot-sm': '4rem',
+            },
+            boxShadow: {
+                // Offset + soft blur only. No zero-offset halos.
+                lift: '0 12px 32px -8px rgba(0, 0, 0, 0.7)',
+                board: '0 2px 0 0 rgba(0, 0, 0, 0.5)',
+                // Legacy glow names, neutralised.
+                glow: 'none',
+                'glow-lg': 'none',
+                'glow-accent': 'none',
             },
             animation: {
-                'fade-in': 'fadeIn 0.3s ease-out',
-                'slide-up': 'slideUp 0.3s ease-out',
-                'slide-down': 'slideDown 0.3s ease-out',
-                'scale-in': 'scaleIn 0.2s ease-out',
+                'strip-in': 'stripIn 220ms cubic-bezier(.2,0,0,1) both',
+                'slot-in': 'slotIn 160ms cubic-bezier(.2,0,0,1) both',
+                // Legacy names, retuned to the single-axis grammar.
+                'fade-in': 'boardFade 140ms cubic-bezier(.2,0,0,1) both',
+                'slide-up': 'slotIn 160ms cubic-bezier(.2,0,0,1) both',
+                'slide-down': 'slotIn 160ms cubic-bezier(.2,0,0,1) both',
+                'scale-in': 'boardFade 140ms cubic-bezier(.2,0,0,1) both',
                 'spin-slow': 'spin 3s linear infinite',
-                'pulse-glow': 'pulseGlow 2s ease-in-out infinite',
+                'pulse-glow': 'none',
             },
             keyframes: {
-                fadeIn: {
+                stripIn: {
+                    '0%': { transform: 'translateX(-101%)' },
+                    '100%': { transform: 'translateX(0)' },
+                },
+                slotIn: {
+                    '0%': { opacity: '0', transform: 'translateX(-6px)' },
+                    '100%': { opacity: '1', transform: 'translateX(0)' },
+                },
+                boardFade: {
                     '0%': { opacity: '0' },
                     '100%': { opacity: '1' },
                 },
-                slideUp: {
-                    '0%': { opacity: '0', transform: 'translateY(10px)' },
-                    '100%': { opacity: '1', transform: 'translateY(0)' },
-                },
-                slideDown: {
-                    '0%': { opacity: '0', transform: 'translateY(-10px)' },
-                    '100%': { opacity: '1', transform: 'translateY(0)' },
-                },
-                scaleIn: {
-                    '0%': { opacity: '0', transform: 'scale(0.95)' },
-                    '100%': { opacity: '1', transform: 'scale(1)' },
-                },
-                pulseGlow: {
-                    '0%, 100%': { boxShadow: '0 0 20px rgba(217, 70, 239, 0.3)' },
-                    '50%': { boxShadow: '0 0 40px rgba(217, 70, 239, 0.6)' },
-                },
             },
-            backgroundImage: {
-                'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-                'gradient-conic': 'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
-                'hero-pattern': 'linear-gradient(to bottom, rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.95))',
+            transitionTimingFunction: {
+                board: 'cubic-bezier(.2,0,0,1)',
             },
-            boxShadow: {
-                'glow': '0 0 20px rgba(14, 165, 233, 0.3)',
-                'glow-lg': '0 0 40px rgba(14, 165, 233, 0.4)',
-                'glow-accent': '0 0 20px rgba(217, 70, 239, 0.3)',
+            maxWidth: {
+                read: '68ch',
+                board: '78rem',
             },
         },
     },

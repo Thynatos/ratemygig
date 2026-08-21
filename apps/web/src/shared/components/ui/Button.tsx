@@ -1,44 +1,66 @@
 import { forwardRef, ButtonHTMLAttributes } from 'react'
 import { cn } from '@/shared/lib/utils'
-import { Loader2 } from 'lucide-react'
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
     variant?: 'primary' | 'secondary' | 'ghost' | 'danger'
     size?: 'sm' | 'md' | 'lg'
     isLoading?: boolean
+    /** Text shown to assistive tech while loading. Defaults to the button's own label. */
+    loadingLabel?: string
 }
 
+/**
+ * A slot on the board. Square, flat, bordered by one device pixel.
+ * Loading is a marching rule under the label, not a spinner — the board
+ * has no rotating parts.
+ */
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-    ({ className, variant = 'primary', size = 'md', isLoading, disabled, children, ...props }, ref) => {
+    (
+        {
+            className,
+            variant = 'primary',
+            size = 'md',
+            isLoading,
+            loadingLabel,
+            disabled,
+            children,
+            ...props
+        },
+        ref
+    ) => {
         const variants = {
-            primary: 'bg-gradient-to-r from-primary-500 to-accent-500 text-white hover:shadow-glow',
-            secondary: 'bg-surface-800 border border-surface-600 text-surface-100 hover:bg-surface-700 hover:border-surface-500',
-            ghost: 'text-surface-300 hover:bg-surface-800 hover:text-surface-100',
-            danger: 'bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30',
+            primary: 'btn-primary',
+            secondary: 'btn-secondary',
+            ghost: 'btn-ghost',
+            danger: 'btn-danger',
         }
 
         const sizes = {
-            sm: 'px-3 py-1.5 text-sm rounded-lg',
-            md: 'px-5 py-2.5 text-base rounded-xl',
-            lg: 'px-6 py-3 text-lg rounded-xl',
+            sm: 'text-[0.6875rem] px-2.5 min-h-[1.875rem]',
+            md: '',
+            lg: 'text-ui px-5 min-h-[2.75rem]',
         }
 
         return (
             <button
                 ref={ref}
                 disabled={disabled || isLoading}
-                className={cn(
-                    'inline-flex items-center justify-center font-semibold transition-all duration-300 active:scale-95',
-                    'focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-2 focus:ring-offset-surface-900',
-                    'disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100',
-                    variants[variant],
-                    sizes[size],
-                    className
-                )}
+                aria-busy={isLoading || undefined}
+                className={cn('relative', variants[variant], sizes[size], className)}
                 {...props}
             >
-                {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                {children}
+                <span className={cn(isLoading && 'opacity-60')}>{children}</span>
+                {isLoading && (
+                    <>
+                        <span
+                            aria-hidden="true"
+                            className="absolute inset-x-0 bottom-0 h-[2px] overflow-hidden"
+                        >
+                            <span className="block h-full w-1/3 bg-current animate-[skeletonWipe_1.1s_cubic-bezier(.2,0,0,1)_infinite]" />
+                        </span>
+                        <span className="sr-only">{loadingLabel ?? 'Working'}</span>
+                    </>
+                )}
             </button>
         )
     }

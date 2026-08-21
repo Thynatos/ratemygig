@@ -4,15 +4,43 @@
 <head>
   <meta charset="UTF-8" />
   <meta name='impact-site-verification' value='5e57ef25-181c-4783-b777-0ed66e00929b'>
-  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <link rel="icon" type="image/svg+xml" href="/board.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description"
-    content="Discover upcoming concerts, rate your gig experiences, and explore venue and artist ratings." />
-  <meta name="theme-color" content="#0f172a" />
-  <title>ratemygig - Concert Rating Platform</title>
+    content="Keep a permanent record of every gig you've been to. Log the night, rate the room, and get your history back as numbers." />
+  <meta name="theme-color" content="#16130F" />
+  <meta name="color-scheme" content="dark" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=Fragment+Mono&display=swap" />
+  <title>ratemygig — every gig you've been to, kept</title>
 </head>
 
 <body>
+  <!--
+    DIRECTION CONTRACT — THE BOARD  ·  seed 4f855fe9 (direction / operate)
+
+    THESIS: A gig is a listing before it is a memory. This product is the venue
+      letter board, kept. Content lives on rails in fixed slots, never in cards.
+      Refuses the category default this codebase used to ship: near-black with a
+      neon gradient, glass cards, glowing hover.
+    OWN-WORLD: Warm brown-black board (#16130F) on groove (#0C0A08), bone plastic
+      lettering (#F2EBDD), sodium-amber strips (#FFB020) as the only accent, one
+      device-pixel rails (#3A342B). Archivo Expanded caps for the board voice,
+      Archivo for UI, Fragment Mono for real data. Radius 0 everywhere. No glow,
+      no gradient, no zero-offset shadow.
+    STORY: You arrive at a board of dates, recognise tonight by the amber strip,
+      open a night, and log what it was. Your archive is the same board, backwards.
+    FIRST VIEWPORT: Board header — page title in expanded bone capitals, one rail
+      beneath, one amber TONIGHT strip carrying the live fact. Below the rail, the
+      row contract begins immediately: date slot / name + room / score slot.
+      Primary action sits in the header's right slot.
+    FORM: Venue marquee + foyer letter board. Candidate 3 of 7 grounded. Seed 4f855fe9.
+    FINISH: unreviewed and undocumented is unfinished; this build ends with the
+      finish review, the verdict, DESIGN.md, and every shipping raster carrying
+      its provenance.
+  -->
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>
 </body>

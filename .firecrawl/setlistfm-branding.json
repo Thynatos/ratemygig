@@ -1,0 +1,169 @@
+{
+  "branding": {
+    "colorScheme": "light",
+    "fonts": [
+      {
+        "family": "Roboto",
+        "role": "body"
+      }
+    ],
+    "colors": {
+      "primary": "#85B146",
+      "secondary": "#005CCC",
+      "accent": "#85B146",
+      "background": "#343138",
+      "textPrimary": "#343138",
+      "link": "#6A8E39"
+    },
+    "typography": {
+      "fontFamilies": {
+        "primary": "Roboto",
+        "heading": "Roboto"
+      },
+      "fontStacks": {
+        "heading": [
+          "Roboto",
+          "Arial",
+          "sans-serif"
+        ],
+        "body": [
+          "Roboto",
+          "Arial",
+          "sans-serif"
+        ],
+        "paragraph": [
+          "Roboto",
+          "Arial",
+          "sans-serif"
+        ]
+      },
+      "fontSizes": {
+        "h1": "34px",
+        "h2": "20px",
+        "body": "12px"
+      }
+    },
+    "spacing": {
+      "baseUnit": 4,
+      "borderRadius": "0px"
+    },
+    "components": {
+      "input": {
+        "background": "#FFFFFF",
+        "textColor": "#333333",
+        "borderColor": null,
+        "borderRadius": "0px",
+        "borderRadiusCorners": {
+          "topLeft": "0px",
+          "topRight": "0px",
+          "bottomRight": "0px",
+          "bottomLeft": "0px"
+        },
+        "shadow": "none"
+      },
+      "buttonPrimary": {
+        "background": "#85B146",
+        "textColor": "#333333",
+        "borderRadius": "0px",
+        "borderRadiusCorners": {
+          "topLeft": "0px",
+          "topRight": "0px",
+          "bottomRight": "0px",
+          "bottomLeft": "0px"
+        },
+        "shadow": "none"
+      },
+      "buttonSecondary": {
+        "background": "#6A8E39",
+        "textColor": "#FFFFFF",
+        "borderRadius": "5px",
+        "borderRadiusCorners": {
+          "topLeft": "5px",
+          "topRight": "5px",
+          "bottomRight": "5px",
+          "bottomLeft": "5px"
+        },
+        "shadow": "none"
+      }
+    },
+    "images": {
+      "logo": "https://w1.cdn.setlistfm.com/img/sfm-logo.png",
+      "favicon": "https://www.setlist.fm/img/icon-large.ico",
+      "ogImage": null,
+      "logoAlt": "setlist.fm logo"
+    },
+    "__llm_logo_reasoning": {
+      "selectedIndex": 0,
+      "reasoning": "Selected #0 because it matches the brand name 'setlist.fm', is located at the top, and is the most likely candidate for the main logo.",
+      "confidence": 0.85,
+      "source": "llm"
+    },
+    "__llm_button_reasoning": {
+      "primary": {
+        "index": 0,
+        "text": "Sign in",
+        "reasoning": "Button #0 'Sign in' uses the vibrant brand color #85B146, which aligns with the primary brand color and is likely a key action for users."
+      },
+      "secondary": {
+        "index": 1,
+        "text": "Sign in",
+        "reasoning": "Button #1 'Sign in' uses a different shade of green (#6A8E39) and serves as a secondary action with a slightly different style (rounded corners)."
+      },
+      "confidence": 0.9
+    },
+    "personality": {
+      "tone": "modern",
+      "energy": "medium",
+      "targetAudience": "music enthusiasts"
+    },
+    "designSystem": {
+      "framework": "custom",
+      "componentLibrary": ""
+    },
+    "confidence": {
+      "buttons": 0.9,
+      "colors": 0.9,
+      "overall": 0.9
+    },
+    "__llm_metadata": {
+      "logoSelection": {
+        "llmCalled": true,
+        "llmSucceeded": true,
+        "finalSource": "llm",
+        "rawLogoSelection": {
+          "selectedLogoIndex": 0,
+          "selectedLogoReasoning": "Selected #0 because it matches the brand name 'setlist.fm', is located at the top, and is the most likely candidate for the main logo.",
+          "confidence": 0.85
+        }
+      },
+      "buttonClassification": {
+        "llmCalled": true,
+        "llmSucceeded": true
+      }
+    },
+    "brandName": "setlist.fm",
+    "logo": "https://w1.cdn.setlistfm.com/img/sfm-logo.png"
+  },
+  "metadata": {
+    "language": "en",
+    "fb:app_id": "38890339940",
+    "keywords": "setlists,setlist,concert,gig,tour,venues",
+    "description": "Over 10,420,000 concert setlists of more than 469,500 artists including tour and song statistics, personal statistics, videos and much more.",
+    "theme-color": "#85b146",
+    "robots": "INDEX,FOLLOW",
+    "color-scheme": "light dark",
+    "title": "setlist.fm - the setlist wiki",
+    "viewport": "width=device-width, initial-scale=1",
+    "favicon": "https://www.setlist.fm/img/icon-large.ico",
+    "scrapeId": "01a0261c-a65a-754b-9afb-db6a9c0e877e",
+    "sourceURL": "https://www.setlist.fm",
+    "url": "https://www.setlist.fm/",
+    "statusCode": 200,
+    "contentType": "text/html;charset=utf-8",
+    "timezone": "America/New_York",
+    "proxyUsed": "basic",
+    "indexId": "623c4fb8-8cc1-4453-a784-5d4e28b71cc1",
+    "creditsUsed": 1,
+    "concurrencyLimited": false
+  }
+}

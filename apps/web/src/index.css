@@ -1,243 +1,608 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ============================================
-   Base Styles
-   ============================================ */
+/* ============================================================
+   THE BOARD — token layer
+   See DESIGN.md. Content lives on rails in fixed slots.
+   No glow, no gradient, no radius, no zero-offset shadow.
+   ============================================================ */
 
 @layer base {
+  :root {
+    --groove: #0c0a08;
+    --board: #16130f;
+    --board-raised: #221d17;
+    --rail: #3a342b;
+    --rail-strong: #6b6153;
+    --bone: #f2ebdd;
+    --bone-mid: #c7bfaf;
+    --bone-dim: #a79e8c;
+    --bone-faint: #8a8172;
+    --strip: #ffb020;
+    --strip-ink: #16130f;
+    --struck: #f0584a;
+
+    --ease-board: cubic-bezier(0.2, 0, 0, 1);
+    --dur-slot: 160ms;
+    --dur-strip: 220ms;
+
+    color-scheme: dark;
+    accent-color: var(--strip);
+  }
+
   html {
-    @apply scroll-smooth;
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
-    @apply bg-surface-950 text-surface-100 font-sans antialiased;
-    background-image: 
-      radial-gradient(circle at 20% 80%, rgba(217, 70, 239, 0.1) 0%, transparent 50%),
-      radial-gradient(circle at 80% 20%, rgba(14, 165, 233, 0.1) 0%, transparent 50%);
-    background-attachment: fixed;
+    @apply bg-groove text-bone font-sans antialiased;
+    font-size: 0.9375rem;
+    font-variation-settings: 'wdth' 100;
+    font-variant-numeric: lining-nums;
     min-height: 100vh;
   }
 
-  ::selection {
-    @apply bg-accent-500/30 text-white;
+  /* The board voice: molded plastic capitals sitting in a groove.
+     Expanded, not condensed — positive tracking, because slot letters
+     cannot be kerned tighter than the slot. */
+  .voice-board {
+    font-family: 'Archivo', system-ui, sans-serif;
+    font-variation-settings: 'wdth' 125;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    font-variant-numeric: tabular-nums lining-nums;
   }
 
-  /* Custom scrollbar */
+  .voice-slot {
+    font-family: 'Archivo', system-ui, sans-serif;
+    font-variation-settings: 'wdth' 118;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+
+  .voice-label {
+    font-family: 'Archivo', system-ui, sans-serif;
+    font-variation-settings: 'wdth' 112;
+    font-weight: 600;
+    font-size: 0.6875rem;
+    line-height: 1;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .voice-data {
+    font-family: 'Fragment Mono', ui-monospace, monospace;
+    font-variant-numeric: tabular-nums lining-nums;
+    letter-spacing: 0;
+  }
+
+  .voice-read {
+    font-size: 1.0625rem;
+    line-height: 1.6;
+    max-width: 68ch;
+  }
+
+  .tnum {
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+
+  /* --- Browser surfaces: themed, never left to the UA ------------------ */
+  ::selection {
+    background: rgba(255, 176, 32, 0.28);
+    color: var(--bone);
+  }
+
+  ::placeholder {
+    color: var(--bone-faint);
+    opacity: 1;
+  }
+
+  * {
+    caret-color: var(--strip);
+  }
+
+  :where(a) {
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 1px;
+  }
+
+  html {
+    scrollbar-color: var(--rail) var(--groove);
+    scrollbar-width: thin;
+  }
+
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 10px;
+    height: 10px;
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-surface-900;
+    background: var(--groove);
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-surface-700 rounded-full;
+    background: var(--rail);
+    border: 2px solid var(--groove);
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-surface-600;
+    background: var(--rail-strong);
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: var(--groove);
+  }
+
+  /* --- Focus: a printed bracket, never a glow -------------------------- */
+  :focus-visible {
+    outline: 2px solid var(--strip);
+    outline-offset: 2px;
+    border-radius: 0;
+  }
+
+  /* On amber ground the bracket flips to bone so it stays visible. */
+  .on-strip :focus-visible,
+  .on-strip:focus-visible {
+    outline-color: var(--bone);
+  }
+
+  [hidden] {
+    display: none !important;
   }
 }
 
-/* ============================================
-   Component Styles
-   ============================================ */
+/* ============================================================
+   Components — the row contract and the board furniture
+   ============================================================ */
 
 @layer components {
-  /* Glass morphism card */
-  .glass-card {
-    @apply bg-surface-900/50 backdrop-blur-xl border border-surface-700/50 rounded-2xl;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+
+  /* --- The board: a panel bounded by rails ---------------------------- */
+  .board {
+    @apply bg-board border border-rail;
   }
 
-  /* Primary button with glow */
+  .board-flush {
+    @apply bg-board border-y border-rail;
+  }
+
+  /* Page shell */
+  .page {
+    @apply mx-auto w-full px-4 sm:px-6 lg:px-8;
+    max-width: 78rem;
+  }
+
+  .page-body {
+    @apply py-8 sm:py-10;
+  }
+
+  /* --- Board header: the signature opening ---------------------------- */
+  .board-header {
+    @apply border-b border-rail-strong pb-5 mb-6 sm:pb-6 sm:mb-8;
+  }
+
+  .board-title {
+    @apply voice-board text-board-xl text-bone;
+  }
+
+  .board-lede {
+    @apply mt-3 text-ui text-bone-dim;
+    max-width: 60ch;
+  }
+
+  /* The one saturated form above the fold. Flat, square, board-coloured ink. */
+  .strip {
+    @apply inline-flex items-center gap-2 bg-strip text-strip-ink voice-slot;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+
+  .strip-lg {
+    @apply strip;
+    padding: 0.5rem 1rem;
+    font-size: 0.9375rem;
+  }
+
+  .strip-quiet {
+    @apply inline-flex items-center gap-2 voice-slot text-bone-dim border border-rail;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+
+  .strip-struck {
+    @apply inline-flex items-center gap-2 voice-slot text-struck border border-struck;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+
+  /* Entrance: slides into its groove once. Nothing else animates on load. */
+  .strip-enter {
+    animation: stripIn var(--dur-strip) var(--ease-board) both;
+  }
+
+  /* --- The row contract: slot / body / slot --------------------------- */
+  .rail-list {
+    @apply border-y border-rail-strong;
+  }
+
+  .rail-list > * + * {
+    @apply border-t border-rail;
+  }
+
+  .row {
+    @apply relative flex items-stretch gap-3 sm:gap-4 bg-board text-left w-full;
+    padding: 0.875rem 0.875rem 0.875rem 1rem;
+    transition: background-color var(--dur-slot) var(--ease-board);
+  }
+
+  /* The rail-cap: a strip slid partway into the row's left gutter. */
+  .row::before {
+    content: '';
+    @apply absolute left-0 top-0 bg-strip;
+    width: 2px;
+    height: 0;
+    transition: height var(--dur-slot) var(--ease-board);
+  }
+
+  .row-interactive:hover,
+  .row-interactive:focus-visible {
+    @apply bg-board-raised;
+  }
+
+  .row-interactive:hover::before,
+  .row-interactive:focus-visible::before,
+  .row-current::before {
+    height: 100%;
+  }
+
+  .row-slot {
+    @apply shrink-0 flex flex-col justify-center;
+    width: 4rem;
+  }
+
+  @media (min-width: 640px) {
+    .row-slot {
+      width: 5.5rem;
+    }
+  }
+
+  .row-body {
+    @apply min-w-0 flex-1 flex flex-col justify-center gap-1;
+  }
+
+  .row-end {
+    @apply shrink-0 flex flex-col items-end justify-center gap-1;
+  }
+
+  .row-title {
+    @apply text-board-md font-semibold text-bone leading-tight;
+    font-variation-settings: 'wdth' 108;
+  }
+
+  .row-meta {
+    @apply text-ui-sm text-bone-dim truncate;
+  }
+
+  .row-sub {
+    @apply text-ui-sm text-bone-faint;
+  }
+
+  /* --- Date slot: the identity of an event row ------------------------ */
+  .date-slot {
+    @apply flex flex-col items-start leading-none;
+  }
+
+  .date-slot-dow {
+    @apply voice-label text-bone-faint;
+  }
+
+  .date-slot-day {
+    @apply voice-board text-bone;
+    font-size: 1.75rem;
+    line-height: 0.9;
+    margin: 0.25rem 0;
+  }
+
+  .date-slot-mon {
+    @apply voice-label text-bone-dim;
+  }
+
+  .date-slot-tonight .date-slot-day {
+    @apply text-strip;
+  }
+
+  .date-slot-tonight .date-slot-dow {
+    @apply text-strip;
+  }
+
+  /* --- Controls -------------------------------------------------------- */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 voice-slot;
+    font-size: 0.8125rem;
+    padding: 0.5rem 0.9375rem;
+    min-height: 2.25rem;
+    border: 1px solid transparent;
+    transition: background-color var(--dur-slot) var(--ease-board),
+      color var(--dur-slot) var(--ease-board),
+      border-color var(--dur-slot) var(--ease-board);
+  }
+
+  .btn:disabled {
+    @apply cursor-not-allowed;
+    opacity: 0.45;
+  }
+
   .btn-primary {
-    @apply px-6 py-3 bg-gradient-to-r from-primary-500 to-accent-500 rounded-xl font-semibold text-white
-           transition-all duration-300 hover:shadow-glow active:scale-95
-           focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-2 focus:ring-offset-surface-900;
+    @apply btn bg-strip text-strip-ink;
   }
 
-  /* Secondary button */
+  .btn-primary:hover:not(:disabled) {
+    @apply bg-strip-bright;
+  }
+
+  .btn-primary:active:not(:disabled) {
+    @apply bg-strip-deep;
+  }
+
+  .btn-primary:focus-visible {
+    outline-color: var(--bone);
+  }
+
   .btn-secondary {
-    @apply px-6 py-3 bg-surface-800 border border-surface-600 rounded-xl font-semibold text-surface-100
-           transition-all duration-300 hover:bg-surface-700 hover:border-surface-500 active:scale-95
-           focus:outline-none focus:ring-2 focus:ring-surface-400 focus:ring-offset-2 focus:ring-offset-surface-900;
+    @apply btn bg-board text-bone;
+    border-color: var(--rail-strong);
   }
 
-  /* Ghost button */
+  .btn-secondary:hover:not(:disabled) {
+    @apply bg-board-raised;
+    border-color: var(--bone-faint);
+  }
+
+  /* Pressed inverts the fill — a printed mark, not a physical press. */
+  .btn-secondary:active:not(:disabled) {
+    @apply bg-bone text-board;
+  }
+
   .btn-ghost {
-    @apply px-4 py-2 rounded-lg font-medium text-surface-300
-           transition-all duration-200 hover:bg-surface-800 hover:text-surface-100
-           focus:outline-none focus:ring-2 focus:ring-surface-500;
+    @apply btn text-bone-dim;
+    padding: 0.5rem 0.625rem;
   }
 
-  /* Icon button */
+  .btn-ghost:hover:not(:disabled) {
+    @apply bg-board-raised text-bone;
+  }
+
+  .btn-danger {
+    @apply btn text-struck bg-transparent;
+    border-color: var(--struck);
+  }
+
+  .btn-danger:hover:not(:disabled) {
+    @apply bg-struck text-board;
+  }
+
   .btn-icon {
-    @apply p-2 rounded-lg text-surface-400 
-           transition-all duration-200 hover:bg-surface-800 hover:text-surface-100
-           focus:outline-none focus:ring-2 focus:ring-surface-500;
+    @apply inline-flex items-center justify-center text-bone-dim;
+    width: 2.25rem;
+    height: 2.25rem;
+    transition: background-color var(--dur-slot) var(--ease-board),
+      color var(--dur-slot) var(--ease-board);
   }
 
-  /* Input field */
+  .btn-icon:hover {
+    @apply bg-board-raised text-bone;
+  }
+
+  /* Legacy aliases so unrebuilt views inherit the world. */
+  .btn-primary,
+  .btn-secondary,
+  .btn-ghost {
+    border-radius: 0;
+  }
+
+  /* --- Inputs ---------------------------------------------------------- */
   .input-field {
-    @apply w-full px-4 py-3 bg-surface-800 border border-surface-700 rounded-xl text-surface-100
-           placeholder:text-surface-500 transition-all duration-200
-           focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20;
+    @apply w-full bg-groove text-bone;
+    border: 1px solid var(--rail-strong);
+    padding: 0.5625rem 0.75rem;
+    font-size: 0.9375rem;
+    transition: border-color var(--dur-slot) var(--ease-board);
   }
 
-  /* Label */
+  .input-field:hover:not(:disabled) {
+    border-color: var(--bone-faint);
+  }
+
+  .input-field:focus {
+    outline: 2px solid var(--strip);
+    outline-offset: 0;
+    border-color: var(--strip);
+  }
+
+  .input-field:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .input-field[aria-invalid='true'] {
+    border-color: var(--struck);
+  }
+
   .input-label {
-    @apply block text-sm font-medium text-surface-300 mb-2;
+    @apply block voice-label text-bone-dim mb-2;
   }
 
-  /* Error message */
   .input-error {
-    @apply text-sm text-red-400 mt-1;
+    @apply mt-1.5 text-ui-sm text-struck;
   }
 
-  /* Badge */
-  .badge {
-    @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium;
+  .input-hint {
+    @apply mt-1.5 text-ui-sm text-bone-faint;
   }
 
-  .badge-primary {
-    @apply badge bg-primary-500/20 text-primary-300 border border-primary-500/30;
+  /* --- Score strip: five slots on a rail ------------------------------- */
+  .score {
+    @apply inline-flex items-center;
+    gap: 2px;
   }
 
-  .badge-accent {
-    @apply badge bg-accent-500/20 text-accent-300 border border-accent-500/30;
+  .score-slot {
+    @apply block bg-groove;
+    border: 1px solid var(--rail);
   }
 
-  .badge-surface {
-    @apply badge bg-surface-700/50 text-surface-300 border border-surface-600;
+  .score-slot-filled {
+    @apply bg-strip;
+    border-color: var(--strip);
   }
 
-  /* Rating stars */
-  .star-rating {
-    @apply flex items-center gap-1;
+  /* --- Tabs: slots on a rail ------------------------------------------- */
+  .tab-rail {
+    @apply flex gap-0 border-b border-rail overflow-x-auto;
   }
 
-  .star-rating .star {
-    @apply w-5 h-5 transition-colors duration-200;
-  }
-
-  .star-rating .star.filled {
-    @apply text-yellow-400;
-  }
-
-  .star-rating .star.empty {
-    @apply text-surface-600;
-  }
-
-  .star-rating .star.interactive {
-    @apply cursor-pointer hover:scale-110 active:scale-95;
-  }
-
-  /* Event card */
-  .event-card {
-    @apply glass-card p-5 transition-all duration-300 hover:border-primary-500/50 hover:shadow-glow cursor-pointer;
-  }
-
-  /* Navigation link */
-  .nav-link {
-    @apply px-4 py-2 text-surface-400 font-medium rounded-lg transition-all duration-200
-           hover:text-surface-100 hover:bg-surface-800/50
-           focus:outline-none focus:ring-2 focus:ring-surface-500;
-  }
-
-  .nav-link.active {
-    @apply text-primary-400 bg-primary-500/10;
-  }
-
-  /* Section title */
-  .section-title {
-    @apply text-2xl md:text-3xl font-display font-bold text-white;
-  }
-
-  .section-subtitle {
-    @apply text-surface-400 mt-2;
-  }
-
-  /* Page container */
-  .page-container {
-    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8;
-  }
-
-  /* Skeleton loading */
-  .skeleton {
-    @apply bg-surface-800 animate-pulse rounded;
-  }
-
-  /* Tab styling */
   .tab {
-    @apply px-4 py-2 text-sm font-medium text-surface-400 border-b-2 border-transparent
-           transition-all duration-200 hover:text-surface-200;
+    @apply voice-label text-bone-faint shrink-0;
+    padding: 0.6875rem 0.875rem;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: color var(--dur-slot) var(--ease-board),
+      border-color var(--dur-slot) var(--ease-board);
   }
 
-  .tab.active {
-    @apply text-primary-400 border-primary-400;
+  .tab:hover {
+    @apply text-bone;
   }
 
-  /* Modal overlay */
-  .modal-overlay {
-    @apply fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4;
+  .tab-active {
+    @apply text-strip;
+    border-bottom-color: var(--strip);
   }
 
-  .modal-content {
-    @apply glass-card max-w-lg w-full max-h-[90vh] overflow-y-auto animate-scale-in;
+  /* --- Navigation ------------------------------------------------------ */
+  .nav-link {
+    @apply voice-label text-bone-dim;
+    padding: 0.5rem 0.625rem;
+    border-bottom: 2px solid transparent;
+    transition: color var(--dur-slot) var(--ease-board),
+      border-color var(--dur-slot) var(--ease-board);
   }
 
-  /* Tooltip */
-  .tooltip {
-    @apply absolute z-50 px-2 py-1 text-xs bg-surface-800 text-surface-200 rounded shadow-lg
-           animate-fade-in pointer-events-none;
+  .nav-link:hover {
+    @apply text-bone;
   }
 
-  /* Avatar */
-  .avatar {
-    @apply rounded-full object-cover bg-surface-700 border-2 border-surface-600;
+  .nav-link-active {
+    @apply text-strip;
+    border-bottom-color: var(--strip);
   }
 
-  .avatar-sm {
-    @apply w-8 h-8;
+  /* --- Skeletons: an empty slot, not a shimmer ------------------------- */
+  .skeleton {
+    @apply bg-board-raised;
+    position: relative;
+    overflow: hidden;
   }
 
-  .avatar-md {
-    @apply w-12 h-12;
+  .skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(242, 235, 221, 0.05), transparent);
+    animation: skeletonWipe 1.4s var(--ease-board) infinite;
   }
 
-  .avatar-lg {
-    @apply w-16 h-16;
-  }
-
-  /* Photo grid */
+  /* --- Photos ---------------------------------------------------------- */
   .photo-grid {
-    @apply grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3;
+    @apply grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4;
+    gap: 1px;
+    background: var(--rail);
+    border: 1px solid var(--rail);
   }
 
   .photo-item {
-    @apply aspect-square rounded-xl overflow-hidden bg-surface-800 cursor-pointer
-           transition-transform duration-300 hover:scale-[1.02];
+    @apply aspect-square overflow-hidden bg-board-raised;
   }
 
   .photo-item img {
     @apply w-full h-full object-cover;
+    transition: opacity var(--dur-slot) var(--ease-board);
+  }
+
+  .photo-item:hover img {
+    opacity: 0.82;
+  }
+
+  /* --- Avatars: square, like a laminate photo -------------------------- */
+  .avatar {
+    @apply object-cover bg-board-raised;
+    border: 1px solid var(--rail-strong);
+  }
+
+  /* --- Legacy shims: neutralise the old world -------------------------- */
+  .glass-card {
+    @apply bg-board border border-rail;
+    backdrop-filter: none;
+    box-shadow: none;
+  }
+
+  .event-card {
+    @apply bg-board border border-rail p-4;
+  }
+
+  .badge,
+  .badge-primary,
+  .badge-accent,
+  .badge-surface {
+    @apply inline-flex items-center voice-label;
+    padding: 0.3125rem 0.5rem;
+    border: 1px solid var(--rail);
+    color: var(--bone-dim);
+  }
+
+  .badge-primary,
+  .badge-accent {
+    color: var(--strip);
+    border-color: var(--strip);
+  }
+
+  .section-title {
+    @apply voice-board text-board-lg text-bone;
+  }
+
+  .section-subtitle {
+    @apply mt-2 text-ui text-bone-dim;
+  }
+
+  .page-container {
+    @apply page page-body;
+  }
+
+  .modal-overlay {
+    @apply fixed inset-0 z-50 flex items-center justify-center p-4;
+    background: rgba(12, 10, 8, 0.82);
+  }
+
+  .modal-content {
+    @apply bg-board border border-rail-strong w-full max-h-[90vh] overflow-y-auto;
+    max-width: 32rem;
+    box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.7);
+  }
+
+  .tooltip {
+    @apply absolute z-50 voice-label bg-board-raised text-bone border border-rail pointer-events-none;
+    padding: 0.3125rem 0.5rem;
   }
 }
 
-/* ============================================
-   Utility Classes
-   ============================================ */
-
 @layer utilities {
+  /* Emphasis comes from weight and size, never from a gradient. */
   .text-gradient {
-    @apply bg-gradient-to-r from-primary-400 via-accent-400 to-primary-400 bg-clip-text text-transparent;
+    color: var(--bone);
   }
 
   .line-clamp-2 {
@@ -254,7 +619,6 @@
     overflow: hidden;
   }
 
-  /* Hide scrollbar but keep functionality */
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -262,5 +626,39 @@
 
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+}
+
+@keyframes skeletonWipe {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* ============================================================
+   Reduced motion: states change instantly. Nothing is hidden
+   behind an animation, so nothing disappears when motion stops.
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .skeleton::after {
+    display: none;
+  }
+
+  .row::before {
+    transition: none;
   }
 }

@@ -126,14 +126,14 @@ export function getCityDisplayName(city: string, country?: string): string {
 }
 
 /**
- * Get rating color based on value
+ * Colour for a rating value.
+ *
+ * Amber means "this was rated" (DESIGN.md §3) — it is not a temperature scale,
+ * so a low score is quiet rather than red. Red is reserved for genuine failure
+ * states, and a two-star gig is not a failure.
  */
 export function getRatingColor(rating: number): string {
-    if (rating >= 4.5) return 'text-green-400'
-    if (rating >= 3.5) return 'text-lime-400'
-    if (rating >= 2.5) return 'text-yellow-400'
-    if (rating >= 1.5) return 'text-orange-400'
-    return 'text-red-400'
+    return rating >= 3 ? 'text-strip' : 'text-bone-dim'
 }
 
 /**

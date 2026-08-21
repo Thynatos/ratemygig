@@ -1,4 +1,4 @@
-import { forwardRef, InputHTMLAttributes } from 'react'
+import { forwardRef, InputHTMLAttributes, useId } from 'react'
 import { cn } from '@/shared/lib/utils'
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -9,10 +9,13 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
     ({ className, label, error, hint, id, ...props }, ref) => {
-        const inputId = id || props.name
+        const generatedId = useId()
+        const inputId = id || props.name || generatedId
+        const hintId = `${inputId}-hint`
+        const errorId = `${inputId}-error`
 
         return (
-            <div className="space-y-1">
+            <div>
                 {label && (
                     <label htmlFor={inputId} className="input-label">
                         {label}
@@ -21,18 +24,22 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
                 <input
                     ref={ref}
                     id={inputId}
-                    className={cn(
-                        'input-field',
-                        error && 'border-red-500 focus:border-red-500 focus:ring-red-500/20',
-                        className
-                    )}
+                    aria-invalid={error ? true : undefined}
+                    aria-describedby={
+                        cn(error && errorId, hint && !error && hintId).trim() || undefined
+                    }
+                    className={cn('input-field', className)}
                     {...props}
                 />
                 {hint && !error && (
-                    <p className="text-sm text-surface-500">{hint}</p>
+                    <p id={hintId} className="input-hint">
+                        {hint}
+                    </p>
                 )}
                 {error && (
-                    <p className="input-error">{error}</p>
+                    <p id={errorId} className="input-error">
+                        {error}
+                    </p>
                 )}
             </div>
         )
