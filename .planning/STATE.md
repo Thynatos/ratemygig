@@ -2,10 +2,14 @@
 
 ## Current Phase
 **Phase:** Post-M5 Sprints (see .planning/SPRINTS.md)
-**Status:** Sprint 10 (audit Tier 0) code complete — **pending: apply `packages/db/migrations/016_schema_fixes.sql` to the live project** (Task 9.5 in `.planning/SPRINT10_PROMPT.md`), then re-run `npm run test:live` and walk the five verification routes. After that: Sprint 11 (audit Tier 1, "Eyes on production") ahead of Sprint 8 per `docs/AUDIT_REPORT.md` §6.
+**Status:** Sprint 10 (audit Tier 0) **complete and verified against the live project** — `016_schema_fixes.sql` applied to `lpfyzjfqyyrdknzgxoul` on 2026-08-21, `npm run test:live` 22/22, all five Task 9.5 routes walked with zero 400s and zero validation failures. Next: Sprint 11 (audit Tier 1, "Eyes on production") ahead of Sprint 8 per `docs/AUDIT_REPORT.md` §6.
 **Last Activity:** 2026-08-21
 
-**Audit findings closed by Sprint 10** (ids from `docs/AUDIT_REPORT.md`; the report itself is a dated artefact and was not edited): A1, A2, A3, A4, A5, A8, A9, A10, C2, D1/E1 (type-check enforced), D5/E2/E3 (live-schema + RPC contract CI job), B7. B1 closed at the reviews-policy/RPC/storage layer (photo/tag/comment metadata mirrors tracked under B9, Tier 1). A1/A2/A5/A8/B1's DB half lands only when 016 is applied.
+**Audit findings closed by Sprint 10** (ids from `docs/AUDIT_REPORT.md`; the report itself is a dated artefact and was not edited): A1, A2, A3, A4, A5, A8, A9, A10, C2, D1/E1 (type-check enforced), D5/E2/E3 (live-schema + RPC contract CI job), B7. B1 closed at the reviews-policy/RPC/storage layer (photo/tag/comment metadata mirrors tracked under B9, Tier 1).
+
+**Live verification evidence (2026-08-21, post-016):** six FKs to `public.profiles` present; reviews SELECT policy = `((is_public AND status='published') OR auth.uid()=user_id)`; storage policy matches `thumbnail_path` and `status`; `handle_new_user` `search_path=public, pg_temp`. Draft leak (B1) probed with a real draft row inside a rolled-back transaction: **anon saw 0 drafts, owner saw 1** — no residue. `/r/f9f9fe86…` renders with its author, `/events/…07` shows "5.0 avg • 1 review", `/venues/…05` and `/artists/…07` show 5.0 (1 review) with distributions, `/artists/…07` has no error boundary, `/venues/top` unchanged.
+
+**Still required before the `live-schema` CI job can run:** add `SUPABASE_URL` and `SUPABASE_ANON_KEY` as GitHub repo secrets (the job is `if`-gated to skip on fork PRs).
 
 ## Completed
 - Auth (magic link + Google OAuth)

@@ -40,7 +40,8 @@
 > and deliberately executed **before** Sprints 8 and 9 — Sprint 8 writes data into display
 > paths that returned HTTP 400 until Sprint 10's migration 016. Spec:
 > `.planning/SPRINT10_PROMPT.md`. Its migration (`packages/db/migrations/016_schema_fixes.sql`)
-> must be applied to the live project before the `live-schema` CI job goes green.
+> was applied to the live project on 2026-08-21 and verified (`npm run test:live` 22/22).
+> The `live-schema` CI job additionally needs `SUPABASE_URL` / `SUPABASE_ANON_KEY` repo secrets.
 
 ---
 
