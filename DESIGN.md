@@ -165,4 +165,87 @@ Applies to every route under `apps/web/src`. The token layer lives in `apps/web/
 
 ---
 
-*Section 7 — what was actually built — is appended at finish.*
+---
+
+## 7. What was actually built
+
+Written at finish, from the built world. Where this section contradicts sections 1–6, this section is right — those were written at direction lock, before contact with the code.
+
+### 7.1 Where the system lives
+
+| Layer | File | What's in it |
+|---|---|---|
+| Tokens, row contract, board furniture | `apps/web/src/index.css` | Every colour, voice, and structural class. **The row contract is CSS, not a component** — see 7.2. |
+| Scale, palette aliases, motion | `apps/web/tailwind.config.js` | Semantic names plus the remapped legacy ramps |
+| Direction contract | `apps/web/index.html` | HTML comment, first child of `<body>`; survives the production build (verified: `grep "seed 4f855fe9" dist/index.html`) |
+| Board furniture with logic | `apps/web/src/shared/components/ui/Board.tsx` | `BoardHeader`, `DateSlot`, `EmptyState`, `ErrorState`, `Figure`, `FigureRail` |
+| Score strip | `apps/web/src/shared/components/ui/StarRating.tsx` | Exported as `StarRating` / `RatingDisplay` / `ScoreStrip` |
+| League tables and charts | `apps/web/src/shared/components/Leaderboard.tsx` | `Leaderboard`, `Distribution`, `LeaderboardFilters` |
+| `whenLabel` | `apps/web/src/shared/lib/utils.ts` | Lives in utils, not Board.tsx, so that file exports only components (React Fast Refresh) |
+
+### 7.2 The row contract is CSS
+
+Section 3 implied React primitives. It isn't one. `Row` and `RailList` components were written, went unused, and were deleted at finish: every list composes `.rail-list` + `.row` / `.row-slot` / `.row-body` / `.row-end` directly. A wrapper would have added an indirection with no callers.
+
+**To build a list:** wrap rows in `.rail-list`; each row is `.row` (add `.row-interactive` if it's a link or button, `.row-current` to pin the amber rail-cap on). Inside, `.row-slot` (fixed 4rem / 5.5rem), `.row-body` (`min-w-0`, flexible), `.row-end`.
+
+### 7.3 What each page puts in the left slot
+
+The slot always holds the row's identity, but "identity" differs by content — this is the one rule that needed interpretation per surface:
+
+| Surface | Left slot |
+|---|---|
+| Discover, event lists, My gigs, Lists, profile reviews | `DateSlot` — day of week, day, 3-letter month |
+| Artists, Venues, followed lists | The name's initial letter, in board voice — a wall of letters |
+| Leaderboards, Wrapped top lists | The rank figure, amber at #1 |
+| Feed (review, attendance) | The person's avatar |
+| Feed (announcement), setlist rows, song "who plays it" | The date, the position, the play count |
+| Notifications | The type icon, amber when unread |
+
+### 7.4 Palette as shipped
+
+Exactly as specified in §3, verified against the running app: ground `rgb(12,10,8)`, board `rgb(22,19,15)`, bone `rgb(242,235,221)`, strip `rgb(255,176,32)`. No drift toward the blue-black slate the category defaults to.
+
+**Verified across every primary route at 375px and desktop:** zero contrast failures against WCAG AA, zero rounded corners, zero gradients, zero zero-offset shadows, zero horizontal overflow, one `<h1>` per route, no tap target under 24px.
+
+### 7.5 The strip, in practice
+
+One amber strip per page, carrying a fact that is true right now:
+
+| Route | Strip |
+|---|---|
+| `/` | Today's date, plus the city if one is set |
+| `/artists`, `/venues` | What's on screen — "12 showing", "8 showing in Denver" |
+| `/artists/top`, `/venues/top` | The filter scope — "All time · everywhere", or "2025 · Manchester" |
+| `/events/:id` | The date and time, or "Tonight · 19:30" |
+| `/venues/:id`, `/artists/:id` | "Next: …" the next date, or "Nothing coming up" |
+| `/my-gigs` | "41 gigs logged" |
+| `/wrapped` | The year is the headline, not a strip — it's set at `clamp(5rem, 26vw, 13rem)` in amber |
+| `/notifications` | "3 unread" or "All caught up" |
+| `/review/:id`, `/events/:id/setlist` | The gig's date |
+| `/songs/:id` | "Played live 14 times" |
+| Index and legal pages with no live fact | No strip. The signature is earned, not decorative. |
+
+**Honesty constraint found during the build:** the paginated artist and venue queries return no total count, so their strips state what is on screen rather than a total the data can't support.
+
+### 7.6 Deviations from the locked direction
+
+1. **Ratings are amber-or-quiet, not a scale.** `getRatingColor` returned a red→green temperature ramp. It now returns `text-strip` at 3+ and `text-bone-dim` below. A two-star gig is a disappointing night, not an error, so it never goes red. Red is reserved for genuine failure.
+2. **Chart pages moved out of the main nav.** The header had five links including "Top Venues" and "Top Artists". The leaderboards are now a tab on the Artists and Venues pages, which cut the nav to three public links and put the charts next to the thing they rank.
+3. **No `Panel` component.** Titled board panels are written inline as `<section class="border border-rail bg-board">` with a `.voice-label` header on a rail. Three lines, no abstraction.
+4. **Loading is a travelling strip, not a spinner.** Single-axis, like everything else. `LoadingSpinner` keeps its name and its `role="status"`.
+5. **State lives in the URL** on Discover (`?city=&q=&page=`), My gigs (`?tab=`) and public profiles (`?tab=`), so a filtered view is a link.
+
+### 7.7 Things a future session should know
+
+- **Dark only, deliberately** (§5). There is no light theme and adding a half-committed one would dilute the material.
+- **The legacy `surface` / `primary` / `accent` Tailwind ramps still exist** in `tailwind.config.js`, remapped onto the board. Nothing uses them any more. They're kept as a safety net for code written against the old names; delete them once you're confident nothing will be.
+- **Caps are rationed.** Display voice and micro-labels only. Anything a human wrote — review bodies, comments, empty-state copy, errors — is sentence case at reading size on a 68ch measure.
+- **Amber has three earned uses** and no others: the live fact, a score, and the single primary action. Two amber elements competing above the fold means one of them isn't primary.
+- **Tests assert the interface, not the styling.** The score strip is a `radiogroup`; ratings are amber-or-dim; photos and avatars carry descriptive alt text. Changing those changes behaviour, so the tests should fight you.
+
+### 7.8 Process notes
+
+- **Code-led build.** No image generation was available in this environment, so no comps were produced and none were needed; the ambition lived in the FIRST VIEWPORT block of the direction contract.
+- **No visual captures.** The harness's browser pane could not composite frames, so the finish review ran on substituted evidence — computed styles, the accessibility tree, rendered page text, and DOM measurements at 375px and desktop — rather than screenshots. Every claim in 7.4 was measured in the running app, not eyeballed.
+- **The finish review ran inline**, not as a separate agent, because this session was instructed not to spawn subagents.
