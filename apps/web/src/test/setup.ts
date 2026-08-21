@@ -1,5 +1,9 @@
 /// <reference types="vitest/globals" />
 import '@testing-library/jest-dom/vitest'
+import 'vitest-axe/dist/extend-expect'
+import { toHaveNoViolations } from 'vitest-axe/dist/matchers'
+
+expect.extend({ toHaveNoViolations })
 
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {

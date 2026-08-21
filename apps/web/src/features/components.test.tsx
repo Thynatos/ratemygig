@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import { checkA11y } from '@/test/axe'
 import { BrowserRouter } from 'react-router-dom'
 import { EventCard } from '@/features/events/components/EventCard'
 import { FeedCard } from '@/features/feed/components/FeedCard'
@@ -101,6 +102,11 @@ describe('EventCard', () => {
     it('renders no badge when friendsGoing is empty', () => {
         renderWithRouter(<EventCard event={mockEvent} friendsGoing={[]} />)
         expect(screen.queryByText(/friends? going/)).not.toBeInTheDocument()
+    })
+
+    it('has no accessibility violations', async () => {
+        const { container } = renderWithRouter(<EventCard event={mockEvent} />)
+        expect(await checkA11y(container)).toHaveNoViolations()
     })
 })
 

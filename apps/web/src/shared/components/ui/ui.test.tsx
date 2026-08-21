@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import { checkA11y } from '@/test/axe'
 import { Button } from './Button'
 import { Input } from './Input'
 import { StarRating, RatingDisplay } from './StarRating'
@@ -58,6 +59,11 @@ describe('Button', () => {
         render(<Button ref={ref}>Ref</Button>)
         expect(ref.current).toBeInstanceOf(HTMLButtonElement)
     })
+
+    it('has no accessibility violations', async () => {
+        const { container } = render(<Button>Click me</Button>)
+        expect(await checkA11y(container)).toHaveNoViolations()
+    })
 })
 
 describe('Input', () => {
@@ -93,6 +99,11 @@ describe('Input', () => {
         render(<Input name="test" onChange={handleChange} />)
         fireEvent.change(screen.getByRole('textbox'), { target: { value: 'hello' } })
         expect(handleChange).toHaveBeenCalled()
+    })
+
+    it('has no accessibility violations', async () => {
+        const { container } = render(<Input label="Email" name="email" />)
+        expect(await checkA11y(container)).toHaveNoViolations()
     })
 })
 
@@ -280,6 +291,15 @@ describe('Modal', () => {
         )
         fireEvent.keyDown(document, { key: 'Escape' })
         expect(handleClose).toHaveBeenCalledTimes(1)
+    })
+
+    it('has no accessibility violations', async () => {
+        const { container } = render(
+            <Modal isOpen={true} onClose={vi.fn()} title="My Modal">
+                Body
+            </Modal>
+        )
+        expect(await checkA11y(container)).toHaveNoViolations()
     })
 })
 

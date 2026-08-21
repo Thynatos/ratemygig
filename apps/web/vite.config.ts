@@ -23,5 +23,14 @@ export default defineConfig({
   },
   build: {
     sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'supabase-vendor': ['@supabase/supabase-js'],
+          'query-vendor': ['@tanstack/react-query'],
+        },
+      },
+    },
   },
 })

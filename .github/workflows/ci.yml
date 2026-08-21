@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - run: npm ci
+
+      - run: npm run lint
+
+      - run: npm run test
+
+      - run: npm run build
+
+      # E2E (playwright) stays local: it needs a live Supabase instance and there
+      # is no mock-server strategy (see SPRINTS.md "Deferred / rejected").
+      # Unit tests, lint, and build all run without secrets — env.ts falls back
+      # to placeholder Supabase values when VITE_* vars are unset.

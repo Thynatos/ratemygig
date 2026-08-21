@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
+import { checkA11y } from '@/test/axe'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider, useAuthContext } from '@/features/auth/AuthProvider'
 import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute'
@@ -120,5 +121,21 @@ describe('Layout', () => {
 
         expect(screen.getByRole('link', { name: /^Privacy$/i })).toBeInTheDocument()
         expect(screen.getByRole('link', { name: /^Terms$/i })).toBeInTheDocument()
+    })
+
+    it('has no accessibility violations', async () => {
+        const { container } = render(
+            <MemoryRouter>
+                <AuthProvider>
+                    <Layout />
+                </AuthProvider>
+            </MemoryRouter>
+        )
+
+        await waitFor(() => {
+            expect(screen.getByRole('link', { name: /^Discover$/i })).toBeInTheDocument()
+        })
+
+        expect(await checkA11y(container)).toHaveNoViolations()
     })
 })

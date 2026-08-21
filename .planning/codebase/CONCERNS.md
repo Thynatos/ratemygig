@@ -75,7 +75,8 @@
 ### Bundle Size
 - **Concern**: Main JS chunk is 640 KB (measured 2026-07-21; the 597 KB figure previously recorded here was stale — it was already 638.5 KB before Sprint 3). Still above 500 KB warning threshold.
 - **Mitigation**: 15 routes now lazy-loaded via `React.lazy()`. Further splitting possible with `manualChunks` in Vite config (Sprint 5).
-- **Location**: `apps/web/src/app/App.tsx`
+- **Status (Sprint 5, 2026-08-21)**: `manualChunks` shipped — `index-*.js` now **404.02 kB** (gzip 121.91 kB), under the 500 kB warning threshold. Vendor chunks: `react-vendor` 32.87 kB / gzip 11.92, `query-vendor` 35.38 kB / gzip 10.58, `supabase-vendor` 168.74 kB / gzip 44.00. All long-cached (content-hashed) and loaded in parallel with the entry chunk.
+- **Location**: `apps/web/vite.config.ts`, `apps/web/src/app/App.tsx`
 
 ### Feed Pagination Architecture
 - **Concern**: Feed uses client-side merge of 4 data sources with `Promise.allSettled` for error isolation. Not true server-side pagination — each sub-query has its own limit but "Load More" increments page offset on all sources simultaneously.
@@ -231,3 +232,13 @@
 
 ### Fixing the 2 react-hooks warnings unmasked a compiler error
 - The `watch()` calls in ProfilePage/WriteReviewPage caused React Compiler to skip compiling those components, which also hid a real `react-hooks/set-state-in-effect` error in WriteReviewPage (photo sync effect). After switching to `useWatch({ control, name })`, the effect was rewritten as React's documented render-phase state adjustment (prev-deps tracking) — same sync semantics, no eslint-disable anywhere.
+
+## Sprint 5 — Performance & CI Hardening (Notes & Tradeoffs)
+
+### axe color-contrast disabled in jsdom
+- jsdom has no layout/color computation, so axe's `color-contrast` rule walks every text node calling `getContext` on canvases, throwing "Not implemented: HTMLCanvasElement.prototype.getContext" stderr noise (and can never produce meaningful results anyway).
+- `apps/web/src/test/axe.ts` exports `checkA11y()` — a thin wrapper over `vitest-axe`'s `axe()` with `color-contrast` disabled by default (per-call rules still win via options spread). All component a11y assertions go through it.
+- Contrast is still exercised manually/e2e; nothing in the current axe suite depends on computed styles.
+
+### CI runs lint/test/build only — E2E stays local
+- `ci.yml` intentionally skips Playwright: the suite needs a live Supabase instance and no mock-server strategy exists (SPRINTS.md "Deferred / rejected"). All three CI steps run without secrets — `env.ts` falls back to placeholder Supabase values when `VITE_*` vars are unset. Commented in the workflow file.

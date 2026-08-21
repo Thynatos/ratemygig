@@ -2,8 +2,8 @@
 
 ## Current Phase
 **Phase:** Post-M5 Sprints (see .planning/SPRINTS.md)
-**Status:** Sprint 4 complete — next up: Sprint 5 (Performance & CI hardening)
-**Last Activity:** 2026-07-26
+**Status:** Sprint 5 complete — next up: Sprint 6 (Gig Wrapped / year-in-review)
+**Last Activity:** 2026-08-21
 
 ## Completed
 - Auth (magic link + Google OAuth)
@@ -56,7 +56,10 @@
 - Sprint 4: optimistic updates with rollback for comments (create/delete) and list items (add/remove) via pure exported cache-transform helpers
 - Sprint 4: dedicated 2s rate limiter (RATE_LIMITS.LIST_ITEM) for list item add/remove; CreateListModal onCreated wired in AddToListButton (event auto-added to new list)
 - Sprint 4: react-hooks lint warnings fixed via useWatch; CONCERNS.md "Known Issues" section emptied
-- 254 unit tests passing, 0 lint errors, 0 lint warnings
+- Sprint 5: bundle splitting via manualChunks (react-vendor / query-vendor / supabase-vendor) — index chunk 404 kB (gzip 122 kB), under 500 kB threshold
+- Sprint 5: vitest-axe wired into test setup; checkA11y helper (test/axe.ts, color-contrast disabled for jsdom); axe assertions on Button, Input, Modal, EventCard, Layout
+- Sprint 5: .github/workflows/ci.yml (push/PR: Node 22, npm ci, lint, test, build; E2E intentionally local-only)
+- 260 unit tests passing, 0 lint errors, 0 lint warnings
 
 ## Decisions
 - Direct Supabase client queries (no custom API layer)

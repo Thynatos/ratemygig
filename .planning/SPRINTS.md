@@ -29,7 +29,7 @@
 | 2 | Scheduled event ingest (CI cron) | S | [x] |
 | 3 | Friends Going + calendar export | M | [x] |
 | 4 | UX correctness pack (known issues) | S | [x] |
-| 5 | Performance & CI hardening | M | [ ] |
+| 5 | Performance & CI hardening | M | [x] |
 | 6 | Gig Wrapped (year-in-review stats) | M | [ ] |
 | 7 | Share cards / OG images | L | [ ] |
 | 8 | setlist.fm import | M | [ ] |
