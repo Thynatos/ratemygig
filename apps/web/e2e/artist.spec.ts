@@ -10,14 +10,14 @@ test.describe('Artist Detail', () => {
 
     test('artists page shows artist cards or empty state', async ({ page }) => {
         await page.goto('/artists')
-        const artistCards = page.getByRole('link', { href: /\/artists\// })
-        const emptyState = page.getByText(/no artists found/i)
-        await expect(artistCards.or(emptyState)).toBeVisible({ timeout: 10000 })
+        const artistRows = page.locator('a[href^="/artists/"]').first()
+        const emptyState = page.getByRole('heading', { name: /no artist/i })
+        await expect(artistRows.or(emptyState)).toBeVisible({ timeout: 10000 })
     })
 
     test('artist detail page shows not found for invalid id', async ({ page }) => {
         await page.goto('/artists/nonexistent-id-12345')
-        await expect(page.getByText(/not found/i)).toBeVisible()
+        await expect(page.getByRole('heading', { name: /No such artist/i })).toBeVisible()
     })
 
     test('top artists leaderboard page renders', async ({ page }) => {

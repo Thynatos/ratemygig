@@ -10,14 +10,14 @@ test.describe('Venue Detail', () => {
 
     test('venues page shows venue cards or empty state', async ({ page }) => {
         await page.goto('/venues')
-        const venueCards = page.getByRole('link', { href: /\/venues\// })
-        const emptyState = page.getByText(/no venues found/i)
-        await expect(venueCards.or(emptyState)).toBeVisible({ timeout: 10000 })
+        const venueRows = page.locator('a[href^="/venues/"]').first()
+        const emptyState = page.getByRole('heading', { name: /no (venues|room)/i })
+        await expect(venueRows.or(emptyState)).toBeVisible({ timeout: 10000 })
     })
 
     test('venue detail page shows not found for invalid id', async ({ page }) => {
         await page.goto('/venues/nonexistent-id-12345')
-        await expect(page.getByText(/not found/i)).toBeVisible()
+        await expect(page.getByRole('heading', { name: /No such venue/i })).toBeVisible()
     })
 
     test('top venues leaderboard page renders', async ({ page }) => {
