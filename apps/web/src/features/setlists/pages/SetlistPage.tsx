@@ -8,12 +8,16 @@ import { SetlistEditor } from '../components/SetlistEditor'
 import { Button } from '@/shared/components/ui/Button'
 import { Card, CardContent } from '@/shared/components/ui/Card'
 import { LoadingPage } from '@/shared/components/ui/Loading'
+import { QueryErrorState } from '@/shared/components/QueryErrorState'
 import type { SetlistWithSongs } from '@core/index'
 
 export function SetlistPage() {
     const { eventId } = useParams<{ eventId: string }>()
     const { user } = useAuth()
-    const { data: setlists = [], isLoading } = useEventSetlists(eventId!)
+    // No `= []` default: a failed query must surface as an error state, not
+    // masquerade as "no setlists yet" (audit finding A13).
+    const { data: setlistsData, isLoading, isError, refetch } = useEventSetlists(eventId!)
+    const setlists = setlistsData ?? []
     const deleteSetlist = useDeleteSetlist()
     const [editingSetlist, setEditingSetlist] = useState<SetlistWithSongs | null>(null)
     const [isCreating, setIsCreating] = useState(false)
@@ -73,7 +77,12 @@ export function SetlistPage() {
                 </Card>
             )}
 
-            {setlists.length === 0 && !isCreating ? (
+            {isError ? (
+                <QueryErrorState
+                    title="Couldn't load setlists"
+                    onRetry={() => refetch()}
+                />
+            ) : setlists.length === 0 && !isCreating ? (
                 <Card>
                     <CardContent className="p-12 text-center">
                         <Music className="w-12 h-12 text-surface-600 mx-auto mb-4" />

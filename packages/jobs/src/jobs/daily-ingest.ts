@@ -4,6 +4,7 @@
 import { loadConfig } from '../config.js';
 import { TicketmasterClient, TicketmasterProvider } from '../ticketmaster/index.js';
 import { SyncService, SyncStats } from '../sync/index.js';
+import { pathToFileURL } from 'node:url';
 
 export interface IngestResult {
     startTime: Date;
@@ -123,10 +124,26 @@ export async function runDailyIngest(): Promise<IngestResult> {
 }
 
 // Run if executed directly
-const isMainModule = import.meta.url === `file://${process.argv[1].replace(/\\/g, '/')}`;
+// pathToFileURL produces a correctly-slashed file:// URL on both POSIX and
+// Windows; the previous string concat never matched on Windows, so running
+// `tsx src/jobs/daily-ingest.ts` locally exited 0 without doing anything.
+const isMainModule = process.argv[1] ? import.meta.url === pathToFileURL(process.argv[1]).href : false;
+
+// Exit non-zero once more than this many events fail to sync, so CI marks the
+// run red and ingest.yml files an issue. A handful of bad events in a large
+// run should not page anyone; anything above this indicates systemic failure.
+const MAX_SYNC_ERRORS = 50;
+
 if (isMainModule) {
     runDailyIngest()
         .then(result => {
+            if (result.stats.errors.length > MAX_SYNC_ERRORS) {
+                console.error(
+                    `Job finished with ${result.stats.errors.length} sync errors ` +
+                    `(threshold: ${MAX_SYNC_ERRORS}). Exiting non-zero.`
+                );
+                process.exit(1);
+            }
             console.log('');
             console.log('Job completed successfully.');
             process.exit(0);

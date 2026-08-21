@@ -14,6 +14,9 @@ import type {
 } from './types.js';
 
 export class TicketmasterClient {
+    private static readonly MAX_RETRIES = 3;
+    private static readonly RETRY_BASE_DELAY_MS = 1000;
+
     private apiKey: string;
     private baseUrl: string;
     private rateLimit: number;
@@ -75,14 +78,36 @@ export class TicketmasterClient {
         return this.queuedRequest(async () => {
             const url = this.buildUrl(endpoint, params);
 
-            const response = await fetch(url);
+            let attempt = 0;
+            while (true) {
+                attempt++;
+                const response = await fetch(url);
 
-            if (!response.ok) {
+                if (response.ok) {
+                    return response.json() as Promise<T>;
+                }
+
+                const status = response.status;
                 const errorText = await response.text();
-                throw new Error(`Ticketmaster API error ${response.status}: ${errorText}`);
-            }
+                const retryable = status === 429 || status >= 500;
 
-            return response.json() as Promise<T>;
+                if (!retryable || attempt > TicketmasterClient.MAX_RETRIES) {
+                    throw new Error(`Ticketmaster API error ${status}: ${errorText}`);
+                }
+
+                // Exponential backoff; honour Retry-After for 429s when present
+                const retryAfterSeconds = Number(response.headers.get('retry-after'));
+                const delayMs =
+                    Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
+                        ? retryAfterSeconds * 1000
+                        : TicketmasterClient.RETRY_BASE_DELAY_MS * 2 ** (attempt - 1);
+
+                console.warn(
+                    `Ticketmaster API ${status}, retrying in ${delayMs}ms ` +
+                    `(attempt ${attempt}/${TicketmasterClient.MAX_RETRIES})`
+                );
+                await new Promise(resolve => setTimeout(resolve, delayMs));
+            }
         });
     }
 
@@ -141,7 +166,16 @@ export class TicketmasterClient {
             yield events;
 
             const pageInfo = response.page;
-            if (!pageInfo || page >= pageInfo.totalPages - 1 || page >= maxPage) {
+            if (!pageInfo || page >= pageInfo.totalPages - 1) {
+                break;
+            }
+
+            if (page >= maxPage) {
+                console.warn(
+                    `Ticketmaster pagination cap reached: stopping at page ${page} ` +
+                    `(${(maxPage + 1) * size} items); further results are truncated by the API's ` +
+                    `1000-item deep-paging limit.`
+                );
                 break;
             }
 

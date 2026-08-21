@@ -8,6 +8,7 @@ import { Avatar } from '@/shared/components/ui/Avatar'
 import { Badge } from '@/shared/components/ui/Badge'
 import { RatingDisplay } from '@/shared/components/ui/StarRating'
 import { LoadingPage } from '@/shared/components/ui/Loading'
+import { QueryErrorState } from '@/shared/components/QueryErrorState'
 import { Button } from '@/shared/components/ui/Button'
 import { GigStatsCard } from '../components/GigStatsCard'
 import { formatDate, formatRelativeTime, cn } from '@/shared/lib/utils'
@@ -45,7 +46,9 @@ export function PublicProfilePage() {
         enabled: !!username,
     })
 
-    const { data: reviews = [] } = useQuery({
+    // No `= []` defaults: failed queries must surface as error states, not
+    // masquerade as empty profiles (audit finding A13).
+    const { data: reviewsData, isError: reviewsError, refetch: refetchReviews } = useQuery({
         queryKey: ['user-public-reviews', profile?.id],
         queryFn: async () => {
             const { data, error } = await supabase
@@ -65,7 +68,9 @@ export function PublicProfilePage() {
         enabled: !!profile?.id,
     })
 
-    const { data: lists = [] } = useQuery({
+    const reviews = reviewsData ?? []
+
+    const { data: listsData, isError: listsError, refetch: refetchLists } = useQuery({
         queryKey: ['user-public-lists', profile?.id],
         queryFn: async () => {
             const { data, error } = await supabase
@@ -84,6 +89,8 @@ export function PublicProfilePage() {
         },
         enabled: !!profile?.id,
     })
+
+    const lists = listsData ?? []
 
     if (profileLoading) return <LoadingPage message="Loading profile..." />
 
@@ -212,7 +219,12 @@ export function PublicProfilePage() {
             {/* Reviews Tab */}
             {activeTab === 'reviews' && (
                 <section>
-                    {reviews.length === 0 ? (
+                    {reviewsError ? (
+                        <QueryErrorState
+                            title="Couldn't load reviews"
+                            onRetry={() => refetchReviews()}
+                        />
+                    ) : reviews.length === 0 ? (
                         <Card>
                             <CardContent className="p-8 text-center">
                                 <Star className="w-12 h-12 text-surface-600 mx-auto mb-4" />
@@ -281,7 +293,12 @@ export function PublicProfilePage() {
             {/* Lists Tab */}
             {activeTab === 'lists' && (
                 <section>
-                    {lists.length === 0 ? (
+                    {listsError ? (
+                        <QueryErrorState
+                            title="Couldn't load lists"
+                            onRetry={() => refetchLists()}
+                        />
+                    ) : lists.length === 0 ? (
                         <Card>
                             <CardContent className="p-8 text-center">
                                 <Globe className="w-12 h-12 text-surface-600 mx-auto mb-4" />

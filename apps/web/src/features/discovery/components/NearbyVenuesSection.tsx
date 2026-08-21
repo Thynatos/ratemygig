@@ -5,11 +5,15 @@ import { useGeolocation } from '@/shared/hooks/useGeolocation'
 import { Card, CardContent } from '@/shared/components/ui/Card'
 import { Button } from '@/shared/components/ui/Button'
 import { Skeleton } from '@/shared/components/ui/Loading'
+import { QueryErrorState } from '@/shared/components/QueryErrorState'
 import { sanitizeText } from '@/shared/lib/sanitize'
 
 export function NearbyVenuesSection() {
     const { latitude, longitude, error, isLoading: geoLoading, isSupported, requestLocation } = useGeolocation()
-    const { data: venues = [], isLoading: venuesLoading } = useNearbyVenues(latitude, longitude)
+    // No `= []` default: a failed query must surface as an error state, not
+    // silently hide the section (audit finding A13).
+    const { data: venuesData, isLoading: venuesLoading, isError: venuesError, refetch: refetchVenues } = useNearbyVenues(latitude, longitude)
+    const venues = venuesData ?? []
 
     const hasLocation = latitude !== null && longitude !== null
 
@@ -48,6 +52,23 @@ export function NearbyVenuesSection() {
                     <div className="space-y-3">
                         {[1, 2, 3].map(i => <Skeleton key={i} className="h-10" />)}
                     </div>
+                </CardContent>
+            </Card>
+        )
+    }
+
+    if (venuesError) {
+        return (
+            <Card>
+                <CardContent className="p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                        <MapPin className="w-5 h-5 text-accent-400" />
+                        <h3 className="text-lg font-semibold text-white">Venues Near You</h3>
+                    </div>
+                    <QueryErrorState
+                        title="Couldn't load nearby venues"
+                        onRetry={() => refetchVenues()}
+                    />
                 </CardContent>
             </Card>
         )

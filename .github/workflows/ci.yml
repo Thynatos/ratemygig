@@ -29,6 +29,16 @@ jobs:
       - run: npx tsc -b --noEmit
         working-directory: apps/web
 
+      # api/ sits outside tsconfig.app.json's include (src only), so the build
+      # above never sees it. This is the file whose module-load failure took
+      # production down — it must be type-checked explicitly.
+      - run: npm run typecheck:api
+        working-directory: apps/web
+
+      # packages/jobs is outside the web project references graph; without
+      # this step its sources (the ingest pipeline) are never type-checked.
+      - run: npx tsc --noEmit -p packages/jobs/tsconfig.json
+
       - run: npm run test
 
       - run: npm run build

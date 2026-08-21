@@ -6,6 +6,7 @@ import { useAuth } from '@/features/auth/hooks/useAuth'
 import { Button } from '@/shared/components/ui/Button'
 import { Textarea } from '@/shared/components/ui/Textarea'
 import { Skeleton } from '@/shared/components/ui/Loading'
+import { QueryErrorState } from '@/shared/components/QueryErrorState'
 
 interface CommentSectionProps {
     reviewId: string
@@ -13,7 +14,10 @@ interface CommentSectionProps {
 
 export function CommentSection({ reviewId }: CommentSectionProps) {
     const { user } = useAuth()
-    const { data: comments = [], isLoading } = useComments(reviewId)
+    // No `= []` default: a failed query must surface as an error state, not
+    // masquerade as "no comments yet" (audit finding A13).
+    const { data: commentsData, isLoading, isError, refetch } = useComments(reviewId)
+    const comments = commentsData ?? []
     const createComment = useCreateComment(reviewId)
     const deleteComment = useDeleteComment()
     const [body, setBody] = useState('')
@@ -83,13 +87,20 @@ export function CommentSection({ reviewId }: CommentSectionProps) {
                 </div>
             )}
 
-            {!isLoading && comments.length === 0 && (
+            {!isLoading && isError && (
+                <QueryErrorState
+                    title="Couldn't load comments"
+                    onRetry={() => refetch()}
+                />
+            )}
+
+            {!isLoading && !isError && comments.length === 0 && (
                 <p className="text-sm text-surface-500 text-center py-4">
                     No comments yet. Be the first!
                 </p>
             )}
 
-            {!isLoading && comments.length > 0 && (
+            {!isLoading && !isError && comments.length > 0 && (
                 <div className="divide-y divide-surface-700/50">
                     {comments.map((comment) => (
                         <CommentItem

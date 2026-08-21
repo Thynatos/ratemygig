@@ -49,6 +49,9 @@ In your Supabase project, go to the **SQL Editor** and run each migration file i
 013_notification_triggers.sql
 014_friends_attendance.sql
 015_user_year_stats.sql
+016_schema_fixes.sql           ← Audit fixes: profiles FKs, RPC repairs, RLS status gates
+017_indexes.sql                ← Search trigram indexes, redundant index cleanup
+018_og_image_cache.sql         ← Public og-cache bucket for share-card renders
 ```
 
 > **Important:** Run them one at a time in order. Each file is idempotent (can be re-run safely).
@@ -269,6 +272,104 @@ metros you care about (each city is a separate paged query; same city name as on
 
 ---
 
+## Environment Variables — Full Matrix
+
+The same variable name can mean different things in different stores. This
+matrix exists because `SUPABASE_ANON_KEY` is both a GitHub secret (CI tests)
+and a Vercel variable (`api/og-inject`) — setting only the first is why share
+cards rendered generic tags after Sprint 10 while every check looked green.
+
+### Vercel project environment variables
+
+| Variable | Consumer | Required | Failure mode when missing |
+|---|---|---|---|
+| `VITE_SUPABASE_URL` | Browser bundle | Yes | App falls back to placeholder URL; auth and all data features silently dead |
+| `VITE_SUPABASE_ANON_KEY` | Browser bundle | Yes | Same as above |
+| `VITE_EVENTS_PROVIDER` | Browser bundle | No | Defaults to `mock` (no real events) |
+| `VITE_TICKETMASTER_API_KEY` | Browser bundle | No | Live TM search disabled |
+| `VITE_SENTRY_DSN` | `shared/lib/monitoring.ts` | Recommended | Monitoring silently off — production errors invisible again |
+| `VITE_SENTRY_ENVIRONMENT` | Sentry init | No | Defaults to `production`/`development` from build mode |
+| `SUPABASE_URL` | `api/og-inject.ts` (server) | Yes* | Share cards degrade to bare document, no OG tags |
+| `SUPABASE_ANON_KEY` | `api/og-inject.ts` (server) | Yes* | Same as above |
+| `SENTRY_AUTH_TOKEN` | `@sentry/vite-plugin` at build time | Recommended | Sourcemaps not uploaded → stack traces stay minified in Sentry |
+| `SENTRY_ORG` / `SENTRY_PROJECT` | `@sentry/vite-plugin` at build time | Recommended | Same as above |
+
+\* Required for rich share cards; the site itself works without them.
+
+> The `VITE_*` prefix embeds values into the shipped JS bundle. Never put the
+> service role key behind a `VITE_` name or in any client-reachable store.
+
+### GitHub Actions secrets
+
+| Secret | Workflow | Required | Failure mode when missing |
+|---|---|---|---|
+| `TICKETMASTER_API_KEY` | ingest.yml | Yes | Job exits non-zero immediately; red run + auto-filed issue |
+| `SUPABASE_URL` | ingest.yml | Yes | Same as above |
+| `SUPABASE_SERVICE_ROLE_KEY` | ingest.yml | Yes | Same as above. **Never** add this to Vercel or `VITE_*` |
+| `SUPABASE_URL` | ci.yml (live-schema job) | Yes | Contract tests fail against wrong/absent project |
+
+### GitHub Actions variables
+
+| Variable | Default | Notes |
+|---|---|---|
+| `INGEST_CITIES` | _(empty)_ | Empty = country mode, which truncates at Ticketmaster's 1000-item paging cap |
+| `INGEST_DAYS_AHEAD` | `180` | Look-ahead window |
+
+### Supabase Edge Function secrets
+
+```bash
+supabase secrets set SENTRY_DSN=...   # optional: og-image errors land in Sentry
+```
+
+Missing `SENTRY_DSN`: og-image failures are console-only.
+
+### Local development
+
+- `apps/web/.env.local` — the `VITE_*` variables
+- `.env` (repo root) — jobs package: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `TICKETMASTER_API_KEY`, `INGEST_*`
+
+---
+
+## Monitoring & Free-Tier Ceilings
+
+### What watches production
+
+- **Sentry (web)** — `@sentry/react`, initialised in `main.tsx`; no-ops unless
+  `VITE_SENTRY_DSN` is set. Four sources feed it: both error boundaries,
+  `logger.error(...)` in production, and `validateRpcResponse` failures (the
+  function that hid a broken RPC for a whole sprint). Traces sampled at 10%.
+- **Sourcemaps** — built as `hidden` and uploaded to Sentry by
+  `@sentry/vite-plugin` during the Vercel build (needs `SENTRY_AUTH_TOKEN`,
+  `SENTRY_ORG`, `SENTRY_PROJECT` as Vercel vars). Release = git SHA, shared
+  with the runtime SDK so frames resolve against the exact deployed build.
+- **Sentry (edge)** — `@sentry/deno` inside `og-image`; set `SENTRY_DSN` via
+  `supabase secrets set`.
+- **Uptime** — [`.github/workflows/uptime.yml`](.github/workflows/uptime.yml)
+  curls `/` and the `og-image` endpoint every 30 minutes and auto-files a
+  GitHub issue on failure. Doubles as the free-tier keep-alive (below).
+- **Ingest failure alerting** — `ingest.yml` files an issue when the nightly
+  run fails (the run's exit code now reflects sync errors).
+- **Security headers** — CSP, `X-Frame-Options`, `Referrer-Policy`,
+  `Permissions-Policy`, `X-Content-Type-Options` are set in
+  `apps/web/vercel.json`. After changing the CSP: click through Discover, a
+  review with photos, and geolocation search with the browser console open —
+  a wrong CSP is a white screen, and curl alone cannot prove otherwise.
+
+### Free-tier ceilings (Supabase) and what eats them
+
+| Ceiling | Limit | What pushes against it |
+|---|---|---|
+| Database size | 500 MB | Nightly ingest growth (events/venues/artists) |
+| Storage | 1 GB | Review photos + avatars + the public `og-cache` bucket |
+| Edge function invocations | 500 k/mo | Crawler fetches of `og-image`; the Storage-bucket render cache keeps repeat requests off satori |
+| Egress | 5 GB/mo | Image-heavy pages; thumbnails are served instead of originals where possible |
+| **Project pausing** | **7 days idle** | Mitigated: `uptime.yml` hits the edge function twice hourly, resetting the idle timer |
+
+If the project pauses, the first symptom is the uptime issue firing with
+connection errors on both checks.
+
+---
+
 ## Share Cards / OG Images
 
 Pasting a `/r/:reviewId` link into social/chat apps shows a rich preview card
@@ -281,12 +382,14 @@ Browser  ───────────────▶ /r/:reviewId ─▶ SP
 Crawler  ── user-agent ──▶ vercel.json UA-gated rewrite
                               └─▶ api/og-inject (Vercel Node function)
                                     ├─ PostgREST (anon key; status=published AND is_public=true)
-                                    ├─ reads dist/og-shell.html (postbuild copy of dist/index.html)
-                                    └─ injects buildOgTags() output before </head>
+                                    └─ serves a self-contained terminal HTML document
+                                       with buildOgTags() injected (no file reads; no meta-refresh)
 og:image ───────────────▶ Supabase Edge Function og-image (satori + resvg via @vercel/og)
                               ├─ service role (bypasses RLS → manual published/public filter)
+                              ├─ rendered PNGs cached in the public og-cache Storage bucket
                               ├─ Inter 400/700 subsets base64-embedded in fonts.ts
-                              └─ 1200×630 PNG, Cache-Control: public, max-age=86400, s-maxage=86400
+                              └─ 1200×630 PNG · successful renders cached 24h,
+                                 fallback cards 5min/1h CDN, genuine 5xx never cached
 ```
 
 | Piece | Path | Notes |
@@ -295,9 +398,8 @@ og:image ───────────────▶ Supabase Edge Function
 | Crawler UA detection | `apps/web/src/shared/lib/crawler.ts` | used by `api/og-inject.ts`; unit-tested in vitest |
 | Client meta hook | `apps/web/src/shared/hooks/usePageMeta.ts` | title/description/canonical/og on review, event, artist, venue pages |
 | Image renderer | `supabase/functions/og-image/` | Deno Edge Function, `?reviewId=` → PNG; branded fallback card for missing/private reviews |
-| Crawler injection | `apps/web/api/og-inject.ts` | serves the SPA shell with injected OG tags to crawler user agents |
-| Shell copy step | `apps/web/scripts/copy-og-shell.mjs` | `postbuild`: `dist/index.html` → `dist/og-shell.html` (generated build output, gitignored) |
-| Static fallback | `apps/web/public/og-fallback.png` | 1200×630 branded image (<100 kB), also embedded in the function for 500s |
+| Crawler injection | `apps/web/api/og-inject.ts` | serves crawlers a self-contained terminal HTML document with injected OG tags |
+| Static fallback | `apps/web/public/og-fallback.png` | 1200×630 branded image (<100 kB), also embedded in the function for 5xx/malformed/unknown ids |
 
 ### Deploy the Edge Function
 
@@ -402,7 +504,7 @@ static TTFs (SIL OFL), subset with fonttools to ASCII + Latin-1 + punctuation +
 |---|---|---|
 | Frontend | Vite + React 19 + Tailwind | ✅ |
 | Backend | Supabase (Postgres + Auth + Storage) | ✅ |
-| Database | 14 migrations, full RLS | ✅ |
+| Database | 18 migrations, full RLS | ✅ |
 | Auth | Magic Link + Google OAuth | ✅ |
 | Storage | Photos + Avatars | ✅ |
 | Data | Mock seed + Ticketmaster ingestion | ✅ |

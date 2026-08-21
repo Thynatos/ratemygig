@@ -1,6 +1,7 @@
 import '@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { ImageResponse } from 'npm:@vercel/og@^0'
+import * as Sentry from 'npm:@sentry/deno@^10'
 import { FALLBACK_PNG_B64, INTER_BOLD_B64, INTER_REGULAR_B64 } from './fonts.ts'
 
 const WIDTH = 1200
@@ -8,6 +9,17 @@ const HEIGHT = 630
 const BRAND = 'ratemygig'
 const TAGLINE = 'Concert Rating Platform'
 const FONT_NAME = 'Inter'
+
+// Optional: set SENTRY_DSN via `supabase secrets set SENTRY_DSN=...` to get
+// edge-function errors in Sentry. The function no-ops cleanly without it.
+const SENTRY_DSN = Deno.env.get('SENTRY_DSN')
+if (SENTRY_DSN) {
+    Sentry.init({ dsn: SENTRY_DSN })
+}
+
+// Public bucket holding pre-rendered review cards, keyed by reviewId +
+// updated_at so an edited review invalidates its card automatically.
+const OG_CACHE_BUCKET = 'og-cache'
 
 const COLORS = {
     background: '#020617',
@@ -19,11 +31,31 @@ const COLORS = {
     subtext: '#94a3b8',
 }
 
+// Successful review renders: stable content, cacheable for a day.
 const PNG_HEADERS = {
     'content-type': 'image/png',
     'cache-control': 'public, max-age=86400, s-maxage=86400',
     'x-content-type-options': 'nosniff',
 }
+
+// Deterministic fallback cards (bad id, unknown id, non-public review): the
+// bytes never vary for a given input, so they may be cached — just more
+// briefly than rendered cards.
+const PNG_FALLBACK_HEADERS = {
+    'content-type': 'image/png',
+    'cache-control': 'public, max-age=300, s-maxage=3600',
+    'x-content-type-options': 'nosniff',
+}
+
+// Genuine 5xx responses must never be cached: a cached 500 serves the wrong
+// card for up to a day after the underlying fault is fixed.
+const PNG_ERROR_HEADERS = {
+    'content-type': 'image/png',
+    'cache-control': 'no-store',
+    'x-content-type-options': 'nosniff',
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 interface SatoriNode {
     type: string
@@ -47,6 +79,7 @@ interface ReviewRow {
     status: string
     is_public: boolean
     user_id: string
+    updated_at: string
     event: { name: string | null; start_at: string | null; city: string | null; venue: { name: string } | null } | null
     photos: { storage_path: string; thumbnail_path: string | null }[] | null
 }
@@ -258,12 +291,28 @@ async function renderPng(element: SatoriNode): Promise<Uint8Array> {
     return new Uint8Array(await image.arrayBuffer())
 }
 
-function pngResponse(png: Uint8Array): Response {
-    return new Response(png, { headers: PNG_HEADERS })
+function pngResponse(png: Uint8Array, headers: typeof PNG_HEADERS): Response {
+    return new Response(png, { status: 200, headers })
+}
+
+// Pre-baked brand card: served for malformed ids and for ids that do not
+// resolve to a publicly visible review. Rendering these through satori cost
+// ~1.2s of CPU per request for identical bytes every time.
+function fallbackPngResponse(): Response {
+    return new Response(b64ToBytes(FALLBACK_PNG_B64), { status: 200, headers: PNG_FALLBACK_HEADERS })
 }
 
 function errorPngResponse(): Response {
-    return new Response(b64ToBytes(FALLBACK_PNG_B64), { status: 500, headers: PNG_HEADERS })
+    return new Response(b64ToBytes(FALLBACK_PNG_B64), { status: 500, headers: PNG_ERROR_HEADERS })
+}
+
+async function readCachedCard(
+    supabase: ReturnType<typeof createClient>,
+    cachePath: string
+): Promise<Uint8Array | null> {
+    const { data, error } = await supabase.storage.from(OG_CACHE_BUCKET).download(cachePath)
+    if (error || !data) return null
+    return new Uint8Array(await data.arrayBuffer())
 }
 
 Deno.serve(async (req: Request) => {
@@ -272,8 +321,16 @@ Deno.serve(async (req: Request) => {
         return new Response('Missing reviewId parameter', { status: 400 })
     }
 
+    // Malformed ids can never match a row; reject before touching the database
+    // or the CDN caches a pointless miss against this route.
+    if (!UUID_PATTERN.test(reviewId)) {
+        return fallbackPngResponse()
+    }
+
+    let supabase: ReturnType<typeof createClient>
+
     try {
-        const supabase = createClient(
+        supabase = createClient(
             Deno.env.get('SUPABASE_URL') as string,
             Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string
         )
@@ -281,7 +338,7 @@ Deno.serve(async (req: Request) => {
         const { data, error } = await supabase
             .from('reviews')
             .select(
-                'rating, title, status, is_public, user_id, event:event_id(name, start_at, city, venue:venue_id(name)), photos:review_photos(storage_path, thumbnail_path)'
+                'rating, title, status, is_public, user_id, updated_at, event:event_id(name, start_at, city, venue:venue_id(name)), photos:review_photos(storage_path, thumbnail_path)'
             )
             .eq('id', reviewId)
             .maybeSingle()
@@ -290,10 +347,21 @@ Deno.serve(async (req: Request) => {
         const review = data as ReviewRow | null
 
         // The service role client bypasses RLS, so public visibility must be
-        // filtered manually here.
+        // filtered manually here. Serve the static fallback instead of paying
+        // for a full satori render of identical bytes.
         const isPubliclyVisible = !!review && review.status === 'published' && review.is_public === true
-        if (!isPubliclyVisible) {
-            return pngResponse(await renderPng(buildFallbackCard()))
+        if (!isPubliclyVisible || !review) {
+            return fallbackPngResponse()
+        }
+
+        // Rendered cards are cached in a public Storage bucket keyed by
+        // reviewId + updated_at: CF-Cache-Status: DYNAMIC proves s-maxage is
+        // not honoured in front of Supabase Functions, so this bucket is what
+        // keeps repeat requests off the satori+resvg render path.
+        const cachePath = `cards/${reviewId}-${review.updated_at}.png`
+        const cached = await readCachedCard(supabase, cachePath)
+        if (cached) {
+            return pngResponse(cached, PNG_HEADERS)
         }
 
         let authorName = 'Anonymous'
@@ -320,19 +388,33 @@ Deno.serve(async (req: Request) => {
         const metaParts = [review.event?.venue?.name, review.event?.city, eventDate].filter(Boolean) as string[]
         const metaLine = metaParts.length > 0 ? metaParts.join(' · ') : null
 
-        return pngResponse(
-            await renderPng(
-                buildReviewCard({
-                    eventName,
-                    metaLine,
-                    rating,
-                    authorName: cleanText(authorName, 40) || 'Anonymous',
-                    photoUrl,
-                })
-            )
+        const png = await renderPng(
+            buildReviewCard({
+                eventName,
+                metaLine,
+                rating,
+                authorName: cleanText(authorName, 40) || 'Anonymous',
+                photoUrl,
+            })
         )
+
+        // Best-effort cache write: a failed upload must not fail the request.
+        try {
+            await supabase.storage.from(OG_CACHE_BUCKET).upload(cachePath, png, {
+                contentType: 'image/png',
+                upsert: false,
+            })
+        } catch (uploadError) {
+            console.warn(`og-image cache write failed for ${cachePath}:`, uploadError)
+        }
+
+        return pngResponse(png, PNG_HEADERS)
     } catch (error) {
         console.error('og-image failed:', error)
+        if (SENTRY_DSN) {
+            Sentry.captureException(error)
+            await Sentry.flush()
+        }
         return errorPngResponse()
     }
 })

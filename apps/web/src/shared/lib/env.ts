@@ -7,6 +7,9 @@ interface Env {
     SUPABASE_ANON_KEY: string
     EVENTS_PROVIDER: EventsProviderMode
     TICKETMASTER_API_KEY?: string
+    SENTRY_DSN: string
+    SENTRY_ENVIRONMENT: string
+    SENTRY_RELEASE: string | null
 }
 
 function getEnv(): Env {
@@ -28,6 +31,13 @@ function getEnv(): Env {
         SUPABASE_ANON_KEY: supabaseAnonKey || 'mock-anon-key',
         EVENTS_PROVIDER: eventsProvider,
         TICKETMASTER_API_KEY: ticketmasterApiKey,
+        // Sentry is optional: monitoring.ts no-ops when the DSN is absent, so
+        // local dev and CI stay silent.
+        SENTRY_DSN: (import.meta.env.VITE_SENTRY_DSN as string | undefined)?.trim() || '',
+        SENTRY_ENVIRONMENT:
+            ((import.meta.env.VITE_SENTRY_ENVIRONMENT as string | undefined)?.trim() ||
+                (import.meta.env.PROD ? 'production' : 'development')),
+        SENTRY_RELEASE: (import.meta.env.VITE_SENTRY_RELEASE as string | undefined)?.trim() || null,
     }
 }
 

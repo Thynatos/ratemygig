@@ -1,0 +1,71 @@
+name: Uptime check
+
+# Free external uptime signal for the two public entry points. Also keeps the
+# Supabase project from idling out on the free tier (projects pause after 7
+# days of inactivity), since every check hits the edge function too.
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: uptime
+  cancel-in-progress: false
+
+env:
+  SITE_URL: https://ratemygig-web.vercel.app
+  OG_URL: https://lpfyzjfqyyrdknzgxoul.supabase.co/functions/v1/og-image
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check site root
+        run: |
+          status=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$SITE_URL")
+          echo "GET $SITE_URL -> $status"
+          if [ "$status" -lt 200 ] || [ "$status" -ge 400 ]; then
+            echo "SITE_URL_DOWN=true" >> "$GITHUB_ENV"
+          fi
+
+      # A valid-UUID request must return 200 with a PNG; anything else means
+      # the share-card pipeline is broken.
+      - name: Check og-image endpoint
+        run: |
+          status=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 \
+            "$OG_URL?reviewId=f9f9fe86-354a-4f6b-8000-5b42b83d7708")
+          content_type=$(curl -s -o /dev/null -w '%{content_type}' --max-time 30 \
+            "$OG_URL?reviewId=f9f9fe86-354a-4f6b-8000-5b42b83d7708")
+          echo "GET og-image -> $status ($content_type)"
+          if [ "$status" -ge 400 ] || [[ "$content_type" != image/png* ]]; then
+            echo "OG_IMAGE_DOWN=true" >> "$GITHUB_ENV"
+          fi
+
+      - name: File issue on failure
+        if: env.SITE_URL_DOWN == 'true' || env.OG_IMAGE_DOWN == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          failed=""
+          if [ "$SITE_URL_DOWN" = "true" ]; then failed="$failed site(/)"; fi
+          if [ "$OG_IMAGE_DOWN" = "true" ]; then failed="$failed og-image"; fi
+          open_issues=$(gh issue list \
+            --state open \
+            --search "Uptime check failed in:title" \
+            --json number --jq length)
+          if [ "$open_issues" -eq 0 ]; then
+            gh issue create \
+              --title "Uptime check failed ($(date -u +%Y-%m-%d))" \
+              --body "The scheduled uptime check flagged:$failed
+
+Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+Target: $SITE_URL / $OG_URL
+
+Note: repeated failures also mean the Supabase free-tier idle timer is not
+being reset by these checks — investigate the project state." \
+              --repo "$GITHUB_REPOSITORY"
+          else
+            echo "An open 'Uptime check failed' issue already exists; not creating a duplicate."
+          fi

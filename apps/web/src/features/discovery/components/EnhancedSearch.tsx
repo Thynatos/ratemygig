@@ -4,6 +4,7 @@ import { Search } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/shared/lib/supabase'
 import { sanitizeText } from '@/shared/lib/sanitize'
+import { QueryErrorState } from '@/shared/components/QueryErrorState'
 
 function useDebouncedValue<T>(value: T, delay: number): T {
     const [debouncedValue, setDebouncedValue] = useState(value)
@@ -40,7 +41,9 @@ export function EnhancedSearch() {
         return () => document.removeEventListener('keydown', handler)
     }, [])
 
-    const { data: events = [] } = useQuery({
+    // No `= []` defaults: failed queries must surface as an error state, not
+    // masquerade as "no results" (audit finding A13).
+    const { data: eventsData, isError: eventsError, refetch: refetchEvents } = useQuery({
         queryKey: ['search', 'events', debouncedQuery],
         queryFn: async () => {
             if (!debouncedQuery || debouncedQuery.length < 2) return []
@@ -55,8 +58,9 @@ export function EnhancedSearch() {
         },
         enabled: debouncedQuery.length >= 2,
     })
+    const events = eventsData ?? []
 
-    const { data: artists = [] } = useQuery({
+    const { data: artistsData, isError: artistsError, refetch: refetchArtists } = useQuery({
         queryKey: ['search', 'artists', debouncedQuery],
         queryFn: async () => {
             if (!debouncedQuery || debouncedQuery.length < 2) return []
@@ -70,8 +74,9 @@ export function EnhancedSearch() {
         },
         enabled: debouncedQuery.length >= 2,
     })
+    const artists = artistsData ?? []
 
-    const { data: venues = [] } = useQuery({
+    const { data: venuesData, isError: venuesError, refetch: refetchVenues } = useQuery({
         queryKey: ['search', 'venues', debouncedQuery],
         queryFn: async () => {
             if (!debouncedQuery || debouncedQuery.length < 2) return []
@@ -85,7 +90,9 @@ export function EnhancedSearch() {
         },
         enabled: debouncedQuery.length >= 2,
     })
+    const venues = venuesData ?? []
 
+    const searchError = eventsError || artistsError || venuesError
     const hasResults = events.length > 0 || artists.length > 0 || venues.length > 0
     const showDropdown = isOpen && debouncedQuery.length >= 2
 
@@ -105,6 +112,19 @@ export function EnhancedSearch() {
 
             {showDropdown && (
                 <div className="absolute z-20 top-full mt-2 w-full bg-surface-800 border border-surface-600 rounded-xl shadow-lg max-h-80 overflow-y-auto">
+                    {searchError ? (
+                        <div className="p-3">
+                            <QueryErrorState
+                                title="Search failed"
+                                onRetry={() => {
+                                    if (eventsError) refetchEvents()
+                                    if (artistsError) refetchArtists()
+                                    if (venuesError) refetchVenues()
+                                }}
+                            />
+                        </div>
+                    ) : (
+                        <>
                     {events.length > 0 && (
                         <div>
                             <div className="px-4 py-2 text-xs uppercase tracking-wider text-surface-500 font-medium">Events</div>
@@ -159,6 +179,8 @@ export function EnhancedSearch() {
                         <div className="px-4 py-6 text-center text-surface-400 text-sm">
                             No results found for &ldquo;{debouncedQuery}&rdquo;
                         </div>
+                    )}
+                        </>
                     )}
                 </div>
             )}

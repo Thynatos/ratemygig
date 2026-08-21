@@ -1,6 +1,7 @@
 import { Component, ReactNode } from 'react'
 import { AlertTriangle, RefreshCw } from 'lucide-react'
 import { Button } from './ui/Button'
+import { captureException } from '../lib/monitoring'
 
 interface Props {
     children: ReactNode
@@ -27,6 +28,10 @@ export class FeatureErrorBoundary extends Component<Props, State> {
             message: error.message,
             stack: error.stack,
             componentStack: errorInfo.componentStack,
+        })
+        captureException(error, {
+            componentStack: errorInfo.componentStack,
+            boundary: this.props.title || 'feature',
         })
     }
 

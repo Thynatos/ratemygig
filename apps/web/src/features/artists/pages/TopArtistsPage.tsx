@@ -4,6 +4,7 @@ import { Trophy } from 'lucide-react'
 import { useTopArtists } from '../api/artists'
 import { Card, CardContent } from '@/shared/components/ui/Card'
 import { Skeleton } from '@/shared/components/ui/Loading'
+import { QueryErrorState } from '@/shared/components/QueryErrorState'
 import { RatingDisplay } from '@/shared/components/ui/StarRating'
 import { sanitizeText } from '@/shared/lib/sanitize'
 
@@ -15,10 +16,13 @@ export function TopArtistsPage() {
     const [year, setYear] = useState<number | ''>('')
     const [city, setCity] = useState('')
 
-    const { data: artists = [], isLoading } = useTopArtists(
+    // No `= []` default: a failed query must surface as an error state, not
+    // masquerade as "no rated artists yet" (audit finding A13).
+    const { data: artistsData, isLoading, isError, refetch } = useTopArtists(
         city.trim() || undefined,
         year === '' ? undefined : year,
     )
+    const artists = artistsData ?? []
 
     return (
         <div className="page-container">
@@ -68,7 +72,14 @@ export function TopArtistsPage() {
                 </div>
             )}
 
-            {!isLoading && artists.length === 0 && (
+            {!isLoading && isError && (
+                <QueryErrorState
+                    title="Couldn't load top artists"
+                    onRetry={() => refetch()}
+                />
+            )}
+
+            {!isLoading && !isError && artists.length === 0 && (
                 <Card>
                     <CardContent className="p-12 text-center">
                         <Trophy className="w-16 h-16 text-surface-600 mx-auto mb-4" />
@@ -80,7 +91,7 @@ export function TopArtistsPage() {
                 </Card>
             )}
 
-            {!isLoading && artists.length > 0 && (
+            {!isLoading && !isError && artists.length > 0 && (
                 <div className="space-y-4">
                     {artists.map((artist, index) => (
                         <Link key={artist.artist_id} to={`/artists/${artist.artist_id}`}>

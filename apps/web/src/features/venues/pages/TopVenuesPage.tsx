@@ -4,6 +4,7 @@ import { Trophy, MapPin } from 'lucide-react'
 import { useTopVenues } from '../api/venues'
 import { Card, CardContent } from '@/shared/components/ui/Card'
 import { Skeleton } from '@/shared/components/ui/Loading'
+import { QueryErrorState } from '@/shared/components/QueryErrorState'
 import { RatingDisplay } from '@/shared/components/ui/StarRating'
 import { sanitizeText } from '@/shared/lib/sanitize'
 
@@ -15,10 +16,13 @@ export function TopVenuesPage() {
     const [year, setYear] = useState<number | ''>('')
     const [city, setCity] = useState('')
 
-    const { data: venues = [], isLoading } = useTopVenues(
+    // No `= []` default: a failed query must surface as an error state, not
+    // masquerade as "no rated venues yet" (audit finding A13).
+    const { data: venuesData, isLoading, isError, refetch } = useTopVenues(
         city.trim() || undefined,
         year === '' ? undefined : year,
     )
+    const venues = venuesData ?? []
 
     return (
         <div className="page-container">
@@ -68,7 +72,14 @@ export function TopVenuesPage() {
                 </div>
             )}
 
-            {!isLoading && venues.length === 0 && (
+            {!isLoading && isError && (
+                <QueryErrorState
+                    title="Couldn't load top venues"
+                    onRetry={() => refetch()}
+                />
+            )}
+
+            {!isLoading && !isError && venues.length === 0 && (
                 <Card>
                     <CardContent className="p-12 text-center">
                         <Trophy className="w-16 h-16 text-surface-600 mx-auto mb-4" />
@@ -80,7 +91,7 @@ export function TopVenuesPage() {
                 </Card>
             )}
 
-            {!isLoading && venues.length > 0 && (
+            {!isLoading && !isError && venues.length > 0 && (
                 <div className="space-y-4">
                     {venues.map((venue, index) => (
                         <Link key={venue.venue_id} to={`/venues/${venue.venue_id}`}>

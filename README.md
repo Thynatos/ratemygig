@@ -23,7 +23,7 @@
 |-------|------------|
 | Frontend | TypeScript, Vite, React 19 |
 | Styling | Tailwind CSS 3 |
-| State | TanStack React Query, Zustand |
+| State | TanStack React Query |
 | Routing | React Router 6 |
 | Forms | React Hook Form + Zod |
 | Backend | Supabase (PostgreSQL, Auth, Storage) |
@@ -76,7 +76,7 @@ Uses mock data by default. For production deployment with real data, see **[DEPL
 
 Quick overview:
 1. Create Supabase project
-2. Run 12 SQL migrations in order
+2. Run 18 SQL migrations in order
 3. Configure Auth (Magic Link + Google OAuth)
 4. Set environment variables
 5. Seed with mock data or ingest from Ticketmaster
@@ -102,6 +102,12 @@ Run migrations in Supabase SQL Editor (in order):
 010_discovery_intelligence.sql
 011_profile_lists.sql
 012_review_photos_thumbnail.sql
+013_notification_triggers.sql
+014_friends_attendance.sql
+015_user_year_stats.sql
+016_schema_fixes.sql
+017_indexes.sql
+018_og_image_cache.sql
 ```
 
 ## 🗃️ Database Schema

@@ -1,5 +1,6 @@
 import { format, formatDistanceToNow, parseISO, isValid } from 'date-fns'
 import { z } from 'zod'
+import { captureException } from './monitoring'
 
 /**
  * Format a date string for display
@@ -144,6 +145,10 @@ export function validateRpcResponse<T>(schema: z.ZodType<T>, data: unknown, cont
     if (!result.success) {
         const ctx = context ? ` (${context})` : ''
         console.error(`RPC response validation failed${ctx}:`, result.error.flatten())
+        captureException(new Error(`RPC response validation failed${ctx}`), {
+            context,
+            issues: result.error.flatten(),
+        })
         throw new Error(`Invalid response from server${ctx}`)
     }
     return result.data

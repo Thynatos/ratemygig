@@ -4,6 +4,7 @@ import { useRecommendedEvents } from '../api/discovery'
 import { useFriendsGoing } from '@/features/events/api/useFriendsGoing'
 import { EventCard } from '@/features/events/components/EventCard'
 import { Skeleton } from '@/shared/components/ui/Loading'
+import { QueryErrorState } from '@/shared/components/QueryErrorState'
 
 interface RecommendedEventsSectionProps {
     limit?: number
@@ -18,7 +19,10 @@ const reasonLabels: Record<string, string> = {
 
 export function RecommendedEventsSection({ limit = 8 }: RecommendedEventsSectionProps) {
     const { user } = useAuth()
-    const { data: recommendations = [], isLoading } = useRecommendedEvents(limit)
+    // No `= []` default: a failed query must surface as an error state, not
+    // silently hide the section (audit finding A13).
+    const { data: recommendationsData, isLoading, isError, refetch } = useRecommendedEvents(limit)
+    const recommendations = recommendationsData ?? []
     const { data: friendsGoing } = useFriendsGoing(recommendations.map(({ event }) => event.id))
 
     if (!user) return null
@@ -35,6 +39,21 @@ export function RecommendedEventsSection({ limit = 8 }: RecommendedEventsSection
                         <Skeleton key={i} className="h-48 rounded-xl" />
                     ))}
                 </div>
+            </section>
+        )
+    }
+
+    if (isError) {
+        return (
+            <section>
+                <h2 className="section-title mb-4 flex items-center gap-2">
+                    <Sparkles className="w-6 h-6 text-accent-400" />
+                    Recommended For You
+                </h2>
+                <QueryErrorState
+                    title="Couldn't load recommendations"
+                    onRetry={() => refetch()}
+                />
             </section>
         )
     }

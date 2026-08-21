@@ -19,6 +19,7 @@ import { Badge } from '@/shared/components/ui/Badge'
 import { RatingDisplay } from '@/shared/components/ui/StarRating'
 import { Avatar } from '@/shared/components/ui/Avatar'
 import { LoadingPage, Skeleton } from '@/shared/components/ui/Loading'
+import { QueryErrorState } from '@/shared/components/QueryErrorState'
 import { Card, CardContent } from '@/shared/components/ui/Card'
 import { formatDate, formatRelativeTime, isValidUrl, calculateAverageRating } from '@/shared/lib/utils'
 import { sanitizeText } from '@/shared/lib/sanitize'
@@ -30,8 +31,12 @@ export function EventDetailPage() {
     const { data: attendance } = useAttendance(eventId!)
     const { data: friendsGoingMap } = useFriendsGoing(eventId ? [eventId] : [])
     const friendsGoing = eventId ? friendsGoingMap?.get(eventId) : undefined
-    const { data: reviews = [], isLoading: reviewsLoading } = useEventReviews(eventId!)
-    const { data: setlists = [], isLoading: setlistsLoading } = useEventSetlists(eventId!)
+    // No `= []` default: a failed query must surface as an error state, not
+    // masquerade as "no reviews yet" (audit finding A13).
+    const { data: reviewsData, isLoading: reviewsLoading, isError: reviewsError, refetch: refetchReviews } = useEventReviews(eventId!)
+    const reviews = reviewsData ?? []
+    const { data: setlistsData, isLoading: setlistsLoading, isError: setlistsError, refetch: refetchSetlists } = useEventSetlists(eventId!)
+    const setlists = setlistsData ?? []
     const toggleAttendance = useToggleAttendance()
     const allPhotoPaths = reviews.flatMap((r: { photos?: { storage_path: string }[] }) =>
         (r.photos ?? []).map((p: { storage_path: string }) => p.storage_path)
@@ -253,6 +258,11 @@ export function EventDetailPage() {
                                         </div>
                                     ))}
                                 </div>
+                            ) : reviewsError ? (
+                                <QueryErrorState
+                                    title="Couldn't load reviews"
+                                    onRetry={() => refetchReviews()}
+                                />
                             ) : reviews.length === 0 ? (
                                 <div className="text-center py-8">
                                     <Star className="w-12 h-12 text-surface-600 mx-auto mb-4" />
@@ -363,6 +373,11 @@ export function EventDetailPage() {
                                         </div>
                                     ))}
                                 </div>
+                            ) : setlistsError ? (
+                                <QueryErrorState
+                                    title="Couldn't load setlists"
+                                    onRetry={() => refetchSetlists()}
+                                />
                             ) : setlists.length === 0 ? (
                                 <div className="text-center py-8">
                                     <Music className="w-12 h-12 text-surface-600 mx-auto mb-4" />

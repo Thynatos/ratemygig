@@ -28,29 +28,49 @@ export class SyncService {
     // Venue Sync
     // ============================================
 
-    async upsertVenue(venue: ProviderVenue): Promise<string | null> {
+    async upsertVenue(venue: ProviderVenue): Promise<{ id: string | null; isNew: boolean }> {
+        // Check if venue exists (same keys as the previous upsert conflict target)
+        const { data: existing } = await this.supabase
+            .from('venues')
+            .select('id')
+            .eq('name', venue.name)
+            .eq('city', venue.city)
+            .eq('country', venue.country)
+            .single();
+
+        const venueData = {
+            name: venue.name,
+            city: venue.city,
+            country: venue.country,
+            lat: venue.lat || null,
+            lng: venue.lng || null,
+            provider_venue_id: venue.id,
+        };
+
+        if (existing) {
+            const { error } = await this.supabase
+                .from('venues')
+                .update(venueData)
+                .eq('id', existing.id);
+
+            if (error) {
+                console.error(`Error updating venue ${venue.name}:`, error);
+                return { id: null, isNew: false };
+            }
+
+            return { id: existing.id, isNew: false };
+        }
+
         const { data, error } = await this.supabase
             .from('venues')
-            .upsert(
-                {
-                    name: venue.name,
-                    city: venue.city,
-                    country: venue.country,
-                    lat: venue.lat || null,
-                    lng: venue.lng || null,
-                    provider_venue_id: venue.id,
-                },
-                {
-                    onConflict: 'name,city,country',
-                    ignoreDuplicates: false,
-                }
-            )
+            .insert(venueData)
             .select('id')
             .single();
 
         if (error) {
-            // If upsert failed, try to get existing venue
-            const { data: existing } = await this.supabase
+            console.error(`Error inserting venue ${venue.name}:`, error);
+            // Insert may have lost a race with a concurrent insert — look it up
+            const { data: fallback } = await this.supabase
                 .from('venues')
                 .select('id')
                 .eq('name', venue.name)
@@ -58,45 +78,63 @@ export class SyncService {
                 .eq('country', venue.country)
                 .single();
 
-            return existing?.id || null;
+            return { id: fallback?.id || null, isNew: false };
         }
 
-        return data?.id || null;
+        return { id: data?.id || null, isNew: true };
     }
 
     // ============================================
     // Artist Sync
     // ============================================
 
-    async upsertArtist(artist: ProviderArtist): Promise<string | null> {
+    async upsertArtist(artist: ProviderArtist): Promise<{ id: string | null; isNew: boolean }> {
+        // Check if artist exists (same key as the previous upsert conflict target)
+        const { data: existing } = await this.supabase
+            .from('artists')
+            .select('id')
+            .eq('name', artist.name)
+            .single();
+
+        const artistData = {
+            name: artist.name,
+            provider_artist_id: artist.id,
+            image_url: artist.imageUrl || null,
+        };
+
+        if (existing) {
+            const { error } = await this.supabase
+                .from('artists')
+                .update(artistData)
+                .eq('id', existing.id);
+
+            if (error) {
+                console.error(`Error updating artist ${artist.name}:`, error);
+                return { id: null, isNew: false };
+            }
+
+            return { id: existing.id, isNew: false };
+        }
+
         const { data, error } = await this.supabase
             .from('artists')
-            .upsert(
-                {
-                    name: artist.name,
-                    provider_artist_id: artist.id,
-                    image_url: artist.imageUrl || null,
-                },
-                {
-                    onConflict: 'name',
-                    ignoreDuplicates: false,
-                }
-            )
+            .insert(artistData)
             .select('id')
             .single();
 
         if (error) {
-            // If upsert failed, try to get existing artist
-            const { data: existing } = await this.supabase
+            console.error(`Error inserting artist ${artist.name}:`, error);
+            // Insert may have lost a race with a concurrent insert — look it up
+            const { data: fallback } = await this.supabase
                 .from('artists')
                 .select('id')
                 .eq('name', artist.name)
                 .single();
 
-            return existing?.id || null;
+            return { id: fallback?.id || null, isNew: false };
         }
 
-        return data?.id || null;
+        return { id: data?.id || null, isNew: true };
     }
 
     // ============================================
@@ -208,10 +246,13 @@ export class SyncService {
                 // 1. Sync venue
                 let venueId = venueCache.get(event.venue.id);
                 if (!venueId) {
-                    venueId = await this.upsertVenue(event.venue) || undefined;
-                    if (venueId) {
-                        venueCache.set(event.venue.id, venueId);
-                        stats.venuesCreated++;
+                    const venue = await this.upsertVenue(event.venue);
+                    if (venue.id) {
+                        venueCache.set(event.venue.id, venue.id);
+                        if (venue.isNew) {
+                            stats.venuesCreated++;
+                        }
+                        venueId = venue.id;
                     }
                 }
 
@@ -220,10 +261,13 @@ export class SyncService {
                 for (const artist of event.artists) {
                     let artistId = artistCache.get(artist.id);
                     if (!artistId) {
-                        artistId = await this.upsertArtist(artist) || undefined;
-                        if (artistId) {
-                            artistCache.set(artist.id, artistId);
-                            stats.artistsCreated++;
+                        const syncedArtist = await this.upsertArtist(artist);
+                        if (syncedArtist.id) {
+                            artistCache.set(artist.id, syncedArtist.id);
+                            if (syncedArtist.isNew) {
+                                stats.artistsCreated++;
+                            }
+                            artistId = syncedArtist.id;
                         }
                     }
                     if (artistId) {

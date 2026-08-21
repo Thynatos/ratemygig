@@ -3,9 +3,13 @@ import { useNotifications, useMarkAllNotificationsRead } from '../api/notificati
 import { NotificationItem } from '../components/NotificationItem'
 import { Button } from '@/shared/components/ui/Button'
 import { LoadingPage } from '@/shared/components/ui/Loading'
+import { QueryErrorState } from '@/shared/components/QueryErrorState'
 
 export function NotificationsPage() {
-    const { data: notifications = [], isLoading } = useNotifications()
+    // No `= []` default: a failed query must surface as an error state, not
+    // masquerade as "no notifications yet" (audit finding A13).
+    const { data: notificationsData, isLoading, isError, refetch } = useNotifications()
+    const notifications = notificationsData ?? []
     const markAllRead = useMarkAllNotificationsRead()
 
     const hasUnread = notifications.some(n => !n.is_read)
@@ -34,7 +38,12 @@ export function NotificationsPage() {
                 )}
             </div>
 
-            {notifications.length === 0 ? (
+            {isError ? (
+                <QueryErrorState
+                    title="Couldn't load notifications"
+                    onRetry={() => refetch()}
+                />
+            ) : notifications.length === 0 ? (
                 <div className="glass-card p-12 text-center">
                     <Bell className="w-12 h-12 text-surface-600 mx-auto mb-4" />
                     <p className="text-surface-400">No notifications yet</p>

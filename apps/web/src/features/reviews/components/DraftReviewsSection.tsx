@@ -5,11 +5,15 @@ import { useDeleteReview } from '@/features/reviews/api/reviews'
 import { Button } from '@/shared/components/ui/Button'
 import { Card, CardContent } from '@/shared/components/ui/Card'
 import { Skeleton } from '@/shared/components/ui/Loading'
+import { QueryErrorState } from '@/shared/components/QueryErrorState'
 import { formatRelativeTime } from '@/shared/lib/utils'
 import { sanitizeText } from '@/shared/lib/sanitize'
 
 export function DraftReviewsSection() {
-    const { data: drafts = [], isLoading } = useDrafts()
+    // No `= []` default: a failed query must surface as an error state, not
+    // silently hide the section (audit finding A13).
+    const { data: draftsData, isLoading, isError, refetch } = useDrafts()
+    const drafts = draftsData ?? []
     const publishDraft = usePublishDraft()
     const deleteReview = useDeleteReview()
 
@@ -19,6 +23,19 @@ export function DraftReviewsSection() {
                 <Skeleton className="h-6 w-40" />
                 <Skeleton className="h-20 w-full" />
             </div>
+        )
+    }
+
+    if (isError) {
+        return (
+            <Card className="mb-6">
+                <CardContent className="p-6">
+                    <QueryErrorState
+                        title="Couldn't load drafts"
+                        onRetry={() => refetch()}
+                    />
+                </CardContent>
+            </Card>
         )
     }
 

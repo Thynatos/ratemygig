@@ -1,6 +1,7 @@
 import { Component, ReactNode } from 'react'
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react'
 import { Button } from './ui/Button'
+import { captureException } from '../lib/monitoring'
 
 interface Props {
     children: ReactNode
@@ -24,12 +25,12 @@ export class ErrorBoundary extends Component<Props, State> {
     }
 
     componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-        // Log error to console (could be sent to monitoring service)
         console.error('[ErrorBoundary] Caught error:', {
             message: error.message,
             stack: error.stack,
             componentStack: errorInfo.componentStack,
         })
+        captureException(error, { componentStack: errorInfo.componentStack })
         this.setState({ errorInfo })
     }
 

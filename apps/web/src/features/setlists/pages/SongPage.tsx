@@ -6,6 +6,7 @@ import { useSongStats } from '../api/stats'
 import { Button } from '@/shared/components/ui/Button'
 import { Card, CardContent } from '@/shared/components/ui/Card'
 import { LoadingPage } from '@/shared/components/ui/Loading'
+import { QueryErrorState } from '@/shared/components/QueryErrorState'
 import { formatDate } from '@/shared/lib/utils'
 import { sanitizeText } from '@/shared/lib/sanitize'
 import type { Song } from '@core/index'
@@ -28,9 +29,23 @@ export function SongPage() {
         enabled: !!songId,
     })
 
-    const { data: stats = [], isLoading: statsLoading } = useSongStats(songId!)
+    // No `= []` default: a failed query must surface as an error state, not
+    // masquerade as zero plays (audit finding A13).
+    const { data: statsData, isLoading: statsLoading, isError: statsError, refetch: refetchStats } = useSongStats(songId!)
+    const stats = statsData ?? []
 
     if (songLoading || statsLoading) return <LoadingPage message="Loading song..." />
+
+    if (statsError) {
+        return (
+            <div className="page-container">
+                <QueryErrorState
+                    title="Couldn't load song statistics"
+                    onRetry={() => refetchStats()}
+                />
+            </div>
+        )
+    }
 
     if (!song) {
         return (

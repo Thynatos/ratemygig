@@ -7,6 +7,7 @@ import { Button } from '@/shared/components/ui/Button'
 import { Card, CardContent } from '@/shared/components/ui/Card'
 import { RatingDisplay } from '@/shared/components/ui/StarRating'
 import { LoadingPage } from '@/shared/components/ui/Loading'
+import { QueryErrorState } from '@/shared/components/QueryErrorState'
 import { EventCard } from '@/features/events/components/EventCard'
 import { useFriendsGoing } from '@/features/events/api/useFriendsGoing'
 import { Input } from '@/shared/components/ui/Input'
@@ -29,7 +30,12 @@ export function VenueDetailPage() {
         year: summaryYear === '' ? undefined : summaryYear,
         city: summaryCity.trim() || undefined,
     })
-    const { data: events = [] } = useVenueEvents(venueId!)
+    // No `= []` default: a failed query must surface as an error state, not
+    // masquerade as "no events yet" (audit finding A13).
+    const { data: eventsData, isError: eventsError, refetch: refetchEvents } = useVenueEvents(venueId!)
+    // useMemo keeps a stable identity for the memo deps below (and avoids
+    // allocating a fresh array on every render while loading).
+    const events = useMemo(() => eventsData ?? [], [eventsData])
     const visibleEventIds = useMemo(() => {
         const now = new Date()
         const upcoming = events.filter(e => new Date(e.start_at) >= now)
@@ -140,7 +146,14 @@ export function VenueDetailPage() {
                         </section>
                     )}
 
-                    {showNoEventsState && (
+                    {eventsError && (
+                        <QueryErrorState
+                            title="Couldn't load events"
+                            onRetry={() => refetchEvents()}
+                        />
+                    )}
+
+                    {!eventsError && showNoEventsState && (
                         <Card>
                             <CardContent className="p-6 text-center">
                                 <Calendar className="w-10 h-10 text-surface-600 mx-auto mb-3" />

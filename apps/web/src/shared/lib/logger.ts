@@ -1,3 +1,5 @@
+import { captureMessage } from './monitoring'
+
 type LogLevel = 'debug' | 'info' | 'warn' | 'error'
 
 interface LogContext {
@@ -61,10 +63,10 @@ function log(level: LogLevel, message: string, context?: LogContext): void {
             break
     }
 
-    // In production, could send to external service
-    // if (import.meta.env.PROD && level === 'error') {
-    //   sendToMonitoringService(entry)
-    // }
+    // Production error logs go to Sentry (no-op when the DSN is unset)
+    if (import.meta.env.PROD && level === 'error') {
+        captureMessage(message, context)
+    }
 }
 
 export const logger = {
