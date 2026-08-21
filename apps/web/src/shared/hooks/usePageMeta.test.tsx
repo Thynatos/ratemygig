@@ -54,7 +54,7 @@ describe('usePageMeta', () => {
     })
 
     it('sets the canonical link and removes it when canonicalPath is omitted', () => {
-        const { rerender } = renderHook(({ meta }: { meta: PageMeta | null }) => usePageMeta(meta), {
+        const { rerender } = renderHook<void, { meta: PageMeta | null }>(({ meta }) => usePageMeta(meta), {
             initialProps: { meta: { title: 'Page', canonicalPath: '/r/123' } },
         })
         const canonical = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]')
@@ -66,7 +66,7 @@ describe('usePageMeta', () => {
     })
 
     it('restores baseline title/description and removes canonical when meta is null', () => {
-        const { rerender } = renderHook(({ meta }: { meta: PageMeta | null }) => usePageMeta(meta), {
+        const { rerender } = renderHook<void, { meta: PageMeta | null }>(({ meta }) => usePageMeta(meta), {
             initialProps: { meta: { title: 'Some Review', description: 'A review', canonicalPath: '/r/123' } },
         })
         expect(document.title).toBe('Some Review | ratemygig')
@@ -80,7 +80,7 @@ describe('usePageMeta', () => {
     })
 
     it('upserts og:image when provided and removes it when not', () => {
-        const { rerender } = renderHook(({ meta }: { meta: PageMeta | null }) => usePageMeta(meta), {
+        const { rerender } = renderHook<void, { meta: PageMeta | null }>(({ meta }) => usePageMeta(meta), {
             initialProps: { meta: { title: 'Page', ogImage: 'https://example.com/image.png' } },
         })
         let image = getMeta('property', 'og:image')

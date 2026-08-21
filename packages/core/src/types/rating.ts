@@ -6,11 +6,9 @@ export interface RatingDistribution {
   rating_5: number
 }
 
-export interface RatingSummary {
+export interface RatingSummary extends RatingDistribution {
   avg_rating: number
   count_reviews: number
-  distribution: RatingDistribution
-  top_tags?: string[]
 }
 
 export interface VenueRatingSummary extends RatingSummary {

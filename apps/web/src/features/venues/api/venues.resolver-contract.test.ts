@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { resolveVenues, resolveVenue, resolveVenueEvents } from './resolver'
 
-describe('venues integration (mock-only flow)', () => {
+describe('venues resolver contract (injected deps)', () => {
     it('resolveVenues returns mock venues when Supabase is not configured', async () => {
         const result = await resolveVenues(undefined, {
             mode: 'mock',

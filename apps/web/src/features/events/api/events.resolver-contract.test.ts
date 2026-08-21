@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { resolveEvents, resolveEvent, resolveCities } from './resolver'
 
-describe('events integration (mock-only flow)', () => {
+describe('events resolver contract (injected deps)', () => {
     it('resolveEvents returns mock events when Supabase is not configured', async () => {
         const result = await resolveEvents({ page: 1, pageSize: 100 }, {
             mode: 'mock',

@@ -34,6 +34,13 @@
 | 7 | Share cards / OG images | L | [x] |
 | 8 | setlist.fm import | M | [ ] |
 | 9 | PWA + Web Push | L | [ ] |
+| 10 | Make it work on a real database (audit Tier 0) | M | [x] |
+
+> **Ordering note:** Sprint 10 was inserted by the 2026-08-21 audit (`docs/AUDIT_REPORT.md` §6)
+> and deliberately executed **before** Sprints 8 and 9 — Sprint 8 writes data into display
+> paths that returned HTTP 400 until Sprint 10's migration 016. Spec:
+> `.planning/SPRINT10_PROMPT.md`. Its migration (`packages/db/migrations/016_schema_fixes.sql`)
+> must be applied to the live project before the `live-schema` CI job goes green.
 
 ---
 

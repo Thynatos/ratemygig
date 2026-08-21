@@ -1,5 +1,5 @@
 import { axe } from 'vitest-axe'
-import type { ElementContext, RunOptions } from 'axe-core'
+import type { RunOptions } from 'axe-core'
 
 /**
  * Run axe against a container with color-contrast disabled: jsdom has no
@@ -8,7 +8,7 @@ import type { ElementContext, RunOptions } from 'axe-core'
  * without ever producing useful results.
  */
 export function checkA11y(
-    context: ElementContext,
+    context: Element | string,
     options?: RunOptions
 ) {
     return axe(context, {

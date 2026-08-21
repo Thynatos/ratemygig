@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/shared/lib/supabase'
+import { useAuth } from '@/features/auth/hooks/useAuth'
 import { sanitizeText } from '@/shared/lib/sanitize'
 import { createRateLimiter } from '@/shared/lib/throttle'
 import { RATE_LIMITS } from '@/shared/lib/constants'
@@ -9,12 +10,13 @@ const draftSaveLimiter = createRateLimiter(RATE_LIMITS.REVIEW_CREATE)
 
 export const draftKeys = {
     all: ['drafts'] as const,
-    byUser: () => [...draftKeys.all, 'user'] as const,
+    byUser: (userId: string) => [...draftKeys.all, 'user', userId] as const,
 }
 
 export function useDrafts() {
+    const { user } = useAuth()
     return useQuery({
-        queryKey: draftKeys.byUser(),
+        queryKey: draftKeys.byUser(user?.id ?? 'anonymous'),
         queryFn: async () => {
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) return []
@@ -108,7 +110,7 @@ export function useSaveDraft() {
             }
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: draftKeys.byUser() })
+            queryClient.invalidateQueries({ queryKey: draftKeys.all })
             queryClient.invalidateQueries({ queryKey: ['my-gigs'] })
         },
     })
@@ -133,7 +135,7 @@ export function usePublishDraft() {
             return data
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: draftKeys.byUser() })
+            queryClient.invalidateQueries({ queryKey: draftKeys.all })
             queryClient.invalidateQueries({ queryKey: ['my-gigs'] })
             queryClient.invalidateQueries({ queryKey: ['reviews'] })
         },

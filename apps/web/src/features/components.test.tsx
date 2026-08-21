@@ -5,7 +5,8 @@ import { BrowserRouter } from 'react-router-dom'
 import { EventCard } from '@/features/events/components/EventCard'
 import { FeedCard } from '@/features/feed/components/FeedCard'
 import { PhotoUploader } from '@/features/reviews/components/PhotoUploader'
-import type { Event, FeedItem } from '@core/index'
+import type { Event } from '@core/index'
+import type { FeedItem } from '@/features/feed/api/feed'
 
 const mockEvent: Event = {
     id: 'evt-1',
@@ -127,11 +128,11 @@ describe('FeedCard', () => {
                 rating: 4,
                 title: 'Amazing show!',
                 body: 'Best concert ever.',
+                created_at: '2024-01-01T00:00:00Z',
             },
             event: {
                 id: 'evt-1',
                 name: 'Taylor Swift',
-                start_at: '2025-06-15T20:00:00Z',
             },
         }
         renderWithRouter(<FeedCard item={item} />)
@@ -178,6 +179,7 @@ describe('FeedCard', () => {
                 name: 'Arctic Monkeys',
                 start_at: '2025-08-10T20:00:00Z',
             },
+            venue: null,
         }
         renderWithRouter(<FeedCard item={item} />)
         expect(screen.getByText('Jane Doe')).toBeInTheDocument()
@@ -195,6 +197,7 @@ describe('FeedCard', () => {
                 rating: 5,
                 title: null,
                 body: 'Great show.',
+                created_at: '2024-01-01T00:00:00Z',
             },
             event: null,
         }

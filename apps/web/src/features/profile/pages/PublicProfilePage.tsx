@@ -17,6 +17,14 @@ import type { Profile } from '@core/index'
 
 type TabType = 'reviews' | 'lists'
 
+interface PublicListRow {
+    id: string
+    name: string
+    description: string | null
+    created_at: string
+    list_items: { count: number }[]
+}
+
 export function PublicProfilePage() {
     const { username } = useParams<{ username: string }>()
     const [activeTab, setActiveTab] = useState<TabType>('reviews')
@@ -69,7 +77,7 @@ export function PublicProfilePage() {
 
             if (error) throw error
 
-            return (data as (typeof data & { list_items: { count: number }[] })[]).map((row) => ({
+            return ((data ?? []) as PublicListRow[]).map((row) => ({
                 ...row,
                 item_count: row.list_items?.[0]?.count ?? 0,
             }))
@@ -107,12 +115,12 @@ export function PublicProfilePage() {
                     <div className="flex flex-col md:flex-row items-center gap-6">
                         <Avatar
                             src={profile.avatar_url}
-                            name={sanitizeText(profile.display_name || profile.username)}
+                            name={sanitizeText(profile.display_name || profile.username || 'Anonymous')}
                             size="xl"
                         />
                         <div className="text-center md:text-left flex-1">
                             <h1 className="text-3xl font-display font-bold text-white mb-1">
-                                {sanitizeText(profile.display_name || profile.username)}
+                                {sanitizeText(profile.display_name || profile.username || 'Anonymous')}
                             </h1>
                             {profile.username && (
                                 <p className="text-surface-400 mb-3">@{sanitizeText(profile.username)}</p>

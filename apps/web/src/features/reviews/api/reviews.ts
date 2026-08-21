@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/shared/lib/supabase'
+import { useAuth } from '@/features/auth/hooks/useAuth'
 import { sanitizeText } from '@/shared/lib/sanitize'
 import { createRateLimiter } from '@/shared/lib/throttle'
 import { STALE_TIMES, RATE_LIMITS } from '@/shared/lib/constants'
@@ -65,8 +66,9 @@ export function useReview(reviewId: string) {
 
 // Fetch user's review for an event
 export function useUserEventReview(eventId: string) {
+    const { user } = useAuth()
     return useQuery({
-        queryKey: ['user-review', eventId],
+        queryKey: ['user-review', eventId, user?.id ?? 'anonymous'],
         queryFn: async () => {
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) return null
@@ -86,8 +88,9 @@ export function useUserEventReview(eventId: string) {
 
 // Fetch user's gigs (attendance + reviews)
 export function useMyGigs(status?: 'planned' | 'attended') {
+    const { user } = useAuth()
     return useQuery({
-        queryKey: ['my-gigs', status],
+        queryKey: ['my-gigs', user?.id ?? 'anonymous', status],
         queryFn: async () => {
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) return []

@@ -5,7 +5,6 @@ import { env } from '@/shared/lib/env'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { validateRpcResponse } from '@/shared/lib/utils'
 import { artistRatingSummarySchema, artistLeaderboardEntrySchema } from '@/shared/validation/schemas'
-import type { ArtistRatingSummary } from '@core/index'
 import {
     artistKeys,
     resolveArtists,
@@ -42,7 +41,7 @@ export function useArtistRatingSummary(artistId: string, filters?: ArtistRatingQ
 
             if (error) throw error
             if (!data || data.length === 0) return null
-            return validateRpcResponse(artistRatingSummarySchema, data[0], 'get_artist_rating_summary') as ArtistRatingSummary
+            return validateRpcResponse(artistRatingSummarySchema, data[0], 'get_artist_rating_summary')
         },
         enabled: !!artistId,
     })
@@ -75,7 +74,7 @@ export function useTopArtists(city?: string, year?: number) {
 export const artistFollowKeys = {
     all: ['artist-follows'] as const,
     isFollowing: (artistId: string) => [...artistFollowKeys.all, 'is-following', artistId] as const,
-    followedArtists: () => [...artistFollowKeys.all, 'followed'] as const,
+    followedArtists: (userId: string) => [...artistFollowKeys.all, 'followed', userId] as const,
 }
 
 export function useIsFollowingArtist(artistId: string) {
@@ -102,7 +101,7 @@ export function useIsFollowingArtist(artistId: string) {
 export function useFollowedArtists() {
     const { user } = useAuth()
     return useQuery({
-        queryKey: artistFollowKeys.followedArtists(),
+        queryKey: artistFollowKeys.followedArtists(user?.id ?? 'anonymous'),
         queryFn: async () => {
             if (!user) return []
 

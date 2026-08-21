@@ -30,7 +30,8 @@ export function ArtistDetailPage() {
     const [summaryVenueId, setSummaryVenueId] = useState('')
 
     const { data: artist, isLoading: artistLoading } = useArtist(artistId!)
-    const { data: venueList = [] } = useVenues()
+    const { data: venuesResult } = useVenues()
+    const venueList = venuesResult?.data ?? []
     const { data: ratingSummary } = useArtistRatingSummary(artistId!, {
         year: summaryYear === '' ? undefined : summaryYear,
         city: summaryCity.trim() || undefined,

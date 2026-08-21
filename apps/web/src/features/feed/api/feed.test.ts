@@ -6,8 +6,8 @@ describe('feedKeys', () => {
         expect(feedKeys.all).toEqual(['feed'])
     })
 
-    it('generates timeline key with page', () => {
-        expect(feedKeys.timeline(1)).toEqual(['feed', 'timeline', 1])
-        expect(feedKeys.timeline(3)).toEqual(['feed', 'timeline', 3])
+    it('generates timeline key scoped to the user and page', () => {
+        expect(feedKeys.timeline('user-1', 1)).toEqual(['feed', 'timeline', 'user-1', 1])
+        expect(feedKeys.timeline('user-1', 3)).toEqual(['feed', 'timeline', 'user-1', 3])
     })
 })

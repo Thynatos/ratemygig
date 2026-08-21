@@ -261,13 +261,33 @@
 ### Renderer deviation from the sprint plan (recorded in DEPLOYMENT.md)
 - The plan specified raw `npm:satori` + `npm:@resvg/resvg-wasm`; the shipped function uses `npm:@vercel/og` (the same stack, bundled) because server-side CLI bundling does not expose function static assets to the runtime (verified empirically — see DEPLOYMENT.md "In-sprint decision record"). Inter subsets are base64-embedded in `fonts.ts` instead of read from `assets/`.
 
-### Pre-existing bugs found during Sprint 7 e2e verification (not fixed — out of scope)
+### ~~Pre-existing bugs found during Sprint 7 e2e verification~~ — FIXED (Sprint 10)
 
-#### ArtistDetailPage crashes whenever the venues query succeeds
-- `apps/web/src/features/artists/pages/ArtistDetailPage.tsx` does `venueList.map(...)` on the result of `useVenues()`, but the paginated API returns `{ data, hasMore }` (see CONVENTIONS.md "Pagination"). With Supabase configured, `venueList` is that object → `TypeError: venueList.map is not a function` → the per-feature ErrorBoundary renders. Mock-mode dev hides it (`data` can be an array via mocks). Fix: destructure `{ data: venueList }` (or `.data`) before mapping.
+#### ~~ArtistDetailPage crashes whenever the venues query succeeds~~ — FIXED
+- **Resolved (Sprint 10 / audit A4)**: `ArtistDetailPage` now destructures `venuesResult?.data ?? []`. The class of bug is gated by `tsc -b --noEmit` in `npm run build` and CI.
 
-#### reviews → profiles PostgREST embed fails (PGRST200)
-- `reviews.user_id` has an FK to `auth.users`, not `public.profiles`, so every `profile:profiles(...)` embed on `reviews` returns 400 `PGRST200` ("no foreign key relationship between 'reviews' and 'profiles'"). This breaks `useReview` and `useEventReviews` against a configured Supabase project — `/r/:reviewId` currently always shows "Review not found" on the live DB. The Sprint 7 server-side pieces work around it (Edge Function and `api/og-inject.ts` fetch `profiles` by `user_id` in a second query). Proper fix options: add an FK `reviews.user_id → profiles.id` (they share the same `auth.users` PK), or switch the client queries to the two-step pattern / an RPC view.
+#### ~~reviews → profiles PostgREST embed fails (PGRST200)~~ — FIXED
+- **Resolved (Sprint 10 / audit A1)**: migration `016_schema_fixes.sql` adds FKs to `public.profiles` from `reviews`, `comments`, `lists`, `setlists`, and both `user_follows` columns. `user_follows` embeds now hint the new constraint names (`user_follows_follower_profile_fkey` / `user_follows_following_profile_fkey`). All nine embed sites are covered by the `live-schema` CI job.
+
+## Sprint 10 — Make it work on a real database (Notes & Tradeoffs)
+
+### user_follows keeps TWO FK targets per column — embed hints are mandatory
+- After 016, `follower_id`/`following_id` each have FKs to both `auth.users` and `public.profiles`. PostgREST only embeds through the `profiles` ones, but the table now has two relationships to `profiles`, so `useFollowers`/`useFollowing` must keep disambiguating hints — and those hints name the **new** constraints (`user_follows_follower_profile_fkey` / `user_follows_following_profile_fkey`), because the old `*_id_fkey` names belong to the `auth.users` constraints.
+
+### get_artist_setlist_stats returns zero rows for artists with no setlist songs
+- The 016 redefinition adds a `HAVING` clause so an artist with no setlists yields an empty result set instead of one all-NULL row. This matches the client (`useArtistSetlistStats` returns `null` on empty) and keeps `artistSetlistStatsSchema` non-nullable. Without it, fixing the RPC's 42703 would have traded a 400 for a Zod validation failure on every artist without setlists.
+
+### Query-cache clearing is gated on identity change, not on every auth event
+- `AuthProvider` clears the React Query cache in `signOut` and on `onAuthStateChange` — but only when `shouldClearQueryCache()` (pure, unit-tested in `cache-policy.test.ts`) says so: `SIGNED_OUT`, or a previous user id that differs from the next. `TOKEN_REFRESHED` (~hourly) and `INITIAL_SESSION` never wipe the cache. User-scoped query keys (`my-gigs`, `user-review`, drafts, feed timeline, recommended, followed artists/venues, user-follow `isFollowing`) additionally carry the user id as defense in depth.
+
+### The live-schema job needs repo secrets and skips forks
+- `.github/workflows/ci.yml` `live-schema` job runs `npm run test:live` (anon REST smoke for all nine profile embeds + Zod contract parse for every RPC the app calls) with `SUPABASE_URL`/`SUPABASE_ANON_KEY` from repo secrets. Fork PRs don't receive secrets, so the job is `if`-gated to skip (not fail) there. The job **fails on main until migration 016 is applied** to the live project — that is the deliberate handoff order (apply 016, then the job goes green). Locally, `npm run test:live -w apps/web` reads `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` from `apps/web/.env.local` via `vitest.live.config.ts`.
+
+### tsconfig `types` is now restrictive
+- `tsconfig.app.json` sets `"types": ["vite/client", "vitest/globals"]`, which turns OFF automatic inclusion of every `@types/*` package for `src/`. Nothing in `src/` uses Node globals (verified), but if that changes, `node` must be added to the array explicitly. `vitest-axe` matchers are typed by `src/test/vitest-axe.d.ts` (the package's own augmentation targets the pre-1.0 `Vi` namespace that Vitest 2 ignores).
+
+### B1 is closed at the enforcement layer, not every mirror
+- 016 adds `status = 'published'` to the reviews SELECT policy (anon branch only — the owner branch stays unqualified so `useDrafts()` works), to all five aggregation RPCs, to `get_trending_events`, and to the storage read policy (which now also matches `thumbnail_path`, fixing A8). The `review_photos`/`review_tags`/`comments` SELECT policies still consult only `is_public` — metadata rows (paths, tag ids, comment bodies) for a hypothetical draft remain readable; the photos themselves are not. Tracked under B9/Tier 1.
 
 ## Sprint 6 — Gig Wrapped (Notes & Tradeoffs)
 

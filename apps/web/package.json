@@ -5,11 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "tsc -b --noEmit && vite build",
     "postbuild": "node scripts/copy-og-shell.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:live": "vitest run --config vitest.live.config.ts",
     "test:watch": "vitest",
     "test:e2e": "playwright test"
   },

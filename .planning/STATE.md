@@ -2,8 +2,10 @@
 
 ## Current Phase
 **Phase:** Post-M5 Sprints (see .planning/SPRINTS.md)
-**Status:** Sprint 7 complete — next up: Sprint 8 (setlist.fm import)
+**Status:** Sprint 10 (audit Tier 0) code complete — **pending: apply `packages/db/migrations/016_schema_fixes.sql` to the live project** (Task 9.5 in `.planning/SPRINT10_PROMPT.md`), then re-run `npm run test:live` and walk the five verification routes. After that: Sprint 11 (audit Tier 1, "Eyes on production") ahead of Sprint 8 per `docs/AUDIT_REPORT.md` §6.
 **Last Activity:** 2026-08-21
+
+**Audit findings closed by Sprint 10** (ids from `docs/AUDIT_REPORT.md`; the report itself is a dated artefact and was not edited): A1, A2, A3, A4, A5, A8, A9, A10, C2, D1/E1 (type-check enforced), D5/E2/E3 (live-schema + RPC contract CI job), B7. B1 closed at the reviews-policy/RPC/storage layer (photo/tag/comment metadata mirrors tracked under B9, Tier 1). A1/A2/A5/A8/B1's DB half lands only when 016 is applied.
 
 ## Completed
 - Auth (magic link + Google OAuth)
@@ -43,7 +45,7 @@
 - Comments: CommentSection + CommentItem on PublicReviewPage
 - Drafts: reviews.status column (draft/published), useDrafts/useSaveDraft/usePublishDraft
 - Drafts: DraftReviewsSection on MyGigsPage
-- Public review queries filter by status=published (no draft leak)
+- Public review visibility enforced in the DB: reviews SELECT policy requires status='published' on the anon branch (016); client queries filter the same way
 - useUpdateProfile React Query mutation with cache invalidation
 - Sprint 1: notification triggers migration 013 (artist/venue event fan-out, new review, comment, reaction) with SECURITY DEFINER functions, preference gates, (user_id,type,link) dedupe
 - Sprint 1: 5 notification opt-out toggles in PreferencesForm; NotificationItem renders new_comment/review_reaction/friend_attendance
@@ -67,7 +69,12 @@
 - Sprint 7: Supabase Edge Function og-image (deployed, verify_jwt=false, manual published/public filter, service-role + two-step profile fetch, signed photo URLs, branded fallback card, 400 on missing param, cache headers) rendering 1200×630 PNGs via npm:@vercel/og with base64-embedded Inter subsets
 - Sprint 7: Vercel crawler OG injection — api/og-inject.ts (PostgREST + dist/og-shell.html + buildOgTags injection, non-crawler UA 302 redirect), scripts/copy-og-shell.mjs postbuild step, vercel.json UA-gated rewrite + includeFiles
 - Sprint 7: apps/web/public/og-fallback.png (1200×630 branded, <100 kB); DEPLOYMENT.md "Share cards / OG images" section with in-sprint decision record
-- 310 unit tests passing, 0 lint errors, 0 lint warnings
+- Sprint 10: migration 016 — FKs to public.profiles from reviews/comments/lists/setlists/user_follows (orphan guard + pg_constraint idempotency), get_recommended_events fixed (42702 + LIMIT p_limit), get_artist_setlist_stats fixed (42703 + empty-row semantics), status='published' gates on the reviews SELECT policy + 5 aggregation RPCs + get_trending_events + storage policy (which now also matches thumbnail_path), handle_new_user search_path pinned
+- Sprint 10: rating summary Zod schemas + core RatingSummary types aligned to the flat rating_1..rating_5 RPC shape (casts dropped); setlist-stats schemas accept timestamptz offsets; recommendation reason enum matches the RPC; ArtistDetailPage useVenues destructuring fixed
+- Sprint 10: TypeScript enforced — `tsc -b --noEmit` in `npm run build` and CI, `types`/`@jobs/*` alias in tsconfig.app.json, vitest-axe matchers typed via src/test/vitest-axe.d.ts, all 46 pre-existing tsc errors fixed (zero `any` added)
+- Sprint 10: live-schema CI job (`test:live`, vitest.live.config.ts, src/test/live/) — anon REST smoke for all 9 profile-embed sites + Zod contract parse for every app RPC; skipped on fork PRs; `*.integration.test.ts` renamed `*.resolver-contract.test.ts`
+- Sprint 10: query cache cleared on sign-out and on auth identity change (pure `shouldClearQueryCache` helper + tests; TOKEN_REFRESHED never clears); user id added to my-gigs/user-review/drafts/feed-timeline/recommended/followed-artists/followed-venues/user-follow keys
+- 317 unit tests passing, 0 lint errors, 0 lint warnings
 
 ## Decisions
 - Direct Supabase client queries (no custom API layer)

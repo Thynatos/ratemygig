@@ -162,9 +162,15 @@ export const lineupArraySchema = z
 
 export const venueRatingSummarySchema = z.object({
     venue_id: z.string().uuid(),
-    avg_rating: z.number().nullable(),
+    venue_name: z.string(),
+    city: z.string(),
+    avg_rating: z.number(),
     count_reviews: z.number().int(),
-    count_ratings: z.number().int(),
+    rating_1: z.number().int(),
+    rating_2: z.number().int(),
+    rating_3: z.number().int(),
+    rating_4: z.number().int(),
+    rating_5: z.number().int(),
 })
 
 export const venueLeaderboardEntrySchema = z.object({
@@ -177,9 +183,14 @@ export const venueLeaderboardEntrySchema = z.object({
 
 export const artistRatingSummarySchema = z.object({
     artist_id: z.string().uuid(),
-    avg_rating: z.number().nullable(),
+    artist_name: z.string(),
+    avg_rating: z.number(),
     count_reviews: z.number().int(),
-    count_ratings: z.number().int(),
+    rating_1: z.number().int(),
+    rating_2: z.number().int(),
+    rating_3: z.number().int(),
+    rating_4: z.number().int(),
+    rating_5: z.number().int(),
 })
 
 export const artistLeaderboardEntrySchema = z.object({
@@ -191,7 +202,7 @@ export const artistLeaderboardEntrySchema = z.object({
 
 export const recommendedEventSchema = z.object({
     event_id: z.string().uuid(),
-    reason: z.enum(['followed_artist', 'followed_venue', 'attended_venue', 'popular', 'similar_taste']),
+    reason: z.enum(['followed_artist', 'followed_venue', 'preferred_city', 'trending']),
     priority: z.number(),
 })
 
@@ -223,7 +234,7 @@ export const artistSongStatsSchema = z.object({
     song_id: z.string().uuid(),
     song_name: z.string(),
     play_count: z.number().int(),
-    last_played: z.string().datetime(),
+    last_played: z.string().datetime({ offset: true }),
 })
 
 export const artistSetlistStatsSchema = z.object({
@@ -236,8 +247,8 @@ export const songStatsEntrySchema = z.object({
     artist_id: z.string().uuid(),
     artist_name: z.string(),
     play_count: z.number().int(),
-    first_played: z.string().datetime(),
-    last_played: z.string().datetime(),
+    first_played: z.string().datetime({ offset: true }),
+    last_played: z.string().datetime({ offset: true }),
 })
 
 export const yearStatEntrySchema = z.object({

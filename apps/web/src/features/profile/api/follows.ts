@@ -8,7 +8,7 @@ const followLimiter = createRateLimiter(RATE_LIMITS.FOLLOW)
 
 export const userFollowKeys = {
     all: ['user-follows'] as const,
-    isFollowing: (userId: string) => [...userFollowKeys.all, 'is-following', userId] as const,
+    isFollowing: (userId: string, viewerId: string) => [...userFollowKeys.all, 'is-following', userId, viewerId] as const,
     followers: (userId: string) => [...userFollowKeys.all, 'followers', userId] as const,
     following: (userId: string) => [...userFollowKeys.all, 'following', userId] as const,
     followerCount: (userId: string) => [...userFollowKeys.all, 'follower-count', userId] as const,
@@ -18,7 +18,7 @@ export const userFollowKeys = {
 export function useIsFollowingUser(userId: string) {
     const { user } = useAuth()
     return useQuery({
-        queryKey: userFollowKeys.isFollowing(userId),
+        queryKey: userFollowKeys.isFollowing(userId, user?.id ?? 'anonymous'),
         queryFn: async () => {
             if (!user) return false
 
@@ -42,7 +42,7 @@ export function useFollowers(userId: string) {
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('user_follows')
-                .select('follower:profiles!user_follows_follower_id_fkey(*)')
+                .select('follower:profiles!user_follows_follower_profile_fkey(*)')
                 .eq('following_id', userId)
                 .order('created_at', { ascending: false })
 
@@ -59,7 +59,7 @@ export function useFollowing(userId: string) {
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('user_follows')
-                .select('following:profiles!user_follows_following_id_fkey(*)')
+                .select('following:profiles!user_follows_following_profile_fkey(*)')
                 .eq('follower_id', userId)
                 .order('created_at', { ascending: false })
 
@@ -104,6 +104,7 @@ export function useFollowingCount(userId: string) {
 
 export function useFollowUser(userId: string) {
     const queryClient = useQueryClient()
+    const { user } = useAuth()
 
     return useMutation({
         mutationFn: async () => {
@@ -121,14 +122,14 @@ export function useFollowUser(userId: string) {
             if (error) throw error
         },
         onMutate: async () => {
-            await queryClient.cancelQueries({ queryKey: userFollowKeys.isFollowing(userId) })
-            const prev = queryClient.getQueryData(userFollowKeys.isFollowing(userId))
-            queryClient.setQueryData(userFollowKeys.isFollowing(userId), true)
+            await queryClient.cancelQueries({ queryKey: userFollowKeys.isFollowing(userId, user?.id ?? 'anonymous') })
+            const prev = queryClient.getQueryData(userFollowKeys.isFollowing(userId, user?.id ?? 'anonymous'))
+            queryClient.setQueryData(userFollowKeys.isFollowing(userId, user?.id ?? 'anonymous'), true)
             return { prev }
         },
         onError: (_err, _vars, ctx) => {
             if (ctx?.prev !== undefined) {
-                queryClient.setQueryData(userFollowKeys.isFollowing(userId), ctx.prev)
+                queryClient.setQueryData(userFollowKeys.isFollowing(userId, user?.id ?? 'anonymous'), ctx.prev)
             }
         },
         onSuccess: () => {
@@ -139,6 +140,7 @@ export function useFollowUser(userId: string) {
 
 export function useUnfollowUser(userId: string) {
     const queryClient = useQueryClient()
+    const { user } = useAuth()
 
     return useMutation({
         mutationFn: async () => {
@@ -158,14 +160,14 @@ export function useUnfollowUser(userId: string) {
             if (error) throw error
         },
         onMutate: async () => {
-            await queryClient.cancelQueries({ queryKey: userFollowKeys.isFollowing(userId) })
-            const prev = queryClient.getQueryData(userFollowKeys.isFollowing(userId))
-            queryClient.setQueryData(userFollowKeys.isFollowing(userId), false)
+            await queryClient.cancelQueries({ queryKey: userFollowKeys.isFollowing(userId, user?.id ?? 'anonymous') })
+            const prev = queryClient.getQueryData(userFollowKeys.isFollowing(userId, user?.id ?? 'anonymous'))
+            queryClient.setQueryData(userFollowKeys.isFollowing(userId, user?.id ?? 'anonymous'), false)
             return { prev }
         },
         onError: (_err, _vars, ctx) => {
             if (ctx?.prev !== undefined) {
-                queryClient.setQueryData(userFollowKeys.isFollowing(userId), ctx.prev)
+                queryClient.setQueryData(userFollowKeys.isFollowing(userId, user?.id ?? 'anonymous'), ctx.prev)
             }
         },
         onSuccess: () => {
