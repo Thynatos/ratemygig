@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Globe, Lock } from 'lucide-react'
 import { useCreateList } from '@/features/lists/api/lists'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { Button } from '@/shared/components/ui/Button'
@@ -25,9 +24,13 @@ export function CreateListModal({ isOpen, onClose, onCreated }: CreateListModalP
         if (!name.trim() || !user) return
 
         createList.mutate(
-            { name: name.trim(), description: description.trim() || undefined, is_public: isPublic },
             {
-                onSuccess: (data) => {
+                name: name.trim(),
+                description: description.trim() || undefined,
+                is_public: isPublic,
+            },
+            {
+                onSuccess: data => {
                     setName('')
                     setDescription('')
                     setIsPublic(true)
@@ -39,49 +42,65 @@ export function CreateListModal({ isOpen, onClose, onCreated }: CreateListModalP
     }
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Create New List">
-            <div className="space-y-4">
+        <Modal isOpen={isOpen} onClose={onClose} title="New list">
+            <div className="space-y-5">
                 <Input
-                    label="List Name"
-                    placeholder="e.g., Best Shows of 2024"
+                    label="Name"
+                    name="list-name"
+                    placeholder="Best nights of 2026"
                     value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    onChange={e => setName(e.target.value)}
                 />
 
                 <Textarea
-                    label="Description (optional)"
-                    placeholder="What's this list about?"
+                    label="Description"
+                    name="list-description"
+                    placeholder="What holds this list together?"
+                    hint="Optional."
                     value={description}
-                    onChange={(e) => setDescription(e.target.value)}
+                    onChange={e => setDescription(e.target.value)}
+                    className="min-h-[80px]"
                 />
 
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-sm text-surface-300">
-                        {isPublic ? <Globe className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-                        {isPublic ? 'Public list' : 'Private list'}
+                <div className="flex items-center justify-between gap-4">
+                    <div>
+                        <p className="voice-label text-bone-dim mb-1">Who can see it</p>
+                        <p className="text-ui-sm text-bone-faint">
+                            {isPublic
+                                ? 'Anyone with the link, and it shows on your profile.'
+                                : 'Only you.'}
+                        </p>
                     </div>
                     <button
                         type="button"
+                        role="switch"
+                        aria-checked={isPublic}
+                        aria-label="Make this list public"
                         onClick={() => setIsPublic(!isPublic)}
                         className={cn(
-                            'relative w-12 h-6 rounded-full transition-colors',
-                            isPublic ? 'bg-green-500' : 'bg-surface-600'
+                            'relative shrink-0 w-14 h-7 border transition-colors duration-150 ease-board',
+                            isPublic ? 'bg-strip border-strip' : 'bg-groove border-rail-strong'
                         )}
                     >
                         <span
+                            aria-hidden="true"
                             className={cn(
-                                'absolute top-1 w-4 h-4 rounded-full bg-white transition-transform',
-                                isPublic ? 'translate-x-7' : 'translate-x-1'
+                                'absolute top-[3px] w-5 h-5 transition-transform duration-150 ease-board',
+                                isPublic
+                                    ? 'translate-x-[30px] bg-strip-ink'
+                                    : 'translate-x-[3px] bg-bone-faint'
                             )}
                         />
                     </button>
                 </div>
 
                 {createList.error && (
-                    <p className="text-sm text-red-400">Failed to create list</p>
+                    <p className="input-error" role="alert">
+                        The list did not save. Your name and description are still here.
+                    </p>
                 )}
 
-                <div className="flex justify-end gap-3 pt-2">
+                <div className="flex justify-end gap-2">
                     <Button variant="ghost" onClick={onClose}>
                         Cancel
                     </Button>
@@ -89,8 +108,9 @@ export function CreateListModal({ isOpen, onClose, onCreated }: CreateListModalP
                         onClick={handleCreate}
                         disabled={!name.trim()}
                         isLoading={createList.isPending}
+                        loadingLabel="Making the list"
                     >
-                        Create List
+                        Make list
                     </Button>
                 </div>
             </div>

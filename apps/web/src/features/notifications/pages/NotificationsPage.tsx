@@ -1,9 +1,9 @@
-import { Bell, CheckCheck } from 'lucide-react'
 import { useNotifications, useMarkAllNotificationsRead } from '../api/notifications'
 import { NotificationItem } from '../components/NotificationItem'
 import { Button } from '@/shared/components/ui/Button'
 import { LoadingPage } from '@/shared/components/ui/Loading'
 import { QueryErrorState } from '@/shared/components/QueryErrorState'
+import { BoardHeader, EmptyState } from '@/shared/components/ui/Board'
 
 export function NotificationsPage() {
     // No `= []` default: a failed query must surface as an error state, not
@@ -12,62 +12,62 @@ export function NotificationsPage() {
     const notifications = notificationsData ?? []
     const markAllRead = useMarkAllNotificationsRead()
 
-    const hasUnread = notifications.some(n => !n.is_read)
-
+    const unreadCount = notifications.filter(n => !n.is_read).length
     const grouped = groupByDate(notifications)
 
-    if (isLoading) return <LoadingPage message="Loading notifications..." />
+    if (isLoading) return <LoadingPage message="Checking for news" />
 
     return (
-        <div className="page-container">
-            <div className="flex items-center justify-between mb-6">
-                <h1 className="text-2xl font-display font-bold text-white flex items-center gap-3">
-                    <Bell className="w-6 h-6 text-primary-400" />
-                    Notifications
-                </h1>
-                {hasUnread && (
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => markAllRead.mutate()}
-                        isLoading={markAllRead.isPending}
-                    >
-                        <CheckCheck className="w-4 h-4 mr-2" />
-                        Mark all read
-                    </Button>
-                )}
-            </div>
+        <div className="page page-body max-w-3xl">
+            <BoardHeader
+                strip={
+                    unreadCount > 0
+                        ? `${unreadCount} unread`
+                        : notifications.length > 0
+                            ? 'All caught up'
+                            : undefined
+                }
+                title="Notifications"
+                lede="New dates from artists and rooms you follow, and replies to what you've written."
+                action={
+                    unreadCount > 0 ? (
+                        <Button
+                            variant="secondary"
+                            onClick={() => markAllRead.mutate()}
+                            isLoading={markAllRead.isPending}
+                            loadingLabel="Marking everything read"
+                        >
+                            Mark all read
+                        </Button>
+                    ) : undefined
+                }
+            />
 
             {isError ? (
                 <QueryErrorState
-                    title="Couldn't load notifications"
+                    title="Couldn't load your notifications"
                     onRetry={() => refetch()}
                 />
             ) : notifications.length === 0 ? (
-                <div className="glass-card p-12 text-center">
-                    <Bell className="w-12 h-12 text-surface-600 mx-auto mb-4" />
-                    <p className="text-surface-400">No notifications yet</p>
-                    <p className="text-surface-500 text-sm mt-2">
-                        We'll notify you about events from followed artists and venues.
-                    </p>
-                </div>
+                <EmptyState
+                    title="Nothing to tell you"
+                    body="Follow an artist or a venue and their new dates land here. Replies to your reviews do too."
+                />
             ) : (
-                <div className="space-y-6">
+                <div className="space-y-8">
                     {grouped.map(group => (
-                        <div key={group.label}>
-                            <h2 className="text-sm font-medium text-surface-400 uppercase tracking-wider mb-2">
-                                {group.label}
-                            </h2>
-                            <div className="glass-card divide-y divide-surface-700">
+                        <section key={group.label}>
+                            <h2 className="voice-label text-bone-dim mb-3">{group.label}</h2>
+                            <div className="rail-list">
                                 {group.items.map(notification => (
                                     <NotificationItem
                                         key={notification.id}
                                         notification={notification}
-                                        onMarkRead={() => {}}
+                                        onMarkRead={() => { }}
                                     />
                                 ))}
                             </div>
-                        </div>
+                        </section>
                     ))}
                 </div>
             )}
@@ -84,7 +84,7 @@ function groupByDate<T extends { created_at: string }>(notifications: T[]) {
     const groups: { label: string; items: T[] }[] = [
         { label: 'Today', items: [] },
         { label: 'Yesterday', items: [] },
-        { label: 'This Week', items: [] },
+        { label: 'Earlier this week', items: [] },
         { label: 'Older', items: [] },
     ]
 

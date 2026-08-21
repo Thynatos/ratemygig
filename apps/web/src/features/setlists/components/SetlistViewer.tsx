@@ -1,6 +1,4 @@
-import { Music, Star, Trash2, Edit3 } from 'lucide-react'
 import { formatRelativeTime } from '@/shared/lib/utils'
-import { Badge } from '@/shared/components/ui/Badge'
 import { sanitizeText } from '@/shared/lib/sanitize'
 import type { SetlistWithSongs } from '@core/index'
 
@@ -11,68 +9,78 @@ interface SetlistViewerProps {
     onDelete?: () => void
 }
 
+/**
+ * A setlist is already a numbered list on a rail — the taped A4 sheet on the
+ * stage floor. Position in the left slot, song in the body, markers on the end.
+ */
 export function SetlistViewer({ setlist, isOwner, onEdit, onDelete }: SetlistViewerProps) {
     const encoreSongs = setlist.songs.filter(s => s.is_encore)
     const mainSongs = setlist.songs.filter(s => !s.is_encore)
+    const author = sanitizeText(
+        setlist.profile?.display_name || setlist.profile?.username || 'a gig-goer'
+    )
 
     const renderSong = (ss: SetlistWithSongs['songs'][number], displayPosition: number) => (
-        <div key={ss.id} className="flex items-start gap-3 py-2 px-3 rounded-lg hover:bg-surface-800/50 transition-colors">
-            <span className="text-surface-500 font-mono text-sm w-6 text-right shrink-0">{displayPosition}</span>
-            <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-white font-medium">{sanitizeText(ss.song?.name ?? 'Unknown Song')}</span>
-                    {ss.is_debut && <Badge variant="accent" className="text-xs px-2 py-0.5">Debut</Badge>}
-                </div>
+        <li key={ss.id} className="row items-start">
+            <span className="row-slot !w-10 sm:!w-12">
+                <span className="voice-data text-ui text-bone-faint tabular-nums">
+                    {String(displayPosition).padStart(2, '0')}
+                </span>
+            </span>
+            <span className="row-body">
+                <span className="text-ui text-bone">
+                    {sanitizeText(ss.song?.name ?? 'Unknown song')}
+                </span>
                 {ss.notes && (
-                    <p className="text-surface-400 text-sm italic mt-0.5">{sanitizeText(ss.notes)}</p>
+                    <span className="text-ui-sm text-bone-faint">{sanitizeText(ss.notes)}</span>
                 )}
-            </div>
-        </div>
+            </span>
+            {ss.is_debut && (
+                <span className="row-end">
+                    <span className="voice-label text-strip">Debut</span>
+                </span>
+            )}
+        </li>
     )
 
     let position = 0
 
     return (
-        <div className="space-y-4">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                        <Music className="w-5 h-5 text-primary-400" />
-                        Setlist by {sanitizeText(setlist.profile?.display_name || setlist.profile?.username || 'Unknown')}
-                    </h3>
-                    <Badge variant={setlist.source === 'verified' ? 'success' : 'surface'}>
-                        {setlist.source === 'verified' ? 'Verified' : 'Manual'}
-                    </Badge>
-                </div>
+        <section className="border border-rail bg-board">
+            <header className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 border-b border-rail">
+                <h3 className="voice-label text-bone-dim">
+                    Written down by <span className="text-bone">{author}</span>
+                    {setlist.source === 'verified' && (
+                        <span className="ml-2 text-strip">· Verified</span>
+                    )}
+                </h3>
                 {isOwner && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                         {onEdit && (
-                            <button
-                                onClick={onEdit}
-                                className="text-surface-400 hover:text-primary-400 transition-colors p-1"
-                                title="Edit setlist"
-                            >
-                                <Edit3 className="w-4 h-4" />
+                            <button type="button" onClick={onEdit} className="btn-ghost">
+                                Edit
                             </button>
                         )}
                         {onDelete && (
                             <button
+                                type="button"
                                 onClick={onDelete}
-                                className="text-surface-400 hover:text-red-400 transition-colors p-1"
-                                title="Delete setlist"
+                                className="btn-ghost text-bone-faint hover:text-struck"
                             >
-                                <Trash2 className="w-4 h-4" />
+                                Delete
                             </button>
                         )}
                     </div>
                 )}
-            </div>
+            </header>
 
             {setlist.notes && (
-                <p className="text-surface-300 text-sm italic">{sanitizeText(setlist.notes)}</p>
+                <p className="px-4 py-3 border-b border-rail text-ui-sm text-bone-dim">
+                    {sanitizeText(setlist.notes)}
+                </p>
             )}
 
-            <div className="space-y-0.5">
+            <ol className="rail-list border-y-0">
                 {mainSongs.map(ss => {
                     position++
                     return renderSong(ss, position)
@@ -80,24 +88,24 @@ export function SetlistViewer({ setlist, isOwner, onEdit, onDelete }: SetlistVie
 
                 {encoreSongs.length > 0 && (
                     <>
-                        <div className="flex items-center gap-2 pt-3 pb-1">
-                            <Star className="w-4 h-4 text-accent-400" />
-                            <span className="text-accent-400 font-medium text-sm">Encore</span>
-                            <div className="flex-1 border-t border-accent-500/30" />
-                        </div>
+                        <li className="row bg-board-raised">
+                            <span className="row-body">
+                                <span className="voice-label text-strip">Encore</span>
+                            </span>
+                        </li>
                         {encoreSongs.map(ss => {
                             position++
                             return renderSong(ss, position)
                         })}
                     </>
                 )}
-            </div>
+            </ol>
 
-            <div className="flex items-center gap-2 text-surface-500 text-sm pt-2 border-t border-surface-700/50">
-                <span>{setlist.songs.length} {setlist.songs.length === 1 ? 'song' : 'songs'}</span>
-                <span>•</span>
-                <span>Last updated {formatRelativeTime(setlist.updated_at)}</span>
-            </div>
-        </div>
+            <footer className="px-4 py-2.5 border-t border-rail voice-label text-bone-faint">
+                <span className="tnum">{setlist.songs.length}</span>{' '}
+                {setlist.songs.length === 1 ? 'song' : 'songs'} · updated{' '}
+                {formatRelativeTime(setlist.updated_at)}
+            </footer>
+        </section>
     )
 }

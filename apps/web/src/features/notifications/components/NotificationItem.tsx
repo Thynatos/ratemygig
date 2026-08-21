@@ -1,5 +1,6 @@
 import { Calendar, Star, Users, MapPin, MessageCircle, Heart, Ticket } from 'lucide-react'
 import { sanitizeText } from '@/shared/lib/sanitize'
+import { cn } from '@/shared/lib/utils'
 import type { Notification as NotificationType } from '@core/index'
 
 const typeIcons: Record<string, typeof Calendar> = {
@@ -12,54 +13,53 @@ const typeIcons: Record<string, typeof Calendar> = {
     friend_attendance: Ticket,
 }
 
-const typeColors: Record<string, string> = {
-    event_reminder: 'text-blue-400',
-    new_review: 'text-yellow-400',
-    artist_event: 'text-accent-400',
-    venue_event: 'text-primary-400',
-    new_comment: 'text-green-400',
-    review_reaction: 'text-pink-400',
-    friend_attendance: 'text-accent-400',
-}
-
 interface NotificationItemProps {
     notification: NotificationType
     onMarkRead: (id: string) => void
 }
 
+/**
+ * Unread is a printed mark, not a colour wash: an amber rail-cap in the left
+ * gutter and bone text. Read rows drop to the dim ramp and lose the cap.
+ */
 export function NotificationItem({ notification, onMarkRead }: NotificationItemProps) {
     const Icon = typeIcons[notification.type] || Calendar
-    const colorClass = typeColors[notification.type] || 'text-surface-400'
     const timeAgo = getTimeAgo(notification.created_at)
+    const unread = !notification.is_read
 
     const handleClick = () => {
-        if (!notification.is_read) {
+        if (unread) {
             onMarkRead(notification.id)
         }
     }
 
     const content = (
         <div
-            className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${notification.is_read ? 'bg-transparent' : 'bg-surface-800/50 hover:bg-surface-800 cursor-pointer'}`}
+            className={cn('row items-start', unread && 'row-current row-interactive')}
             onClick={handleClick}
         >
-            <div className={`mt-0.5 ${colorClass}`}>
-                <Icon className="w-5 h-5" />
-            </div>
-            <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                    <span className={`text-sm font-medium ${notification.is_read ? 'text-surface-300' : 'text-white'}`}>
-                        {sanitizeText(notification.title)}
-                    </span>
-                    {!notification.is_read && (
-                        <span className="w-2 h-2 rounded-full bg-primary-500 shrink-0" />
-                    )}
-                </div>
+            <span className="row-slot !w-8">
+                <Icon
+                    className={cn('w-[18px] h-[18px]', unread ? 'text-strip' : 'text-bone-faint')}
+                    aria-hidden="true"
+                />
+            </span>
+
+            <span className="row-body">
+                <span className={cn('text-ui', unread ? 'text-bone' : 'text-bone-dim')}>
+                    {sanitizeText(notification.title)}
+                </span>
                 {notification.body && (
-                    <p className="text-xs text-surface-400 mt-0.5 line-clamp-2">{sanitizeText(notification.body)}</p>
+                    <span className="text-ui-sm text-bone-faint line-clamp-2">
+                        {sanitizeText(notification.body)}
+                    </span>
                 )}
-            </div>
-            <span className="text-xs text-surface-500 shrink-0">{timeAgo}</span>
+                {unread && <span className="sr-only">Unread</span>}
+            </span>
+
+            <span className="row-end">
+                <span className="voice-label text-bone-faint whitespace-nowrap">{timeAgo}</span>
+            </span>
         </div>
     )
 

@@ -1,11 +1,13 @@
-import { useState, useRef, useEffect } from 'react'
-import { X, Plus, ChevronUp, ChevronDown, Music, Star } from 'lucide-react'
+import { useState, useRef, useEffect, useId } from 'react'
+import { X, ChevronUp, ChevronDown } from 'lucide-react'
 import { useSongSearch } from '../api/songs'
 import { useCreateSetlist, useUpdateSetlist } from '../api/setlists'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { Button } from '@/shared/components/ui/Button'
 import { Input } from '@/shared/components/ui/Input'
+import { Textarea } from '@/shared/components/ui/Textarea'
 import { sanitizeText } from '@/shared/lib/sanitize'
+import { cn } from '@/shared/lib/utils'
 import type { SetlistWithSongs } from '@core/index'
 
 interface SetlistEditorProps {
@@ -24,9 +26,15 @@ interface SongEntry {
     notes: string
 }
 
-export function SetlistEditor({ eventId, existingSetlist, onClose, artistId }: SetlistEditorProps) {
+export function SetlistEditor({
+    eventId,
+    existingSetlist,
+    onClose,
+    artistId,
+}: SetlistEditorProps) {
     const { user } = useAuth()
     const isEditing = !!existingSetlist
+    const searchId = useId()
 
     const [songs, setSongs] = useState<SongEntry[]>(() => {
         if (!existingSetlist) return []
@@ -61,14 +69,17 @@ export function SetlistEditor({ eventId, existingSetlist, onClose, artistId }: S
 
     const handleAddSong = (songId: string, songName: string) => {
         const nextPosition = songs.length > 0 ? Math.max(...songs.map(s => s.position)) + 1 : 0
-        setSongs(prev => [...prev, {
-            id: songId,
-            name: songName,
-            position: nextPosition,
-            isEncore: false,
-            isDebut: false,
-            notes: '',
-        }])
+        setSongs(prev => [
+            ...prev,
+            {
+                id: songId,
+                name: songName,
+                position: nextPosition,
+                isEncore: false,
+                isDebut: false,
+                notes: '',
+            },
+        ])
         setSearchQuery('')
         setShowSearch(false)
     }
@@ -92,11 +103,11 @@ export function SetlistEditor({ eventId, existingSetlist, onClose, artistId }: S
     }
 
     const handleToggleEncore = (index: number) => {
-        setSongs(prev => prev.map((s, i) => i === index ? { ...s, isEncore: !s.isEncore } : s))
+        setSongs(prev => prev.map((s, i) => (i === index ? { ...s, isEncore: !s.isEncore } : s)))
     }
 
     const handleToggleDebut = (index: number) => {
-        setSongs(prev => prev.map((s, i) => i === index ? { ...s, isDebut: !s.isDebut } : s))
+        setSongs(prev => prev.map((s, i) => (i === index ? { ...s, isDebut: !s.isDebut } : s)))
     }
 
     const handleSave = () => {
@@ -105,7 +116,7 @@ export function SetlistEditor({ eventId, existingSetlist, onClose, artistId }: S
         if (isEditing && existingSetlist) {
             updateSetlist.mutate(
                 { setlistId: existingSetlist.id, notes: setlistNotes },
-                { onSuccess: onClose },
+                { onSuccess: onClose }
             )
         } else {
             createSetlist.mutate(
@@ -122,150 +133,205 @@ export function SetlistEditor({ eventId, existingSetlist, onClose, artistId }: S
                     })),
                     notes: setlistNotes,
                 },
-                { onSuccess: onClose },
+                { onSuccess: onClose }
             )
         }
     }
 
     const isPending = createSetlist.isPending || updateSetlist.isPending
     const encoreIndex = songs.findIndex(s => s.isEncore)
+    const canCreate = searchQuery.trim().length > 0
+    const exactMatch = searchResults.some(
+        s => s.name.toLowerCase() === searchQuery.trim().toLowerCase()
+    )
 
     return (
-        <div className="space-y-4">
-            <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-white">
-                    {isEditing ? 'Edit Setlist' : 'Add Setlist'}
+        <div className="space-y-5">
+            <div className="flex items-center justify-between gap-4">
+                <h2 className="voice-slot text-ui text-bone">
+                    {isEditing ? 'Edit the setlist' : 'Write down the setlist'}
                 </h2>
-                <button onClick={onClose} className="text-surface-400 hover:text-white transition-colors">
-                    <X className="w-5 h-5" />
+                <button type="button" onClick={onClose} className="btn-icon">
+                    <X className="w-4 h-4" aria-hidden="true" />
+                    <span className="sr-only">Close the editor</span>
                 </button>
             </div>
 
-            <div>
-                <label className="block text-sm text-surface-400 mb-1">Notes (optional)</label>
-                <textarea
-                    value={setlistNotes}
-                    onChange={e => setSetlistNotes(e.target.value)}
-                    placeholder="Add notes about this setlist..."
-                    className="w-full bg-surface-800 border border-surface-600 rounded-xl px-4 py-3 text-white placeholder-surface-500 focus:border-primary-500 focus:ring-1 focus:ring-primary-500/20 outline-none resize-none"
-                    rows={2}
-                />
-            </div>
+            <Textarea
+                label="Notes"
+                name="setlist-notes"
+                value={setlistNotes}
+                onChange={e => setSetlistNotes(e.target.value)}
+                placeholder="Anything worth remembering — a cover, a false start, a guest."
+                className="min-h-[70px]"
+                hint="Optional."
+            />
 
-            <div className="relative" ref={searchRef}>
-                <div className="flex gap-2">
-                    <Input
-                        value={searchQuery}
-                        onChange={e => { setSearchQuery(e.target.value); setShowSearch(true) }}
-                        onFocus={() => setShowSearch(true)}
-                        placeholder="Search for a song..."
-                        className="flex-1"
-                    />
-                    <Button
-                        variant="secondary"
-                        onClick={() => {
-                            if (searchQuery.trim()) {
-                                handleAddSong('', searchQuery.trim())
-                            }
-                        }}
-                    >
-                        <Plus className="w-4 h-4" />
-                    </Button>
-                </div>
-
-                {showSearch && searchQuery.trim() && (
-                    <div className="absolute z-10 top-full mt-1 w-full bg-surface-800 border border-surface-600 rounded-xl shadow-lg max-h-48 overflow-y-auto">
-                        {searchResults.map(song => (
-                            <button
-                                key={song.id}
-                                onClick={() => handleAddSong(song.id, song.name)}
-                                className="w-full text-left px-4 py-2 text-white hover:bg-surface-700 transition-colors"
-                            >
-                                {sanitizeText(song.name)}
-                            </button>
-                        ))}
-                        {searchQuery.trim() && !searchResults.some(s => s.name.toLowerCase() === searchQuery.trim().toLowerCase()) && (
-                            <button
-                                onClick={() => handleAddSong('', searchQuery.trim())}
-                                className="w-full text-left px-4 py-2 text-primary-400 hover:bg-surface-700 transition-colors"
-                            >
-                                <Plus className="w-4 h-4 inline mr-2" />
-                                Create &ldquo;{sanitizeText(searchQuery.trim())}&rdquo;
-                            </button>
-                        )}
+            {!isEditing && (
+                <div className="relative" ref={searchRef}>
+                    <label htmlFor={searchId} className="input-label">
+                        Add a song
+                    </label>
+                    <div className="flex gap-2">
+                        <Input
+                            id={searchId}
+                            value={searchQuery}
+                            onChange={e => {
+                                setSearchQuery(e.target.value)
+                                setShowSearch(true)
+                            }}
+                            onFocus={() => setShowSearch(true)}
+                            placeholder="Song title"
+                            className="flex-1"
+                            autoComplete="off"
+                        />
+                        <Button
+                            variant="secondary"
+                            onClick={() => {
+                                if (canCreate) handleAddSong('', searchQuery.trim())
+                            }}
+                            disabled={!canCreate}
+                        >
+                            Add
+                        </Button>
                     </div>
-                )}
-            </div>
 
-            {songs.length > 0 && (
-                <div className="space-y-1">
-                    {songs.map((song, index) => (
-                        <div key={index}>
-                            {song.isEncore && (encoreIndex === index) && (
-                                <div className="flex items-center gap-2 pt-2 pb-1">
-                                    <Star className="w-3 h-3 text-accent-400" />
-                                    <span className="text-accent-400 text-sm font-medium">Encore</span>
-                                    <div className="flex-1 border-t border-accent-500/30" />
-                                </div>
+                    {showSearch && canCreate && (
+                        <div className="absolute z-10 top-full mt-1 w-full border border-rail-strong bg-board shadow-lift max-h-56 overflow-y-auto">
+                            {searchResults.map(song => (
+                                <button
+                                    key={song.id}
+                                    type="button"
+                                    onClick={() => handleAddSong(song.id, song.name)}
+                                    className="w-full text-left px-3 py-2 text-ui text-bone border-b border-rail transition-colors duration-150 ease-board hover:bg-board-raised"
+                                >
+                                    {sanitizeText(song.name)}
+                                </button>
+                            ))}
+                            {!exactMatch && (
+                                <button
+                                    type="button"
+                                    onClick={() => handleAddSong('', searchQuery.trim())}
+                                    className="w-full text-left px-3 py-2 voice-label text-strip transition-colors duration-150 ease-board hover:bg-board-raised"
+                                >
+                                    Add “{sanitizeText(searchQuery.trim())}” as a new song
+                                </button>
                             )}
-                            <div className="flex items-center gap-2 p-2 rounded-lg bg-surface-800/50 border border-surface-700">
-                                <span className="text-surface-500 font-mono text-sm w-5 text-right">{index + 1}</span>
-                                <span className="flex-1 text-white text-sm font-medium truncate">{sanitizeText(song.name)}</span>
-                                <button
-                                    onClick={() => handleToggleEncore(index)}
-                                    className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${song.isEncore ? 'bg-accent-500/20 text-accent-300 border-accent-500/30' : 'bg-surface-700/50 text-surface-400 border-surface-600'}`}
-                                >
-                                    Encore
-                                </button>
-                                <button
-                                    onClick={() => handleToggleDebut(index)}
-                                    className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${song.isDebut ? 'bg-warning-500/20 text-yellow-300 border-yellow-500/30' : 'bg-surface-700/50 text-surface-400 border-surface-600'}`}
-                                >
-                                    Debut
-                                </button>
-                                <div className="flex flex-col">
-                                    <button
-                                        onClick={() => handleMoveSong(index, 'up')}
-                                        disabled={index === 0}
-                                        className="text-surface-500 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
-                                    >
-                                        <ChevronUp className="w-3 h-3" />
-                                    </button>
-                                    <button
-                                        onClick={() => handleMoveSong(index, 'down')}
-                                        disabled={index === songs.length - 1}
-                                        className="text-surface-500 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
-                                    >
-                                        <ChevronDown className="w-3 h-3" />
-                                    </button>
-                                </div>
-                                <button
-                                    onClick={() => handleRemoveSong(index)}
-                                    className="text-surface-500 hover:text-red-400 transition-colors"
-                                >
-                                    <X className="w-4 h-4" />
-                                </button>
-                            </div>
                         </div>
+                    )}
+                </div>
+            )}
+
+            {songs.length > 0 ? (
+                <ol className="rail-list">
+                    {songs.map((song, index) => (
+                        <li key={index}>
+                            {song.isEncore && encoreIndex === index && (
+                                <p className="bg-board-raised px-4 py-1.5 voice-label text-strip border-b border-rail">
+                                    Encore
+                                </p>
+                            )}
+                            <div className="row items-center gap-2">
+                                <span className="row-slot !w-9">
+                                    <span className="voice-data text-ui-sm text-bone-faint tabular-nums">
+                                        {String(index + 1).padStart(2, '0')}
+                                    </span>
+                                </span>
+
+                                <span className="row-body !flex-row !items-center">
+                                    <span className="text-ui text-bone truncate">
+                                        {sanitizeText(song.name)}
+                                    </span>
+                                </span>
+
+                                <span className="row-end !flex-row items-center gap-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleToggleEncore(index)}
+                                        aria-pressed={song.isEncore}
+                                        className={cn(
+                                            'voice-label border px-1.5 py-1 transition-colors duration-150 ease-board',
+                                            song.isEncore
+                                                ? 'bg-strip text-strip-ink border-strip'
+                                                : 'text-bone-faint border-rail hover:text-bone'
+                                        )}
+                                    >
+                                        Encore
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleToggleDebut(index)}
+                                        aria-pressed={song.isDebut}
+                                        className={cn(
+                                            'voice-label border px-1.5 py-1 transition-colors duration-150 ease-board',
+                                            song.isDebut
+                                                ? 'bg-strip text-strip-ink border-strip'
+                                                : 'text-bone-faint border-rail hover:text-bone'
+                                        )}
+                                    >
+                                        Debut
+                                    </button>
+                                    <span className="flex flex-col">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleMoveSong(index, 'up')}
+                                            disabled={index === 0}
+                                            className="text-bone-faint hover:text-bone disabled:opacity-30 disabled:cursor-not-allowed"
+                                        >
+                                            <ChevronUp className="w-3.5 h-3.5" aria-hidden="true" />
+                                            <span className="sr-only">
+                                                Move {sanitizeText(song.name)} earlier
+                                            </span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleMoveSong(index, 'down')}
+                                            disabled={index === songs.length - 1}
+                                            className="text-bone-faint hover:text-bone disabled:opacity-30 disabled:cursor-not-allowed"
+                                        >
+                                            <ChevronDown
+                                                className="w-3.5 h-3.5"
+                                                aria-hidden="true"
+                                            />
+                                            <span className="sr-only">
+                                                Move {sanitizeText(song.name)} later
+                                            </span>
+                                        </button>
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRemoveSong(index)}
+                                        className="text-bone-faint hover:text-struck"
+                                    >
+                                        <X className="w-4 h-4" aria-hidden="true" />
+                                        <span className="sr-only">
+                                            Remove {sanitizeText(song.name)}
+                                        </span>
+                                    </button>
+                                </span>
+                            </div>
+                        </li>
                     ))}
-                </div>
+                </ol>
+            ) : (
+                !isEditing && (
+                    <p className="border border-dashed border-rail-strong px-4 py-6 text-center text-ui-sm text-bone-faint">
+                        No songs yet. Search above and add them in the order they were played.
+                    </p>
+                )
             )}
 
-            {songs.length === 0 && (
-                <div className="text-center py-8 text-surface-500">
-                    <Music className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p>No songs added yet. Search for songs above.</p>
-                </div>
-            )}
-
-            <div className="flex justify-end gap-3 pt-2">
-                <Button variant="ghost" onClick={onClose}>Cancel</Button>
+            <div className="flex justify-end gap-2">
+                <Button variant="ghost" onClick={onClose}>
+                    Cancel
+                </Button>
                 <Button
                     onClick={handleSave}
-                    disabled={isPending || (!isEditing && songs.length === 0)}
+                    disabled={!isEditing && songs.length === 0}
                     isLoading={isPending}
+                    loadingLabel="Saving the setlist"
                 >
-                    {isEditing ? 'Update Setlist' : 'Create Setlist'}
+                    {isEditing ? 'Save changes' : 'Save setlist'}
                 </Button>
             </div>
         </div>

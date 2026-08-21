@@ -1,8 +1,5 @@
 import { memo } from 'react'
-import { Globe, Lock, ListMusic } from 'lucide-react'
 import type { List, Event } from '@core/index'
-import { Card, CardContent } from '@/shared/components/ui/Card'
-import { Badge } from '@/shared/components/ui/Badge'
 import { formatRelativeTime } from '@/shared/lib/utils'
 import { sanitizeText } from '@/shared/lib/sanitize'
 
@@ -16,39 +13,31 @@ interface ListCardProps {
     onClick: () => void
 }
 
+/** A list on the board: how many gigs in the slot, name and note in the body. */
 export const ListCard = memo(function ListCard({ list, onClick }: ListCardProps) {
     return (
-        <Card hoverable onClick={onClick}>
-            <CardContent className="p-5">
-                <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                            <h3 className="font-semibold text-white truncate">{sanitizeText(list.name)}</h3>
-                            {list.is_public ? (
-                                <Globe className="w-3.5 h-3.5 text-surface-500 shrink-0" />
-                            ) : (
-                                <Lock className="w-3.5 h-3.5 text-surface-500 shrink-0" />
-                            )}
-                        </div>
+        <button type="button" onClick={onClick} className="row row-interactive items-start">
+            <span className="row-slot">
+                <span className="date-slot">
+                    <span className="date-slot-day">{list.item_count}</span>
+                    <span className="date-slot-mon">
+                        {list.item_count === 1 ? 'gig' : 'gigs'}
+                    </span>
+                </span>
+            </span>
 
-                        {list.description && (
-                            <p className="text-sm text-surface-400 mt-1 line-clamp-2">
-                                {sanitizeText(list.description)}
-                            </p>
-                        )}
-
-                        <div className="flex items-center gap-3 mt-3">
-                            <Badge variant="surface">
-                                <ListMusic className="w-3 h-3 mr-1" />
-                                {list.item_count} {list.item_count === 1 ? 'event' : 'events'}
-                            </Badge>
-                            <span className="text-xs text-surface-500">
-                                {formatRelativeTime(list.created_at)}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </CardContent>
-        </Card>
+            <span className="row-body">
+                <span className="row-title">{sanitizeText(list.name)}</span>
+                {list.description && (
+                    <span className="row-meta line-clamp-2">
+                        {sanitizeText(list.description)}
+                    </span>
+                )}
+                <span className="voice-label text-bone-faint">
+                    {list.is_public ? 'Public' : 'Private'} · made{' '}
+                    {formatRelativeTime(list.created_at)}
+                </span>
+            </span>
+        </button>
     )
 })
