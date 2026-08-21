@@ -19,6 +19,10 @@
                 }
             ],
             "destination": "/api/og-inject?reviewId=:reviewId"
+        },
+        {
+            "source": "/(.*)",
+            "destination": "/index.html"
         }
     ]
 }

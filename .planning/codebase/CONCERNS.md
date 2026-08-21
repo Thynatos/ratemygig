@@ -271,6 +271,12 @@
 
 ## Sprint 10 — Make it work on a real database (Notes & Tradeoffs)
 
+### Production had NO SPA fallback — every deep link 404'd (found during the Sprint 10 merge)
+- Verified against `https://ratemygig-web.vercel.app` on 2026-08-21 while running the G3 checklist: `/` returned 200 but `/venues`, `/artists`, `/events/:id` and `/r/:id` all returned a **platform** 404 (`X-Vercel-Error: NOT_FOUND`, `Server: Vercel`, plain-text body — not the app's NotFoundPage, which would be a 200 SPA shell). Cause: `apps/web/vercel.json` declared `framework: "vite"` but no catch-all rewrite, and Vercel's Vite preset does not add one (Vite can be an MPA).
+- This had nothing to do with Sprint 10, but it would have made Sprint 7's share cards look broken on their first production deploy: the UA-gated `/r/:reviewId` rewrite serves crawlers correctly, so a Slack/Twitter preview renders — while a human clicking that same link fell through to the filesystem and got the 404. Fixed by appending `{"source": "/(.*)", "destination": "/index.html"}` **after** the crawler rewrite (order matters; Vercel evaluates rewrites top-down).
+- Safe against the `api/og-inject` function and static assets because Vercel checks redirects → headers → **filesystem** → rewrites, so anything that exists on disk or as a function is matched before the catch-all is considered.
+- **G3 remains partly unverified:** Vercel preview deployments on this account are SSO-protected (every request, crawler UA included, 302s to `vercel.com/sso-api`), so the crawler rewrite cannot be exercised on a preview. It can only be checked on the production alias after a merge — run the four-step G3 checklist there.
+
 ### user_follows keeps TWO FK targets per column — embed hints are mandatory
 - After 016, `follower_id`/`following_id` each have FKs to both `auth.users` and `public.profiles`. PostgREST only embeds through the `profiles` ones, but the table now has two relationships to `profiles`, so `useFollowers`/`useFollowing` must keep disambiguating hints — and those hints name the **new** constraints (`user_follows_follower_profile_fkey` / `user_follows_following_profile_fkey`), because the old `*_id_fkey` names belong to the `auth.users` constraints.
 
