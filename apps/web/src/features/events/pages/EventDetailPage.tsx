@@ -12,7 +12,7 @@ import { SetlistCard } from '@/features/setlists/components/SetlistCard'
 import { ReactionButtons } from '@/features/reviews/components/ReactionButtons'
 import { AddToListButton } from '@/features/lists/components/AddToListButton'
 import { AddToCalendarButton } from '../components/AddToCalendarButton'
-import { usePhotoUrls } from '@/shared/hooks'
+import { usePhotoUrls, usePageMeta } from '@/shared/hooks'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { Button } from '@/shared/components/ui/Button'
 import { Badge } from '@/shared/components/ui/Badge'
@@ -37,6 +37,19 @@ export function EventDetailPage() {
         (r.photos ?? []).map((p: { storage_path: string }) => p.storage_path)
     )
     const { urls: photoUrls } = usePhotoUrls(allPhotoPaths)
+
+    usePageMeta(
+        event
+            ? {
+                  title: event.name,
+                  description: `${event.name} at ${event.venue?.name || 'Venue TBA'} — ${event.city}, ${formatDate(
+                      event.start_at,
+                      'MMM d, yyyy'
+                  )}`,
+                  canonicalPath: `/events/${event.id}`,
+              }
+            : null
+    )
 
     if (isLoading) return <LoadingPage message="Loading event details..." />
 

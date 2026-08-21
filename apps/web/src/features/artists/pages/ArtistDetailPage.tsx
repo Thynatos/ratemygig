@@ -14,6 +14,7 @@ import { LoadingPage } from '@/shared/components/ui/Loading'
 import { EventCard } from '@/features/events/components/EventCard'
 import { useFriendsGoing } from '@/features/events/api/useFriendsGoing'
 import { Input } from '@/shared/components/ui/Input'
+import { usePageMeta } from '@/shared/hooks'
 import { sanitizeText } from '@/shared/lib/sanitize'
 import { env } from '@/shared/lib/env'
 import { getProviderModeLabel, isTicketmasterMode } from '@/shared/lib/provider-policy'
@@ -44,6 +45,16 @@ export function ArtistDetailPage() {
         return [...upcoming, ...past].map(e => e.id)
     }, [events])
     const { data: friendsGoing } = useFriendsGoing(visibleEventIds)
+
+    usePageMeta(
+        artist
+            ? {
+                  title: artist.name,
+                  description: `${artist.name} — ratings, upcoming events`,
+                  canonicalPath: `/artists/${artist.id}`,
+              }
+            : null
+    )
 
     if (artistLoading) return <LoadingPage message="Loading artist..." />
 

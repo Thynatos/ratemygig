@@ -1,0 +1,8 @@
+
+[functions.og-image]
+enabled = true
+verify_jwt = false
+import_map = "./functions/og-image/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/og-image/index.ts"

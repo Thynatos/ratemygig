@@ -243,6 +243,32 @@
 ### CI runs lint/test/build only — E2E stays local
 - `ci.yml` intentionally skips Playwright: the suite needs a live Supabase instance and no mock-server strategy exists (SPRINTS.md "Deferred / rejected"). All three CI steps run without secrets — `env.ts` falls back to placeholder Supabase values when `VITE_*` vars are unset. Commented in the workflow file.
 
+## Sprint 7 — Share Cards / OG Images (Notes & Tradeoffs)
+
+### The crawler UA list is best-effort
+- `CRAWLER_UA_PATTERN` (and the parallel regex in `vercel.json`) matches the major crawlers (Googlebot, facebookexternalhit, Twitterbot, WhatsApp, Slack, LinkedIn, Discord, Telegram, Pinterest, embed/preview probes). New or obscure bots that don't match get the plain SPA shell — no rich card, but no breakage either. Revisit the list when a specific validator shows a blank card.
+- The two lists (TS + vercel.json) must stay in sync manually; the Vercel `has` value cannot import from `src/`.
+
+### og-shell.html is generated build output
+- `dist/og-shell.html` is created by the `postbuild` step (`scripts/copy-og-shell.mjs`) copying `dist/index.html`. If `index.html` ever changes structure, the copy tracks it automatically (it is regenerated on every build) — the only drift risk is a stale `og-shell.html` when someone serves `dist/` from a build that predates the script. `dist/` is gitignored, so CI/deploy builds always regenerate it.
+
+### Public Edge Function relies on a manual visibility filter
+- `og-image` runs with the service role key (`verify_jwt = false` in `supabase/config.toml`), which bypasses RLS. The function therefore re-checks `status = 'published' && is_public = true` itself before rendering any review data; everything else gets the branded fallback card. Any future change to review visibility semantics must be mirrored in this filter (and in `api/og-inject.ts`, which uses the anon key + explicit PostgREST filters).
+
+### Cold-start latency
+- First request to `og-image` after idle pays Deno cold start + wasm init (~200–500 ms). Acceptable for crawlers; the `Cache-Control: public, max-age=86400, s-maxage=86400` response headers mean each review image is fetched at most once per day per CDN edge.
+
+### Renderer deviation from the sprint plan (recorded in DEPLOYMENT.md)
+- The plan specified raw `npm:satori` + `npm:@resvg/resvg-wasm`; the shipped function uses `npm:@vercel/og` (the same stack, bundled) because server-side CLI bundling does not expose function static assets to the runtime (verified empirically — see DEPLOYMENT.md "In-sprint decision record"). Inter subsets are base64-embedded in `fonts.ts` instead of read from `assets/`.
+
+### Pre-existing bugs found during Sprint 7 e2e verification (not fixed — out of scope)
+
+#### ArtistDetailPage crashes whenever the venues query succeeds
+- `apps/web/src/features/artists/pages/ArtistDetailPage.tsx` does `venueList.map(...)` on the result of `useVenues()`, but the paginated API returns `{ data, hasMore }` (see CONVENTIONS.md "Pagination"). With Supabase configured, `venueList` is that object → `TypeError: venueList.map is not a function` → the per-feature ErrorBoundary renders. Mock-mode dev hides it (`data` can be an array via mocks). Fix: destructure `{ data: venueList }` (or `.data`) before mapping.
+
+#### reviews → profiles PostgREST embed fails (PGRST200)
+- `reviews.user_id` has an FK to `auth.users`, not `public.profiles`, so every `profile:profiles(...)` embed on `reviews` returns 400 `PGRST200` ("no foreign key relationship between 'reviews' and 'profiles'"). This breaks `useReview` and `useEventReviews` against a configured Supabase project — `/r/:reviewId` currently always shows "Review not found" on the live DB. The Sprint 7 server-side pieces work around it (Edge Function and `api/og-inject.ts` fetch `profiles` by `user_id` in a second query). Proper fix options: add an FK `reviews.user_id → profiles.id` (they share the same `auth.users` PK), or switch the client queries to the two-step pattern / an RPC view.
+
 ## Sprint 6 — Gig Wrapped (Notes & Tradeoffs)
 
 ### get_user_year_stats ignores its p_user_id parameter (deliberate, same as 014)

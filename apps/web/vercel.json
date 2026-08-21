@@ -2,5 +2,23 @@
     "framework": "vite",
     "installCommand": "cd ../.. && npm install",
     "buildCommand": "npm run build",
-    "outputDirectory": "dist"
+    "outputDirectory": "dist",
+    "functions": {
+        "api/og-inject.ts": {
+            "includeFiles": "dist/og-shell.html"
+        }
+    },
+    "rewrites": [
+        {
+            "source": "/r/:reviewId",
+            "has": [
+                {
+                    "type": "header",
+                    "key": "user-agent",
+                    "value": "(?i).*(bot|crawl|spider|slurp|facebookexternalhit|Twitterbot|Slackbot|LinkedInBot|Discordbot|WhatsApp|TelegramBot|Pinterest|embed|preview).*"
+                }
+            ],
+            "destination": "/api/og-inject?reviewId=:reviewId"
+        }
+    ]
 }

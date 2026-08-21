@@ -2,7 +2,7 @@
 
 ## Current Phase
 **Phase:** Post-M5 Sprints (see .planning/SPRINTS.md)
-**Status:** Sprint 6 complete — next up: Sprint 7 (Share cards / OG images)
+**Status:** Sprint 7 complete — next up: Sprint 8 (setlist.fm import)
 **Last Activity:** 2026-08-21
 
 ## Completed
@@ -62,7 +62,12 @@
 - Sprint 6: migration 015 get_user_year_stats RPC (SECURITY DEFINER, caller-scoped, one-row year stats: gigs/reviews/avg rating/photos/cities/first+last dates + top_artists/top_venues JSONB)
 - Sprint 6: /wrapped page (lazy, ProtectedRoute) with ?year= param + prev/next year nav (min 2000, max current), January→previous-year default via pure resolveWrappedYear, stat cards reusing GigStatsCard visual language, top artist/venue lists, empty state CTA to Discover
 - Sprint 6: ProfilePage "Your Year in Review" entry card linking to /wrapped; UserYearStats/YearStatEntry core types; yearStatsSchema Zod validation on the RPC row
-- 281 unit tests passing, 0 lint errors, 0 lint warnings
+- Sprint 7: shared/lib/crawler.ts (CRAWLER_UA_PATTERN + isCrawlerUserAgent) and shared/lib/og.ts (buildOgTags with HTML-attribute escaping + ≤200-char description, buildOgImageUrl) with 22 unit tests
+- Sprint 7: usePageMeta hook (title/description/canonical/og upsert; null-restore + unmount-restore of index.html baseline) applied to PublicReviewPage, EventDetailPage, ArtistDetailPage, VenueDetailPage; 7 hook tests + Playwright e2e meta verification
+- Sprint 7: Supabase Edge Function og-image (deployed, verify_jwt=false, manual published/public filter, service-role + two-step profile fetch, signed photo URLs, branded fallback card, 400 on missing param, cache headers) rendering 1200×630 PNGs via npm:@vercel/og with base64-embedded Inter subsets
+- Sprint 7: Vercel crawler OG injection — api/og-inject.ts (PostgREST + dist/og-shell.html + buildOgTags injection, non-crawler UA 302 redirect), scripts/copy-og-shell.mjs postbuild step, vercel.json UA-gated rewrite + includeFiles
+- Sprint 7: apps/web/public/og-fallback.png (1200×630 branded, <100 kB); DEPLOYMENT.md "Share cards / OG images" section with in-sprint decision record
+- 310 unit tests passing, 0 lint errors, 0 lint warnings
 
 ## Decisions
 - Direct Supabase client queries (no custom API layer)
