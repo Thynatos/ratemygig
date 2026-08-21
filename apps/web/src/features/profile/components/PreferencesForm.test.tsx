@@ -63,28 +63,28 @@ describe('PreferencesForm notification toggles', () => {
     it('renders five notification toggles', () => {
         render(<PreferencesForm />)
         expect(screen.getAllByRole('switch')).toHaveLength(5)
-        expect(screen.getByText('Artist events')).toBeInTheDocument()
-        expect(screen.getByText('Venue events')).toBeInTheDocument()
-        expect(screen.getByText('New reviews')).toBeInTheDocument()
-        expect(screen.getByText('Comments')).toBeInTheDocument()
-        expect(screen.getByText('Reactions')).toBeInTheDocument()
+        expect(screen.getByText('New dates from artists you follow')).toBeInTheDocument()
+        expect(screen.getByText('New dates at rooms you follow')).toBeInTheDocument()
+        expect(screen.getByText('Reviews from people you follow')).toBeInTheDocument()
+        expect(screen.getByText('Replies to your reviews')).toBeInTheDocument()
+        expect(screen.getByText('Reactions to your reviews')).toBeInTheDocument()
     })
 
     it('reflects current preference values', () => {
         render(<PreferencesForm />)
-        expect(screen.getByRole('switch', { name: 'Artist events' })).toHaveAttribute('aria-checked', 'true')
-        expect(screen.getByRole('switch', { name: 'Comments' })).toHaveAttribute('aria-checked', 'false')
+        expect(screen.getByRole('switch', { name: 'New dates from artists you follow' })).toHaveAttribute('aria-checked', 'true')
+        expect(screen.getByRole('switch', { name: 'Replies to your reviews' })).toHaveAttribute('aria-checked', 'false')
     })
 
     it('calls the mutation with the flipped value when a toggle is clicked', () => {
         render(<PreferencesForm />)
-        fireEvent.click(screen.getByRole('switch', { name: 'Artist events' }))
+        fireEvent.click(screen.getByRole('switch', { name: 'New dates from artists you follow' }))
         expect(updateMutate).toHaveBeenCalledWith({ notify_artist_events: false })
     })
 
     it('turns an opted-out type back on', () => {
         render(<PreferencesForm />)
-        fireEvent.click(screen.getByRole('switch', { name: 'Comments' }))
+        fireEvent.click(screen.getByRole('switch', { name: 'Replies to your reviews' }))
         expect(updateMutate).toHaveBeenCalledWith({ notify_comments: true })
     })
 
@@ -97,7 +97,7 @@ describe('PreferencesForm notification toggles', () => {
         for (const toggle of screen.getAllByRole('switch')) {
             expect(toggle).toHaveAttribute('aria-checked', 'true')
         }
-        fireEvent.click(screen.getByRole('switch', { name: 'Reactions' }))
+        fireEvent.click(screen.getByRole('switch', { name: 'Reactions to your reviews' }))
         expect(updateMutate).toHaveBeenCalledWith({ notify_reactions: false })
     })
 })

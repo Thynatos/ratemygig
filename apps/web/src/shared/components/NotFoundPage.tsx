@@ -1,19 +1,37 @@
 import { Link } from 'react-router-dom'
-import { Home, Music } from 'lucide-react'
 
+/**
+ * A blank slot on the board. The 404 states what happened and offers the two
+ * ways back in — it does not joke about it.
+ */
 export function NotFoundPage() {
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center p-4">
-            <Music className="w-16 h-16 text-accent-500 mb-6" />
-            <h1 className="text-4xl font-display font-bold text-white mb-2">404</h1>
-            <p className="text-xl text-surface-400 mb-8">Page not found</p>
-            <p className="text-surface-500 mb-8 text-center max-w-md">
-                The page you're looking for doesn't exist or has been moved.
-            </p>
-            <Link to="/" className="btn-primary flex items-center gap-2">
-                <Home className="w-5 h-5" />
-                Back to Home
-            </Link>
+        <div className="min-h-screen bg-groove flex flex-col items-center justify-center p-6">
+            <div className="w-full max-w-md">
+                <span className="score mb-6 inline-flex" aria-hidden="true">
+                    {[0, 1, 2, 3, 4].map(i => (
+                        <span key={i} className="score-slot w-[22px] h-[34px]" />
+                    ))}
+                </span>
+
+                <p className="voice-label text-bone-faint mb-3">Error 404</p>
+                <h1 className="voice-board text-board-lg text-bone">Nothing at this address</h1>
+                <p className="board-lede">
+                    The page has moved, been deleted, or the link was mistyped.
+                </p>
+
+                <div className="mt-7 flex flex-wrap gap-2">
+                    <Link to="/" className="btn-primary">
+                        See what's on
+                    </Link>
+                    <Link to="/artists" className="btn-secondary">
+                        Browse artists
+                    </Link>
+                    <Link to="/venues" className="btn-secondary">
+                        Browse venues
+                    </Link>
+                </div>
+            </div>
         </div>
     )
 }

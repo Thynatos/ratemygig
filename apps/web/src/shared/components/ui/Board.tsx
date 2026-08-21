@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { parseISO, isValid, isToday, isTomorrow, isPast } from 'date-fns'
+import { parseISO, isValid, isToday } from 'date-fns'
 import { cn } from '@/shared/lib/utils'
 
 /* ============================================================
@@ -109,16 +109,6 @@ export function DateSlot({ date, className }: DateSlotProps) {
             </span>
         </span>
     )
-}
-
-/** Human label for when a gig is, used in row meta and detail headers. */
-export function whenLabel(date: string | Date): string {
-    const d = typeof date === 'string' ? parseISO(date) : date
-    if (!isValid(d)) return 'Date to be confirmed'
-    if (isToday(d)) return 'Tonight'
-    if (isTomorrow(d)) return 'Tomorrow'
-    if (isPast(d)) return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
-    return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
 }
 
 /* ---------------------------------------------------------------- */

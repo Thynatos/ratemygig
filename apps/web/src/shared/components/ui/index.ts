@@ -18,7 +18,6 @@ export {
     RailList,
     Row,
     DateSlot,
-    whenLabel,
     EmptyState,
     ErrorState,
     Figure,

@@ -107,48 +107,78 @@ describe('Input', () => {
     })
 })
 
-describe('StarRating', () => {
-    it('renders 5 stars', () => {
-        render(<StarRating value={3} />)
-        expect(screen.getAllByRole('button')).toHaveLength(5)
+describe('StarRating (the score strip)', () => {
+    it('renders five radio slots when interactive', () => {
+        render(<StarRating value={3} onChange={vi.fn()} />)
+        expect(screen.getAllByRole('radio')).toHaveLength(5)
     })
 
-    it('calls onChange when clicked', () => {
+    it('exposes the picked slot as checked', () => {
+        render(<StarRating value={3} onChange={vi.fn()} />)
+        const slots = screen.getAllByRole('radio')
+        expect(slots[2]).toBeChecked()
+        expect(slots[0]).not.toBeChecked()
+    })
+
+    it('calls onChange when a slot is clicked', () => {
         const handleChange = vi.fn()
         render(<StarRating value={0} onChange={handleChange} />)
-        fireEvent.click(screen.getAllByRole('button')[2])
+        fireEvent.click(screen.getAllByRole('radio')[2])
         expect(handleChange).toHaveBeenCalledWith(3)
     })
 
-    it('does not call onChange when readonly', () => {
-        const handleChange = vi.fn()
-        render(<StarRating value={3} onChange={handleChange} readonly />)
-        fireEvent.click(screen.getAllByRole('button')[0])
-        expect(handleChange).not.toHaveBeenCalled()
+    it('renders no controls when readonly', () => {
+        render(<StarRating value={3} readonly />)
+        expect(screen.queryAllByRole('radio')).toHaveLength(0)
+        expect(screen.queryAllByRole('button')).toHaveLength(0)
+    })
+
+    it('announces a readonly score to assistive tech', () => {
+        render(<StarRating value={3} readonly />)
+        expect(screen.getByText('3 out of 5')).toBeInTheDocument()
     })
 
     it('calls onChange on Enter key', () => {
         const handleChange = vi.fn()
         render(<StarRating value={0} onChange={handleChange} />)
-        fireEvent.keyDown(screen.getAllByRole('button')[3], { key: 'Enter' })
+        fireEvent.keyDown(screen.getAllByRole('radio')[3], { key: 'Enter' })
         expect(handleChange).toHaveBeenCalledWith(4)
     })
 
     it('calls onChange on Space key', () => {
         const handleChange = vi.fn()
         render(<StarRating value={0} onChange={handleChange} />)
-        fireEvent.keyDown(screen.getAllByRole('button')[0], { key: ' ' })
+        fireEvent.keyDown(screen.getAllByRole('radio')[0], { key: ' ' })
+        expect(handleChange).toHaveBeenCalledWith(1)
+    })
+
+    it('moves the score with arrow keys', () => {
+        const handleChange = vi.fn()
+        render(<StarRating value={2} onChange={handleChange} />)
+        fireEvent.keyDown(screen.getAllByRole('radio')[1], { key: 'ArrowRight' })
+        expect(handleChange).toHaveBeenCalledWith(3)
+    })
+
+    it('clamps arrow movement at the ends', () => {
+        const handleChange = vi.fn()
+        render(<StarRating value={1} onChange={handleChange} />)
+        fireEvent.keyDown(screen.getAllByRole('radio')[0], { key: 'ArrowLeft' })
         expect(handleChange).toHaveBeenCalledWith(1)
     })
 
     it('displays value when showValue is true', () => {
-        render(<StarRating value={4.5} showValue />)
+        render(<StarRating value={4.5} readonly showValue />)
         expect(screen.getByText('4.5')).toBeInTheDocument()
     })
 
-    it('shows dash when value is 0 and showValue is true', () => {
-        render(<StarRating value={0} showValue />)
-        expect(screen.getByText('-')).toBeInTheDocument()
+    it('shows an em dash when value is 0 and showValue is true', () => {
+        render(<StarRating value={0} readonly showValue />)
+        expect(screen.getByText('—')).toBeInTheDocument()
+    })
+
+    it('has no accessibility violations', async () => {
+        const { container } = render(<StarRating value={3} onChange={vi.fn()} />)
+        expect(await checkA11y(container)).toHaveNoViolations()
     })
 })
 
@@ -156,24 +186,29 @@ describe('RatingDisplay', () => {
     it('renders rating and count', () => {
         render(<RatingDisplay rating={4.2} count={15} />)
         expect(screen.getByText('4.2')).toBeInTheDocument()
-        expect(screen.getByText('(15 reviews)')).toBeInTheDocument()
+        expect(screen.getByText('15 reviews')).toBeInTheDocument()
     })
 
     it('renders singular review text', () => {
         render(<RatingDisplay rating={5} count={1} />)
-        expect(screen.getByText('(1 review)')).toBeInTheDocument()
+        expect(screen.getByText('1 review')).toBeInTheDocument()
     })
 
-    it('shows dash when rating is 0', () => {
+    it('names the empty case rather than showing a zero', () => {
+        render(<RatingDisplay rating={0} count={0} />)
+        expect(screen.getByText('No reviews')).toBeInTheDocument()
+    })
+
+    it('shows an em dash when there is no rating', () => {
         render(<RatingDisplay rating={0} />)
-        expect(screen.getByText('-')).toBeInTheDocument()
+        expect(screen.getByText('—')).toBeInTheDocument()
     })
 })
 
 describe('Avatar', () => {
     it('renders image when src is provided', () => {
         render(<Avatar src="https://example.com/avatar.jpg" name="John Doe" />)
-        expect(screen.getByAltText('John Doe')).toBeInTheDocument()
+        expect(screen.getByAltText("John Doe's avatar")).toBeInTheDocument()
     })
 
     it('renders fallback initials when no src', () => {
@@ -183,7 +218,7 @@ describe('Avatar', () => {
 
     it('renders fallback when image errors', () => {
         render(<Avatar src="invalid.jpg" name="Jane Smith" />)
-        const img = screen.getByAltText('Jane Smith')
+        const img = screen.getByAltText("Jane Smith's avatar")
         fireEvent.error(img)
         expect(screen.getByText('JS')).toBeInTheDocument()
     })
@@ -304,14 +339,14 @@ describe('Modal', () => {
 })
 
 describe('Loading', () => {
-    it('renders LoadingSpinner', () => {
+    it('renders LoadingSpinner as a labelled status strip', () => {
         render(<LoadingSpinner />)
-        expect(document.querySelector('.animate-spin')).toBeInTheDocument()
+        expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument()
     })
 
     it('renders LoadingPage with default message', () => {
         render(<LoadingPage />)
-        expect(screen.getByText('Loading...')).toBeInTheDocument()
+        expect(screen.getByText('Reading the board')).toBeInTheDocument()
     })
 
     it('renders LoadingPage with custom message', () => {

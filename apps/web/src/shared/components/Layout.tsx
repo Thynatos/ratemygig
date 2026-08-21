@@ -40,10 +40,9 @@ export function Layout() {
         return location.pathname.startsWith(path)
     }
 
-    // Close the menu on navigation and on Escape; return focus to its trigger.
-    useEffect(() => {
-        setMobileMenuOpen(false)
-    }, [location.pathname])
+    // The menu closes from the links themselves (below) rather than from an
+    // effect on pathname, so navigating never costs an extra render pass.
+    const closeMenu = () => setMobileMenuOpen(false)
 
     useEffect(() => {
         if (!mobileMenuOpen) return
@@ -175,6 +174,7 @@ export function Layout() {
                                 <Link
                                     key={to}
                                     to={to}
+                                    onClick={closeMenu}
                                     className={cn(
                                         'row row-interactive voice-slot text-ui',
                                         isActive(to) ? 'text-strip row-current' : 'text-bone'
@@ -188,6 +188,7 @@ export function Layout() {
                                 <>
                                     <Link
                                         to="/notifications"
+                                        onClick={closeMenu}
                                         className={cn(
                                             'row row-interactive voice-slot text-ui',
                                             isActive('/notifications')
@@ -202,7 +203,10 @@ export function Layout() {
                                     </Link>
                                     <button
                                         type="button"
-                                        onClick={() => signOut()}
+                                        onClick={() => {
+                                            closeMenu()
+                                            signOut()
+                                        }}
                                         className="row row-interactive voice-slot text-ui text-bone-dim"
                                     >
                                         <span className="row-body">Sign out</span>

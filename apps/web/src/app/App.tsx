@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom'
 import { Layout } from '@/shared/components/Layout'
 import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute'
 import { FeatureErrorBoundary } from '@/shared/components/FeatureErrorBoundary'
+import { LoadingPage } from '@/shared/components/ui/Loading'
 
 // Eagerly loaded (landing / frequently visited)
 import { DiscoverPage } from '@/features/events/pages/DiscoverPage'
@@ -35,7 +36,13 @@ const WrappedPage = lazy(() => import('@/features/wrapped/pages/WrappedPage').th
 
 function App() {
     return (
-        <Suspense fallback={<div className="min-h-screen bg-surface-950" />}>
+        <Suspense
+            fallback={
+                <div className="min-h-screen bg-groove flex items-start justify-center pt-24">
+                    <LoadingPage message="Loading" />
+                </div>
+            }
+        >
             <Routes>
                 {/* Public routes */}
                 <Route element={<Layout />}>

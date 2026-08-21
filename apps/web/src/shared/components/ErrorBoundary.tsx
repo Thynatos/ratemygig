@@ -1,5 +1,4 @@
 import { Component, ReactNode } from 'react'
-import { AlertTriangle, RefreshCw, Home } from 'lucide-react'
 import { Button } from './ui/Button'
 import { captureException } from '../lib/monitoring'
 
@@ -53,28 +52,26 @@ export class ErrorBoundary extends Component<Props, State> {
             }
 
             return (
-                <div className="min-h-screen flex items-center justify-center p-4 bg-surface-950">
-                    <div className="glass-card max-w-md w-full p-8 text-center">
-                        {/* Icon */}
-                        <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-red-500/20 flex items-center justify-center">
-                            <AlertTriangle className="w-8 h-8 text-red-400" />
-                        </div>
-
-                        {/* Message */}
-                        <h1 className="text-2xl font-display font-bold text-white mb-2">
-                            Something went wrong
+                <div className="min-h-screen bg-groove flex items-center justify-center p-6">
+                    <div
+                        role="alert"
+                        className="max-w-md w-full border border-struck bg-board px-6 py-8"
+                    >
+                        <p className="voice-label text-struck mb-3">Error</p>
+                        <h1 className="voice-board text-board-lg text-bone">
+                            The app stopped
                         </h1>
-                        <p className="text-surface-400 mb-6">
-                            We encountered an unexpected error. Don't worry, your data is safe.
+                        <p className="mt-3 text-ui text-bone-dim">
+                            Something broke that we didn't plan for. Nothing you've logged is
+                            affected — reloading usually clears it.
                         </p>
 
-                        {/* Error details (dev only) */}
                         {import.meta.env.DEV && this.state.error && (
-                            <details className="mb-6 text-left">
-                                <summary className="cursor-pointer text-sm text-surface-500 hover:text-surface-400">
+                            <details className="mt-5 text-left">
+                                <summary className="cursor-pointer voice-label text-bone-faint hover:text-bone">
                                     Technical details
                                 </summary>
-                                <pre className="mt-2 p-3 rounded-lg bg-surface-900 text-red-400 text-xs overflow-auto max-h-32">
+                                <pre className="mt-2 p-3 bg-groove border border-rail text-struck voice-data text-[0.6875rem] overflow-auto max-h-40">
                                     {this.state.error.message}
                                     {this.state.error.stack && (
                                         <>
@@ -86,15 +83,13 @@ export class ErrorBoundary extends Component<Props, State> {
                             </details>
                         )}
 
-                        {/* Actions */}
-                        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                        <div className="mt-6 flex flex-wrap gap-2">
+                            <Button onClick={this.handleReload}>Reload the page</Button>
                             <Button variant="secondary" onClick={this.handleRetry}>
-                                <RefreshCw className="w-4 h-4 mr-2" />
-                                Try Again
+                                Try again
                             </Button>
-                            <Button onClick={this.handleGoHome}>
-                                <Home className="w-4 h-4 mr-2" />
-                                Go Home
+                            <Button variant="ghost" onClick={this.handleGoHome}>
+                                Back to what's on
                             </Button>
                         </div>
                     </div>

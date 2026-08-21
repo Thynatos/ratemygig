@@ -57,11 +57,24 @@ describe('EventCard', () => {
         expect(screen.getByText('Jun')).toBeInTheDocument()
     })
 
-    it('shows artist badges limited to 2 with overflow', () => {
+    it('names the support acts under the headline', () => {
+        // The headliner is already in the event name; the row lists who else
+        // was on, capped at two with an overflow count.
         renderWithRouter(<EventCard event={mockEvent} />)
-        expect(screen.getByText('Taylor Swift')).toBeInTheDocument()
-        expect(screen.getByText('Sabrina Carpenter')).toBeInTheDocument()
-        expect(screen.getByText('+1')).toBeInTheDocument()
+        expect(
+            screen.getByText('with Sabrina Carpenter, Gracie Abrams')
+        ).toBeInTheDocument()
+    })
+
+    it('caps the support list and counts the rest', () => {
+        const crowded = {
+            ...mockEvent,
+            lineup: ['Taylor Swift', 'Sabrina Carpenter', 'Gracie Abrams', 'Paramore'],
+        }
+        renderWithRouter(<EventCard event={crowded} />)
+        expect(
+            screen.getByText('with Sabrina Carpenter, Gracie Abrams +1')
+        ).toBeInTheDocument()
     })
 
     it('shows Tickets indicator for future events with tickets', () => {
@@ -86,23 +99,23 @@ describe('EventCard', () => {
             { userId: 'user-2', displayName: 'Sam', avatarUrl: null },
         ]
         renderWithRouter(<EventCard event={mockEvent} friendsGoing={friendsGoing} />)
-        expect(screen.getByText('2 friends going')).toBeInTheDocument()
+        expect(screen.getByText('Alex, Sam going')).toBeInTheDocument()
     })
 
     it('pluralizes the badge for a single friend', () => {
         const friendsGoing = [{ userId: 'user-1', displayName: 'Alex', avatarUrl: null }]
         renderWithRouter(<EventCard event={mockEvent} friendsGoing={friendsGoing} />)
-        expect(screen.getByText('1 friend going')).toBeInTheDocument()
+        expect(screen.getByText('Alex going')).toBeInTheDocument()
     })
 
     it('renders no badge when friendsGoing is omitted', () => {
         renderWithRouter(<EventCard event={mockEvent} />)
-        expect(screen.queryByText(/friends? going/)).not.toBeInTheDocument()
+        expect(screen.queryByText(/going/)).not.toBeInTheDocument()
     })
 
     it('renders no badge when friendsGoing is empty', () => {
         renderWithRouter(<EventCard event={mockEvent} friendsGoing={[]} />)
-        expect(screen.queryByText(/friends? going/)).not.toBeInTheDocument()
+        expect(screen.queryByText(/going/)).not.toBeInTheDocument()
     })
 
     it('has no accessibility violations', async () => {
@@ -158,7 +171,7 @@ describe('FeedCard', () => {
             },
         }
         renderWithRouter(<FeedCard item={item} />)
-        expect(screen.getByText('Upcoming event')).toBeInTheDocument()
+        expect(screen.getByText('New date announced')).toBeInTheDocument()
         expect(screen.getByText('Coldplay Concert')).toBeInTheDocument()
     })
 
@@ -183,7 +196,7 @@ describe('FeedCard', () => {
         }
         renderWithRouter(<FeedCard item={item} />)
         expect(screen.getByText('Jane Doe')).toBeInTheDocument()
-        expect(screen.getByText(/planning to attend/)).toBeInTheDocument()
+        expect(screen.getByText(/is going to/)).toBeInTheDocument()
     })
 
     it('renders anonymous author when author is missing', () => {
@@ -202,7 +215,7 @@ describe('FeedCard', () => {
             event: null,
         }
         renderWithRouter(<FeedCard item={item} />)
-        expect(screen.getByText('Anonymous')).toBeInTheDocument()
+        expect(screen.getByText('Someone')).toBeInTheDocument()
     })
 })
 
@@ -218,15 +231,15 @@ describe('PhotoUploader', () => {
             { id: 'p2', url: 'https://example.com/2.jpg' },
         ]
         render(<PhotoUploader photos={photos} onAdd={vi.fn()} onRemove={vi.fn()} />)
-        expect(screen.getByAltText('Photo 1')).toBeInTheDocument()
-        expect(screen.getByAltText('Photo 2')).toBeInTheDocument()
+        expect(screen.getByAltText('Photo 1 of 2')).toBeInTheDocument()
+        expect(screen.getByAltText('Photo 2 of 2')).toBeInTheDocument()
     })
 
     it('calls onRemove when remove button clicked', () => {
         const handleRemove = vi.fn()
         const photos = [{ id: 'p1', url: 'https://example.com/1.jpg' }]
         render(<PhotoUploader photos={photos} onAdd={vi.fn()} onRemove={handleRemove} />)
-        const removeBtn = screen.getByRole('button', { name: '' })
+        const removeBtn = screen.getByRole('button', { name: 'Remove photo 1' })
         fireEvent.click(removeBtn)
         expect(handleRemove).toHaveBeenCalledWith(0)
     })
@@ -240,10 +253,10 @@ describe('PhotoUploader', () => {
         expect(screen.queryByText(/Drop photos here/)).not.toBeInTheDocument()
     })
 
-    it('shows add more button when photos exist but under limit', () => {
+    it('keeps the drop zone available while under the limit', () => {
         const photos = [{ id: 'p1', url: 'https://example.com/1.jpg' }]
         render(<PhotoUploader photos={photos} onAdd={vi.fn()} onRemove={vi.fn()} maxPhotos={5} />)
-        expect(screen.getByText('Add')).toBeInTheDocument()
+        expect(screen.getByText(/Drop photos here/)).toBeInTheDocument()
     })
 
     it('calls onAdd with valid files on input change', () => {
@@ -265,7 +278,7 @@ describe('PhotoUploader', () => {
         const input = document.querySelector('input[type="file"]') as HTMLInputElement
         fireEvent.change(input, { target: { files: [file] } })
 
-        expect(screen.getByText(/Invalid file type/)).toBeInTheDocument()
+        expect(screen.getByText(/isn't a JPG, PNG or WebP/)).toBeInTheDocument()
         expect(handleAdd).not.toHaveBeenCalled()
     })
 
@@ -277,6 +290,6 @@ describe('PhotoUploader', () => {
         const input = document.querySelector('input[type="file"]') as HTMLInputElement
         fireEvent.change(input, { target: { files: [file] } })
 
-        expect(screen.getByText(/File too large/)).toBeInTheDocument()
+        expect(screen.getByText(/is over 1MB/)).toBeInTheDocument()
     })
 })

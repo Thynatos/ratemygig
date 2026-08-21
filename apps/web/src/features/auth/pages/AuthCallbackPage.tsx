@@ -19,5 +19,5 @@ export function AuthCallbackPage() {
         return () => clearTimeout(timeout)
     }, [navigate, searchParams])
 
-    return <LoadingPage message="Completing sign in..." />
+    return <LoadingPage message="Signing you in" />
 }

@@ -161,15 +161,16 @@ describe('getCityDisplayName', () => {
 })
 
 describe('getRatingColor', () => {
-    it('returns green color for high ratings', () => {
-        expect(getRatingColor(5)).toContain('green')
+    // Amber means "this was rated" — it is not a hot/cold scale, so a low
+    // score is quiet rather than red (DESIGN.md §3).
+    it('uses the accent for three and above', () => {
+        expect(getRatingColor(5)).toBe('text-strip')
+        expect(getRatingColor(3)).toBe('text-strip')
     })
 
-    it('returns yellow color for medium ratings', () => {
-        expect(getRatingColor(3)).toContain('yellow')
-    })
-
-    it('returns red color for low ratings', () => {
-        expect(getRatingColor(1)).toContain('red')
+    it('uses the dim ramp below three, never red', () => {
+        expect(getRatingColor(2)).toBe('text-bone-dim')
+        expect(getRatingColor(1)).toBe('text-bone-dim')
+        expect(getRatingColor(0)).toBe('text-bone-dim')
     })
 })

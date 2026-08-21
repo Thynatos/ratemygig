@@ -1,5 +1,4 @@
 import { Component, ReactNode } from 'react'
-import { AlertTriangle, RefreshCw } from 'lucide-react'
 import { Button } from './ui/Button'
 import { captureException } from '../lib/monitoring'
 
@@ -42,20 +41,23 @@ export class FeatureErrorBoundary extends Component<Props, State> {
     render() {
         if (this.state.hasError) {
             return (
-                <div className="page-container">
-                    <div className="glass-card max-w-lg mx-auto p-8 text-center">
-                        <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-red-500/20 flex items-center justify-center">
-                            <AlertTriangle className="w-6 h-6 text-red-400" />
-                        </div>
-                        <h2 className="text-lg font-semibold text-white mb-2">
-                            {this.props.title || 'Something went wrong'}
+                <div className="page page-body">
+                    <div
+                        role="alert"
+                        className="max-w-lg mx-auto border border-struck bg-board px-6 py-8 text-center"
+                    >
+                        <p className="voice-label text-struck mb-2.5">Error</p>
+                        <h2 className="voice-slot text-board-md text-bone mb-2">
+                            {this.props.title
+                                ? `${this.props.title} didn't load`
+                                : "This section didn't load"}
                         </h2>
-                        <p className="text-surface-400 text-sm mb-4">
-                            This section encountered an error. You can try again or explore other parts of the app.
+                        <p className="text-ui text-bone-dim mb-5">
+                            Something in this part of the app broke. The rest of the board still
+                            works.
                         </p>
-                        <Button variant="secondary" size="sm" onClick={this.handleRetry}>
-                            <RefreshCw className="w-4 h-4 mr-2" />
-                            Try Again
+                        <Button variant="secondary" onClick={this.handleRetry}>
+                            Try again
                         </Button>
                     </div>
                 </div>

@@ -114,6 +114,13 @@ export function StarRating({
                 e.preventDefault()
                 move(5)
                 break
+            case ' ':
+            case 'Enter':
+                // preventDefault suppresses the native button click, so the
+                // handler runs exactly once per keypress.
+                e.preventDefault()
+                onChange(slot)
+                break
         }
     }
 

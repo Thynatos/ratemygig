@@ -1,4 +1,4 @@
-import { Calendar, X } from 'lucide-react'
+import { X } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 
 interface DateRangePickerProps {
@@ -19,35 +19,37 @@ export function DateRangePicker({
     const hasValue = fromDate || toDate
 
     return (
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-            <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-500 pointer-events-none" />
+        <div className="flex flex-wrap items-end gap-2">
+            <div>
+                <label htmlFor="date-from" className="input-label">
+                    From
+                </label>
                 <input
+                    id="date-from"
                     type="date"
                     value={fromDate}
-                    onChange={(e) => onFromChange(e.target.value)}
+                    onChange={e => onFromChange(e.target.value)}
                     className={cn(
-                        'input-field pl-10 pr-4 w-full sm:w-40 text-sm',
-                        !fromDate && 'text-surface-500'
+                        'input-field w-full sm:w-40 voice-data text-ui-sm',
+                        !fromDate && 'text-bone-faint'
                     )}
-                    aria-label="From date"
                 />
             </div>
 
-            <span className="text-surface-500 text-center">to</span>
-
-            <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-500 pointer-events-none" />
+            <div>
+                <label htmlFor="date-to" className="input-label">
+                    Until
+                </label>
                 <input
+                    id="date-to"
                     type="date"
                     value={toDate}
-                    onChange={(e) => onToChange(e.target.value)}
+                    onChange={e => onToChange(e.target.value)}
                     min={fromDate || undefined}
                     className={cn(
-                        'input-field pl-10 pr-4 w-full sm:w-40 text-sm',
-                        !toDate && 'text-surface-500'
+                        'input-field w-full sm:w-40 voice-data text-ui-sm',
+                        !toDate && 'text-bone-faint'
                     )}
-                    aria-label="To date"
                 />
             </div>
 
@@ -55,10 +57,10 @@ export function DateRangePicker({
                 <button
                     type="button"
                     onClick={onClear}
-                    className="p-2 rounded-lg text-surface-400 hover:text-white hover:bg-surface-800 transition-colors"
-                    aria-label="Clear date range"
+                    className="btn-icon"
+                    aria-label="Clear the date range"
                 >
-                    <X className="w-4 h-4" />
+                    <X className="w-4 h-4" aria-hidden="true" />
                 </button>
             )}
         </div>

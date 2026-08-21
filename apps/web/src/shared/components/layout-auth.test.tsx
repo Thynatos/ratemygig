@@ -86,10 +86,16 @@ describe('Layout', () => {
             expect(screen.getByRole('link', { name: /^Discover$/i })).toBeInTheDocument()
         })
 
-        expect(screen.getByRole('link', { name: /^Venues$/i })).toBeInTheDocument()
-        expect(screen.getByRole('link', { name: /^Artists$/i })).toBeInTheDocument()
-        expect(screen.getByRole('link', { name: /^Top Venues$/i })).toBeInTheDocument()
-        expect(screen.getByRole('link', { name: /^Top Artists$/i })).toBeInTheDocument()
+        // The chart pages moved out of the main nav into a tab on each index
+        // page, so Venues/Artists appear both in the nav and in the footer.
+        expect(screen.getAllByRole('link', { name: /^Venues$/i }).length).toBeGreaterThan(0)
+        expect(screen.getAllByRole('link', { name: /^Artists$/i }).length).toBeGreaterThan(0)
+        expect(
+            screen.getByRole('link', { name: /^Top rated venues$/i })
+        ).toBeInTheDocument()
+        expect(
+            screen.getByRole('link', { name: /^Top rated artists$/i })
+        ).toBeInTheDocument()
     })
 
     it('shows sign in button when not authenticated', async () => {
@@ -116,7 +122,7 @@ describe('Layout', () => {
         )
 
         await waitFor(() => {
-            expect(screen.getByRole('link', { name: /^About$/i })).toBeInTheDocument()
+            expect(screen.getByRole('link', { name: /^What this is$/i })).toBeInTheDocument()
         })
 
         expect(screen.getByRole('link', { name: /^Privacy$/i })).toBeInTheDocument()

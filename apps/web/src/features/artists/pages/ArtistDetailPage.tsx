@@ -15,12 +15,12 @@ import {
     EmptyState,
     Figure,
     FigureRail,
-    whenLabel,
 } from '@/shared/components/ui/Board'
 import { Distribution } from '@/shared/components/Leaderboard'
 import { EventCard } from '@/features/events/components/EventCard'
 import { useFriendsGoing } from '@/features/events/api/useFriendsGoing'
 import { usePageMeta } from '@/shared/hooks'
+import { whenLabel } from '@/shared/lib/utils'
 import { sanitizeText } from '@/shared/lib/sanitize'
 import { env } from '@/shared/lib/env'
 import { getProviderModeLabel, isTicketmasterMode } from '@/shared/lib/provider-policy'

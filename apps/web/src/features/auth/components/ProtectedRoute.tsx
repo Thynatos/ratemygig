@@ -7,7 +7,7 @@ export function ProtectedRoute() {
     const location = useLocation()
 
     if (isLoading) {
-        return <LoadingPage message="Checking authentication..." />
+        return <LoadingPage message="Checking your session" />
     }
 
     if (!user) {

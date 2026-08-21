@@ -1,23 +1,58 @@
+import { BoardHeader } from '@/shared/components/ui/Board'
+
+/** Read mode. The same terms as before, in the product's own voice. */
 export function TermsPage() {
     return (
-        <div className="page-container max-w-3xl mx-auto">
-            <h1 className="section-title mb-6">Terms of Service</h1>
-            <div className="prose prose-invert max-w-none">
-                <p className="text-surface-300 text-lg leading-relaxed">
-                    By using RateMyGig, you agree to the following terms.
-                </p>
-                <h2 className="text-xl font-semibold text-white mt-6 mb-3">Use of Service</h2>
-                <p className="text-surface-400">
-                    RateMyGig provides a platform for discovering live events, sharing reviews, and connecting with other music fans. You agree to use the service responsibly and not abuse the platform.
-                </p>
-                <h2 className="text-xl font-semibold text-white mt-6 mb-3">User Content</h2>
-                <p className="text-surface-400">
-                    Reviews and other content you submit remain yours. By posting, you grant RateMyGig a license to display and distribute your content within the platform.
-                </p>
-                <h2 className="text-xl font-semibold text-white mt-6 mb-3">Disclaimer</h2>
-                <p className="text-surface-400">
-                    RateMyGig provides event information for convenience. We are not responsible for the accuracy of event details, cancellations, or changes. Always verify event details with the official source.
-                </p>
+        <div className="page page-body max-w-3xl">
+            <BoardHeader
+                title="Terms"
+                lede="Using ratemygig means agreeing to these."
+            />
+
+            <div className="space-y-8">
+                <section>
+                    <h2 className="voice-label text-bone-dim border-b border-rail pb-2 mb-3">
+                        Using the service
+                    </h2>
+                    <p className="voice-read text-bone-mid">
+                        ratemygig lets you find live events, keep a record of the ones you go to,
+                        and read what other people made of them. Use it reasonably and don't abuse
+                        the platform or the people on it.
+                    </p>
+                </section>
+
+                <section>
+                    <h2 className="voice-label text-bone-dim border-b border-rail pb-2 mb-3">
+                        Your content stays yours
+                    </h2>
+                    <p className="voice-read text-bone-mid">
+                        The reviews, photos and setlists you write remain yours. By posting them
+                        you grant ratemygig a licence to display and distribute that content
+                        within the platform — nothing wider than that.
+                    </p>
+                </section>
+
+                <section>
+                    <h2 className="voice-label text-bone-dim border-b border-rail pb-2 mb-3">
+                        About event listings
+                    </h2>
+                    <p className="voice-read text-bone-mid">
+                        Event details come from third-party sources and are provided as a
+                        convenience. We can't guarantee they're accurate, and we're not
+                        responsible for cancellations, reschedules or changes. Always check with
+                        the venue or the official ticket seller before you travel.
+                    </p>
+                </section>
+
+                <section>
+                    <h2 className="voice-label text-bone-dim border-b border-rail pb-2 mb-3">
+                        Tickets
+                    </h2>
+                    <p className="voice-read text-bone-mid">
+                        We don't sell tickets. Ticket links hand you off to other sites, and any
+                        purchase you make there is between you and them.
+                    </p>
+                </section>
             </div>
         </div>
     )

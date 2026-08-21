@@ -1,4 +1,4 @@
-import { format, formatDistanceToNow, parseISO, isValid } from 'date-fns'
+import { format, formatDistanceToNow, parseISO, isValid, isToday, isTomorrow, isPast } from 'date-fns'
 import { z } from 'zod'
 import { captureException } from './monitoring'
 
@@ -27,6 +27,25 @@ export function formatRelativeTime(date: string | Date): string {
     const d = typeof date === 'string' ? parseISO(date) : date
     if (!isValid(d)) return 'Unknown'
     return formatDistanceToNow(d, { addSuffix: true })
+}
+
+/**
+ * Human label for when a gig is. Used in board headers and row meta, where
+ * "Tonight" carries more than a date does.
+ */
+export function whenLabel(date: string | Date): string {
+    const d = typeof date === 'string' ? parseISO(date) : date
+    if (!isValid(d)) return 'Date to be confirmed'
+    if (isToday(d)) return 'Tonight'
+    if (isTomorrow(d)) return 'Tomorrow'
+    if (isPast(d)) {
+        return d.toLocaleDateString('en-GB', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+        })
+    }
+    return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
 }
 
 /**

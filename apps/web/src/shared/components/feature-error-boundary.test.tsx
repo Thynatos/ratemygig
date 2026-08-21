@@ -27,9 +27,9 @@ describe('FeatureErrorBoundary', () => {
             </FeatureErrorBoundary>
         )
 
-        expect(screen.getByText('Something went wrong')).toBeInTheDocument()
-        expect(screen.getByText(/This section encountered an error/)).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: /Try Again/i })).toBeInTheDocument()
+        expect(screen.getByText("This section didn't load")).toBeInTheDocument()
+        expect(screen.getByText(/broke/)).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /Try again/i })).toBeInTheDocument()
 
         consoleSpy.mockRestore()
     })
@@ -38,12 +38,12 @@ describe('FeatureErrorBoundary', () => {
         const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
         render(
-            <FeatureErrorBoundary title="Events failed to load">
+            <FeatureErrorBoundary title="Top Venues">
                 <ThrowError message="Test error" />
             </FeatureErrorBoundary>
         )
 
-        expect(screen.getByText('Events failed to load')).toBeInTheDocument()
+        expect(screen.getByText("Top Venues didn't load")).toBeInTheDocument()
 
         consoleSpy.mockRestore()
     })
@@ -63,11 +63,11 @@ describe('FeatureErrorBoundary', () => {
             </FeatureErrorBoundary>
         )
 
-        expect(screen.getByText('Something went wrong')).toBeInTheDocument()
+        expect(screen.getByText("This section didn't load")).toBeInTheDocument()
 
         // Simulate fixing the error and retrying
         shouldThrow = false
-        fireEvent.click(screen.getByRole('button', { name: /Try Again/i }))
+        fireEvent.click(screen.getByRole('button', { name: /Try again/i }))
 
         expect(screen.getByTestId('recovered')).toBeInTheDocument()
 

@@ -99,23 +99,31 @@ export function EnhancedSearch() {
     return (
         <div ref={containerRef} className="relative">
             <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-surface-400" />
+                <label htmlFor="enhanced-search" className="sr-only">
+                    Search gigs, artists and venues
+                </label>
+                <Search
+                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-bone-faint"
+                    aria-hidden="true"
+                />
                 <input
-                    type="text"
+                    id="enhanced-search"
+                    type="search"
                     value={query}
                     onChange={e => { setQuery(e.target.value); setIsOpen(true) }}
                     onFocus={() => { if (debouncedQuery.length >= 2) setIsOpen(true) }}
-                    placeholder="Search events, artists, venues..."
-                    className="input-field pl-10 w-full"
+                    placeholder="Gig, artist or venue"
+                    className="input-field pl-9 w-full"
                 />
             </div>
 
             {showDropdown && (
-                <div className="absolute z-20 top-full mt-2 w-full bg-surface-800 border border-surface-600 rounded-xl shadow-lg max-h-80 overflow-y-auto">
+                <div className="absolute z-20 top-full mt-1 w-full bg-board border border-rail-strong shadow-lift max-h-80 overflow-y-auto">
                     {searchError ? (
                         <div className="p-3">
                             <QueryErrorState
                                 title="Search failed"
+                                message="The lookup didn't come back. Try again."
                                 onRetry={() => {
                                     if (eventsError) refetchEvents()
                                     if (artistsError) refetchArtists()
@@ -127,16 +135,16 @@ export function EnhancedSearch() {
                         <>
                     {events.length > 0 && (
                         <div>
-                            <div className="px-4 py-2 text-xs uppercase tracking-wider text-surface-500 font-medium">Events</div>
+                            <h2 className="voice-label text-bone-faint px-3 py-2 border-b border-rail">Gigs</h2>
                             {events.map(event => (
                                 <Link
                                     key={event.id}
                                     to={`/events/${event.id}`}
                                     onClick={() => { setIsOpen(false); setQuery('') }}
-                                    className="flex items-center gap-3 px-4 py-2 hover:bg-surface-700 transition-colors"
+                                    className="flex items-center gap-3 px-3 py-2 transition-colors duration-150 ease-board hover:bg-board-raised"
                                 >
-                                    <span className="text-white text-sm">{sanitizeText(event.name)}</span>
-                                    <span className="text-surface-500 text-xs ml-auto">{sanitizeText(event.city)}</span>
+                                    <span className="text-ui text-bone">{sanitizeText(event.name)}</span>
+                                    <span className="voice-label text-bone-faint ml-auto">{sanitizeText(event.city)}</span>
                                 </Link>
                             ))}
                         </div>
@@ -144,15 +152,15 @@ export function EnhancedSearch() {
 
                     {artists.length > 0 && (
                         <div>
-                            <div className="px-4 py-2 text-xs uppercase tracking-wider text-surface-500 font-medium border-t border-surface-700">Artists</div>
+                            <h2 className="voice-label text-bone-faint px-3 py-2 border-y border-rail">Artists</h2>
                             {artists.map(artist => (
                                 <Link
                                     key={artist.id}
                                     to={`/artists/${artist.id}`}
                                     onClick={() => { setIsOpen(false); setQuery('') }}
-                                    className="flex items-center gap-3 px-4 py-2 hover:bg-surface-700 transition-colors"
+                                    className="flex items-center gap-3 px-3 py-2 transition-colors duration-150 ease-board hover:bg-board-raised"
                                 >
-                                    <span className="text-white text-sm">{sanitizeText(artist.name)}</span>
+                                    <span className="text-ui text-bone">{sanitizeText(artist.name)}</span>
                                 </Link>
                             ))}
                         </div>
@@ -160,25 +168,25 @@ export function EnhancedSearch() {
 
                     {venues.length > 0 && (
                         <div>
-                            <div className="px-4 py-2 text-xs uppercase tracking-wider text-surface-500 font-medium border-t border-surface-700">Venues</div>
+                            <h2 className="voice-label text-bone-faint px-3 py-2 border-y border-rail">Venues</h2>
                             {venues.map(venue => (
                                 <Link
                                     key={venue.id}
                                     to={`/venues/${venue.id}`}
                                     onClick={() => { setIsOpen(false); setQuery('') }}
-                                    className="flex items-center gap-3 px-4 py-2 hover:bg-surface-700 transition-colors"
+                                    className="flex items-center gap-3 px-3 py-2 transition-colors duration-150 ease-board hover:bg-board-raised"
                                 >
-                                    <span className="text-white text-sm">{sanitizeText(venue.name)}</span>
-                                    <span className="text-surface-500 text-xs ml-auto">{sanitizeText(venue.city)}</span>
+                                    <span className="text-ui text-bone">{sanitizeText(venue.name)}</span>
+                                    <span className="voice-label text-bone-faint ml-auto">{sanitizeText(venue.city)}</span>
                                 </Link>
                             ))}
                         </div>
                     )}
 
                     {!hasResults && debouncedQuery.length >= 2 && (
-                        <div className="px-4 py-6 text-center text-surface-400 text-sm">
-                            No results found for &ldquo;{debouncedQuery}&rdquo;
-                        </div>
+                        <p className="px-3 py-6 text-center text-ui-sm text-bone-dim">
+                            Nothing matches &ldquo;{debouncedQuery}&rdquo;.
+                        </p>
                     )}
                         </>
                     )}
