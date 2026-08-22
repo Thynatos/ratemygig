@@ -3,6 +3,30 @@
 @tailwind utilities;
 
 /* ============================================================
+   Fonts — self-hosted, latin subset (CSP: font-src 'self').
+   Archivo ships as a variable font covering the wdth 62..125 and
+   wght 400..800 axes the board voice needs; Fragment Mono is the
+   400 data voice.
+   ============================================================ */
+
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 400 800;
+  font-stretch: 62% 125%;
+  font-display: swap;
+  src: url('/fonts/archivo-var-latin.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Fragment Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/fragment-mono-latin.woff2') format('woff2');
+}
+
+/* ============================================================
    THE BOARD — token layer
    See DESIGN.md. Content lives on rails in fixed slots.
    No glow, no gradient, no radius, no zero-offset shadow.
