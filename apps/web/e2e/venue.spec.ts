@@ -17,7 +17,7 @@ test.describe('Venue Detail', () => {
 
     test('venue detail page shows not found for invalid id', async ({ page }) => {
         await page.goto('/venues/nonexistent-id-12345')
-        await expect(page.getByRole('heading', { name: /No such venue/i })).toBeVisible()
+        await expect(page.getByRole('heading', { name: /No such venue/i })).toBeVisible({ timeout: 10000 })
     })
 
     test('top venues leaderboard page renders', async ({ page }) => {

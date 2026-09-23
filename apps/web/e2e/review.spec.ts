@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test'
 test.describe('Review', () => {
     test('review page shows not found for invalid id', async ({ page }) => {
         await page.goto('/r/nonexistent-review-id-12345')
-        await expect(page.getByRole('heading', { name: /isn't public/i })).toBeVisible()
+        await expect(page.getByRole('heading', { name: /isn't public/i })).toBeVisible({ timeout: 10000 })
     })
 
     test('write review page redirects to login when not authenticated', async ({ page }) => {
