@@ -21,6 +21,8 @@ export const RATE_LIMITS = {
   LIST_CREATE: 5000,
   LIST_ITEM: 2000,
   SETLIST_CREATE: 5000,
+  // setlist.fm's quota is shared by every user of the app (see setlist-import).
+  SETLIST_IMPORT: 3000,
   PHOTO_UPLOAD: 3000,
   COMMENT_CREATE: 3000,
   REACTION: 1000,

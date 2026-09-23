@@ -13,12 +13,14 @@
 - `useUploadReviewPhotos`: 3s throttle
 - `useToggleAttendance`: 2s throttle
 - `useCreateSetlist`: 5s throttle
+- `useImportSetlist`: 3s throttle (Sprint 8; one setlist.fm quota is shared by every user)
 - **Remaining risk**: Client-side only; a determined user can bypass. Server-side rate limiting via Supabase Edge Functions would be more robust.
 
 ### API Key Exposure
 - **Risk**: `VITE_TICKETMASTER_API_KEY` is embedded in the client bundle
 - **Location**: `apps/web/src/shared/lib/env.ts`, `ticketmaster-browser-provider.ts`
 - **Mitigation**: Ticketmaster API has its own rate limits, but a proxy through Supabase Edge Functions would be safer
+- **Pattern now exists (Sprint 8)**: `supabase/functions/setlist-import` keeps the setlist.fm key in Edge Function secrets, verifies the caller's session in code, and is unit-tested from vitest through injected dependencies. The deferred TM proxy can copy it.
 
 ### RLS Gaps
 - **Concern**: Review photo access depends on parent review's `is_public` flag — this requires careful RLS policy (defined in `002_rls_policies.sql`) but should be verified against actual Supabase behavior
@@ -310,3 +312,44 @@
 
 ### Photos are counted against the review's year
 - `photos_uploaded` joins `review_photos` through the reviews written that year (same window as `reviews_written`), not the photo's own `created_at`, so Wrapped totals reconcile with the review count even for photos uploaded later.
+## Sprint 8 — setlist.fm Import (Notes & Tradeoffs)
+
+### setlist.fm's API terms vs. saving imported setlists — decide before enabling in production
+- The [API terms](https://www.setlist.fm/help/terms) allow **non-commercial use only**, require an attribution link "wherever Setlist.fm data is used" (the link each API response carries), and forbid retaining copies of the data beyond short-term caching.
+- Sprint 8 saves imported songs permanently (`songs` / `setlist_songs`) once the user reviews and presses Save. The editor shows setlist.fm's attribution link during review. The saved setlist keeps no record of where it came from: there is no column for a source URL, and `setlists.source` only allows `'manual' | 'verified'`, so imports save as `'manual'`. `SetlistViewer` therefore cannot attribute it afterwards.
+- Options: (a) confirm with setlist.fm that user-reviewed, user-saved setlists are acceptable; (b) add a `source_url` column (plus a `'setlistfm'` source value) in a new migration so the viewer can attribute; (c) leave the feature dark by not setting the secret. Nothing reaches production until `SETLISTFM_API_KEY` is set and the function is deployed.
+
+### Encore numbering collapses to a boolean
+- setlist.fm numbers encores (1, 2, …) but `setlist_songs.is_encore` is a boolean, so a second encore reads as part of the first. Play order and positions are preserved exactly.
+
+### Tape and unnamed entries are dropped
+- The normalizer skips `tape: true` entries (intro/outro music played from a recording) and unnamed placeholder songs. Positions are renumbered in play order over what remains, so an import can be shorter than the setlist.fm page.
+
+### Artist matching is by name
+- setlist.fm identifies artists by MusicBrainz id, and `artists` only stores Ticketmaster ids, so matching compares names. It ignores case, accents, punctuation and a leading "the", and accepts a billing that extends the name with a joiner ("Bruce Springsteen" ↔ "Bruce Springsteen & The E Street Band"). Aliases and renamed acts (P!nk / Pink) read as mismatches; those setlists can still be entered by hand.
+- Candidates are the event's `event_artists` links (with ids). An event with no links falls back to its `lineup` names, and those songs save with `artist_id` NULL.
+
+### The date check is advisory
+- A setlist dated more than a day from the gig's UTC start date shows a "make sure it's the same night" line in the editor, but the import still goes through. Venue time zones aren't stored, so a tighter check would flag legitimate late shows.
+
+### One quota, client-side limit only
+- A single setlist.fm key serves every user. The only per-user throttle is the client-side 3 s limiter, so a signed-in user could script the function and drain the daily quota (about 1,440 requests on a starter key). Server-side rate limiting stays deferred (SPRINTS.md "Deferred / rejected").
+
+### Pre-existing save-path bugs fixed because the import depends on them
+- `useCreateSetlist` / `useAddSong` looked songs up with `.is('artist_id', <uuid>)`, which PostgREST rejects (HTTP 400 PGRST100, verified against the live project). The error was ignored, so every artist-scoped lookup "missed" and the insert then hit `UNIQUE(name, artist_id)`. This stayed latent because `SetlistPage` never passes an `artistId`; imports always do. Both hooks now go through `getOrCreateSongId` (`songs.ts`), which uses `eq` for artist-scoped lookups, `limit(1)` where NULL-artist names can repeat, and a re-read after losing a `23505` race. The logic is unit-tested via `getOrCreateSongIdWithDeps`.
+- The create path wrote the setlist row first and its songs one at a time, so a mid-save failure left a partial setlist and `UNIQUE(event_id, user_id)` then blocked the retry. Song ids are now resolved first, the songs go in as one bulk insert, and the setlist row is deleted if that insert fails.
+- The editor swallowed save errors, including the rate limiter's own message. They now raise a toast (`setlistSaveErrorMessage`, which never shows the raw database text).
+- Editor layout: song names were centred in their rows (`.row-body`'s `justify-center` applied along the row axis), and both input rows were about 200 px wide because `flex-1` landed on the inner `<input>` rather than `Input`'s wrapper. Both are fixed; the editor sits behind sign-in, which is likely why the design finish review missed them.
+
+### Toasts are new, errors-only, and persistent
+- `ToastProvider` (`shared/components/ui/Toast.tsx`) + `useToast` (`shared/hooks/useToast.ts`). Toasts stay until dismissed or replaced by id, because errors that time out get missed. Their owner dismisses them on unmount, as the setlist editor does. At most three show at once. Only an `error` tone exists; add others when a real caller needs one.
+
+### New issues found in Sprint 8 (verified; not fixed, outside the sprint)
+1. **SetlistEditor edit mode discards song changes.** It renders Encore/Debut/reorder/remove controls, but "Save changes" calls `useUpdateSetlist`, which only writes `notes`/`source`.
+2. **Hand-entered songs never count in artist song stats.** `SetlistPage` passes no `artistId`, so they're created with `artist_id` NULL, and `get_artist_song_stats` requires `s.artist_id = p_artist_id`. Imported songs are the first to carry an artist.
+3. **`useCreateSong` (no callers)** upserts with `ignoreDuplicates` then calls `.single()`, which fails with PGRST116 whenever the song already exists. `useAddSong`, `useRemoveSong` and `useReorderSongs` have no callers either.
+4. **Not-found pages for malformed ids still take ~4–6 s.** PostgREST answers a non-UUID id with HTTP 400 `22P02`; `retryUnlessNotFound` retries it twice (1 s + 2 s backoff). Treating `22P02` as definitive would make these instant and let the e2e not-found timeouts go back to the default.
+5. **Pressed controls are amber** (editor Encore/Debut chips, review tag chips, follow and attendance buttons). DESIGN.md §3 says a confirmed state is "a filled bone mark, not a colour", and §7.7 keeps amber for the live fact, a score and the primary action. The built system is consistent with itself, so this is a design decision to make, not a bug; imports make it more visible (every imported encore shows an amber chip).
+6. **Nightly ingest has failed every run since at least 2026-09-18.** `ingest.yml` exits with "Missing required environment variable: TICKETMASTER_API_KEY": the repo has only the `SUPABASE_URL` / `SUPABASE_ANON_KEY` secrets, not `TICKETMASTER_API_KEY` or `SUPABASE_SERVICE_ROLE_KEY`.
+7. **E2E depends on live Supabase latency.** In one of three full runs this session, six tests timed out on loading states; the other two were 25/25.
+8. **Planning-doc drift.** Sprint 11 shipped (`9f2c8a3`) but isn't in the SPRINTS.md status table. Sprint 9's spec names `016_push_subscriptions.sql`, but migrations 016–018 exist, so the next free number is 019.

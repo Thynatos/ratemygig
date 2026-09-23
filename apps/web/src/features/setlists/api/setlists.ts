@@ -4,6 +4,7 @@ import { useAuth } from '@/features/auth/hooks/useAuth'
 import { createRateLimiter } from '@/shared/lib/throttle'
 import { sanitizeText } from '@/shared/lib/sanitize'
 import { RATE_LIMITS } from '@/shared/lib/constants'
+import { getOrCreateSongId, isUniqueViolation } from './songs'
 import type { Setlist, SetlistSong, SetlistWithSongs, Song } from '@core/index'
 
 export const setlistKeys = {
@@ -106,6 +107,22 @@ export function useMySetlists() {
     })
 }
 
+/** Toast copy for a failed save: never the raw database message. */
+export function setlistSaveErrorMessage(error: unknown): string {
+    if (error instanceof Error && error.message.startsWith('Please wait')) {
+        return 'Give it a few seconds before saving again.'
+    }
+    if (error instanceof Error && error.message === 'Not authenticated') {
+        return 'Sign in again to save the setlist.'
+    }
+    // Songs resolve their own conflicts, so a unique violation here is
+    // UNIQUE(event_id, user_id): this user already has a setlist for the gig.
+    if (isUniqueViolation(error)) {
+        return 'You already have a setlist for this gig. Edit that one instead.'
+    }
+    return "Couldn't save the setlist. Try again."
+}
+
 const setlistCreateLimiter = createRateLimiter(RATE_LIMITS.SETLIST_CREATE)
 const setlistMutationLimiter = createRateLimiter(RATE_LIMITS.SETLIST_CREATE)
 
@@ -126,6 +143,31 @@ interface CreateSetlistInput {
     source?: 'manual' | 'verified'
 }
 
+/** Resolves every entry to a song id, creating each distinct (name, artist) at most once. */
+async function resolveSongIds(songs: SetlistSongInput[]): Promise<string[]> {
+    const resolved = new Map<string, string>()
+    const ids: string[] = []
+
+    for (const song of songs) {
+        if (song.songId) {
+            ids.push(song.songId)
+            continue
+        }
+
+        const name = song.songName.trim()
+        const artistId = song.artistId || null
+        const key = `${artistId ?? ''}\u0000${name}`
+        let id = resolved.get(key)
+        if (!id) {
+            id = await getOrCreateSongId(name, artistId)
+            resolved.set(key, id)
+        }
+        ids.push(id)
+    }
+
+    return ids
+}
+
 export function useCreateSetlist() {
     const queryClient = useQueryClient()
 
@@ -137,6 +179,9 @@ export function useCreateSetlist() {
 
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) throw new Error('Not authenticated')
+
+            // Songs first: a failure here happens before any setlist row exists.
+            const songIds = await resolveSongIds(input.songs)
 
             const { data: setlist, error: setlistError } = await supabase
                 .from('setlists')
@@ -151,48 +196,24 @@ export function useCreateSetlist() {
 
             if (setlistError) throw setlistError
 
-            const setlistId = setlist.id
-
-            for (const songInput of input.songs) {
-                let songId = songInput.songId
-
-                if (!songId) {
-                    const { data: existingSong } = await supabase
-                        .from('songs')
-                        .select('id')
-                        .eq('name', songInput.songName.trim())
-                        .is('artist_id', songInput.artistId || null)
-                        .maybeSingle()
-
-                    if (existingSong) {
-                        songId = existingSong.id
-                    } else {
-                        const { data: newSong, error: songError } = await supabase
-                            .from('songs')
-                            .insert({
-                                name: songInput.songName.trim(),
-                                artist_id: songInput.artistId || null,
-                            })
-                            .select()
-                            .single()
-
-                        if (songError) throw songError
-                        songId = newSong.id
-                    }
-                }
-
-                const { error: ssError } = await supabase
-                    .from('setlist_songs')
-                    .insert({
-                        setlist_id: setlistId,
-                        song_id: songId,
+            if (input.songs.length > 0) {
+                const { error: ssError } = await supabase.from('setlist_songs').insert(
+                    input.songs.map((songInput, i) => ({
+                        setlist_id: setlist.id,
+                        song_id: songIds[i],
                         position: songInput.position,
                         is_encore: songInput.isEncore ?? false,
                         is_debut: songInput.isDebut ?? false,
                         notes: songInput.notes ? sanitizeText(songInput.notes) : null,
-                    })
+                    }))
+                )
 
-                if (ssError) throw ssError
+                if (ssError) {
+                    // The bulk insert is all-or-nothing; dropping the empty setlist
+                    // too keeps UNIQUE(event_id, user_id) from blocking the retry.
+                    await supabase.from('setlists').delete().eq('id', setlist.id)
+                    throw ssError
+                }
             }
 
             return setlist as Setlist
@@ -297,32 +318,8 @@ export function useAddSong() {
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) throw new Error('Not authenticated')
 
-            let songId = input.songId
-
-            if (!songId) {
-                const { data: existingSong } = await supabase
-                    .from('songs')
-                    .select('id')
-                    .eq('name', input.songName.trim())
-                    .is('artist_id', input.artistId || null)
-                    .maybeSingle()
-
-                if (existingSong) {
-                    songId = existingSong.id
-                } else {
-                    const { data: newSong, error: songError } = await supabase
-                        .from('songs')
-                        .insert({
-                            name: input.songName.trim(),
-                            artist_id: input.artistId || null,
-                        })
-                        .select()
-                        .single()
-
-                    if (songError) throw songError
-                    songId = newSong.id
-                }
-            }
+            const songId =
+                input.songId || (await getOrCreateSongId(input.songName.trim(), input.artistId || null))
 
             const { data, error } = await supabase
                 .from('setlist_songs')

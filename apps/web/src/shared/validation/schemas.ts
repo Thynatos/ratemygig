@@ -251,6 +251,37 @@ export const songStatsEntrySchema = z.object({
     last_played: z.string().datetime({ offset: true }),
 })
 
+// ============================================
+// Edge Function Response Schemas
+// ============================================
+
+function isSetlistFmUrl(value: string): boolean {
+    try {
+        const url = new URL(value)
+        const host = url.hostname.toLowerCase()
+        return url.protocol === 'https:' && (host === 'setlist.fm' || host.endsWith('.setlist.fm'))
+    } catch {
+        return false
+    }
+}
+
+/** The setlist-import Edge Function contract (supabase/functions/setlist-import). */
+export const setlistImportSchema = z.object({
+    artistName: z.string().min(1),
+    eventDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    venueName: z.string(),
+    // Rendered as the attribution link, so it must stay on setlist.fm.
+    url: z.string().refine(isSetlistFmUrl, 'Expected an https setlist.fm URL'),
+    songs: z.array(
+        z.object({
+            name: z.string().min(1),
+            encore: z.boolean(),
+        })
+    ),
+})
+
+export type SetlistImport = z.infer<typeof setlistImportSchema>
+
 export const yearStatEntrySchema = z.object({
     name: z.string(),
     count: z.number().int(),

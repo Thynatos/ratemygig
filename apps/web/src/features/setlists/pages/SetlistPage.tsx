@@ -68,7 +68,11 @@ export function SetlistPage() {
 
             {isCreating && (
                 <div className="border border-rail bg-board p-4 mb-6">
-                    <SetlistEditor eventId={eventId!} onClose={() => setIsCreating(false)} />
+                    <SetlistEditor
+                        eventId={eventId!}
+                        event={event}
+                        onClose={() => setIsCreating(false)}
+                    />
                 </div>
             )}
 

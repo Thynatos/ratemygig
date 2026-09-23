@@ -32,7 +32,7 @@
 | 5 | Performance & CI hardening | M | [x] |
 | 6 | Gig Wrapped (year-in-review stats) | M | [x] |
 | 7 | Share cards / OG images | L | [x] |
-| 8 | setlist.fm import | M | [ ] |
+| 8 | setlist.fm import | M | [x] |
 | 9 | PWA + Web Push | L | [ ] |
 | 10 | Make it work on a real database (audit Tier 0) | M | [x] |
 
@@ -328,6 +328,24 @@ for Vercel (DEPLOYMENT.md already targets Vercel/Netlify); keep it provider-port
 
 - Pasting a valid setlist.fm link yields a fully prefilled editor; save persists with
   correct positions/encores; no setlist.fm key in the client bundle.
+
+### Completion record (2026-09-23)
+
+Built as specified, with these recorded deviations (details in `CONCERNS.md` → Sprint 8):
+
+- **Contract adds `url`.** setlist.fm's API terms require its attribution link wherever
+  the data is shown, so the function returns
+  `{ artistName, eventDate, venueName, url, songs: [{ name, encore }] }`.
+- **Songs are created on save, not on import.** The import prefills names; `useCreateSetlist`
+  get-or-creates `songs` rows under `UNIQUE(name, artist_id)` when the user saves, so an
+  abandoned import leaves nothing in the catalog. This needed a real fix: the old lookup
+  used `.is('artist_id', <uuid>)`, which PostgREST rejects.
+- **Prefill test is component-level** (`SetlistEditor.test.tsx`). The editor is behind
+  sign-in and the e2e suite has no auth; adding it would mean the deferred E2E mock
+  server. The full e2e suite still runs green.
+- **Toasts did not exist** and were added (`ToastProvider` / `useToast`).
+- **Not live yet.** Set the `SETLISTFM_API_KEY` secret and deploy the function
+  (DEPLOYMENT.md → "setlist.fm Import"), after deciding on the API terms' retention clause.
 
 ---
 

@@ -6,3 +6,13 @@ import_map = "./functions/og-image/deno.json"
 # Uncomment to specify a custom file path to the entrypoint.
 # Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
 entrypoint = "./functions/og-image/index.ts"
+
+[functions.setlist-import]
+enabled = true
+# Off, as Supabase recommends with publishable/secret API keys (the platform
+# check only understands the legacy JWT-based keys). The function verifies the
+# caller's bearer token against Supabase Auth itself and refuses anyone who is
+# not signed in.
+verify_jwt = false
+import_map = "./functions/setlist-import/deno.json"
+entrypoint = "./functions/setlist-import/index.ts"

@@ -2,14 +2,16 @@
 
 ## Current Phase
 **Phase:** Post-M5 Sprints (see .planning/SPRINTS.md)
-**Status:** Sprint 10 (audit Tier 0) **complete and verified against the live project** — `016_schema_fixes.sql` applied to `lpfyzjfqyyrdknzgxoul` on 2026-08-21, `npm run test:live` 22/22, all five Task 9.5 routes walked with zero 400s and zero validation failures. Next: Sprint 11 (audit Tier 1, "Eyes on production") ahead of Sprint 8 per `docs/AUDIT_REPORT.md` §6.
-**Last Activity:** 2026-08-21
+**Status:** Sprint 8 (setlist.fm import) **complete in code** (2026-09-23): 450 unit tests, 25/25 e2e, lint 0/0, build clean, no setlist.fm key in `dist/`, and editor behaviour checked in a real browser against a stubbed function. **Not live yet**: it needs the `SETLISTFM_API_KEY` Edge Function secret and `supabase functions deploy setlist-import`, after a decision on setlist.fm's API terms (attribution + no long-term retention; see CONCERNS → Sprint 8). Sprint 11 (audit Tier 1) shipped in `9f2c8a3` but was never added to the SPRINTS.md table. Next: Sprint 9 (PWA + Web Push), the first unchecked sprint. Its spec's migration number (016) is taken; use 019.
+**Last Activity:** 2026-09-23
+
+**Sprint 10 (audit Tier 0)** was completed and verified against the live project: `016_schema_fixes.sql` applied to `lpfyzjfqyyrdknzgxoul` on 2026-08-21, `npm run test:live` 22/22, all five Task 9.5 routes walked with zero 400s and zero validation failures.
 
 **Audit findings closed by Sprint 10** (ids from `docs/AUDIT_REPORT.md`; the report itself is a dated artefact and was not edited): A1, A2, A3, A4, A5, A8, A9, A10, C2, D1/E1 (type-check enforced), D5/E2/E3 (live-schema + RPC contract CI job), B7. B1 closed at the reviews-policy/RPC/storage layer (photo/tag/comment metadata mirrors tracked under B9, Tier 1).
 
 **Live verification evidence (2026-08-21, post-016):** six FKs to `public.profiles` present; reviews SELECT policy = `((is_public AND status='published') OR auth.uid()=user_id)`; storage policy matches `thumbnail_path` and `status`; `handle_new_user` `search_path=public, pg_temp`. Draft leak (B1) probed with a real draft row inside a rolled-back transaction: **anon saw 0 drafts, owner saw 1** — no residue. `/r/f9f9fe86…` renders with its author, `/events/…07` shows "5.0 avg • 1 review", `/venues/…05` and `/artists/…07` show 5.0 (1 review) with distributions, `/artists/…07` has no error boundary, `/venues/top` unchanged.
 
-**Still required before the `live-schema` CI job can run:** add `SUPABASE_URL` and `SUPABASE_ANON_KEY` as GitHub repo secrets (the job is `if`-gated to skip on fork PRs).
+**Repo secrets (checked 2026-09-23 with `gh secret list`):** `SUPABASE_URL` and `SUPABASE_ANON_KEY` are set (2026-08-21), so the `live-schema` CI job can run. `TICKETMASTER_API_KEY` and `SUPABASE_SERVICE_ROLE_KEY` are **not** set, and the nightly `ingest.yml` has failed on every run since at least 2026-09-18 with "Missing required environment variable: TICKETMASTER_API_KEY".
 
 ## Completed
 - Auth (magic link + Google OAuth)
@@ -78,7 +80,11 @@
 - Sprint 10: TypeScript enforced — `tsc -b --noEmit` in `npm run build` and CI, `types`/`@jobs/*` alias in tsconfig.app.json, vitest-axe matchers typed via src/test/vitest-axe.d.ts, all 46 pre-existing tsc errors fixed (zero `any` added)
 - Sprint 10: live-schema CI job (`test:live`, vitest.live.config.ts, src/test/live/) — anon REST smoke for all 9 profile-embed sites + Zod contract parse for every app RPC; skipped on fork PRs; `*.integration.test.ts` renamed `*.resolver-contract.test.ts`
 - Sprint 10: query cache cleared on sign-out and on auth identity change (pure `shouldClearQueryCache` helper + tests; TOKEN_REFRESHED never clears); user id added to my-gigs/user-review/drafts/feed-timeline/recommended/followed-artists/followed-venues/user-follow keys
-- 317 unit tests passing, 0 lint errors, 0 lint warnings
+- Sprint 8: Supabase Edge Function `setlist-import` (setlist.fm key in Edge Function secrets only; bearer session verified in code with `verify_jwt = false`; setlist.fm URL/id parsing that never fetches user-supplied URLs; one bounded retry on a 429 burst; 404 / 429 / key-rejected / upstream error codes) returning `{ artistName, eventDate, venueName, url, songs: [{ name, encore }] }`; pure `setlistfm.ts` + dependency-injected `handler.ts`, unit-tested from vitest (35 tests, no network)
+- Sprint 8: "Import from setlist.fm" in SetlistEditor (create mode): `useImportSetlist` → `setlistImportSchema` Zod boundary → pure `mapSetlistImport` (name-based artist match against `event_artists` with `lineup` fallback, play-order positions, encore flags, same-night check) → prefilled list with setlist.fm attribution link; saves through the existing `useCreateSetlist` (limits unchanged) plus a new 3 s client import limiter
+- Sprint 8: song get-or-create fixed and shared (`getOrCreateSongId`: `eq` not `is` for artist ids, `limit(1)`, `23505` race re-read); `useCreateSetlist` resolves songs first, bulk-inserts `setlist_songs`, and deletes the setlist row if that insert fails
+- Sprint 8: `ToastProvider` / `useToast` (errors only, persistent until dismissed or replaced, max 3, struck rule on the board); failure toasts for not found / artist mismatch / quota / invalid link / empty setlist / save errors
+- 450 unit tests passing, 0 lint errors, 0 lint warnings
 
 ## Decisions
 - Direct Supabase client queries (no custom API layer)
@@ -91,6 +97,8 @@
 - Avatar bucket is public (no signed URLs needed)
 - Draft reviews use status column, not separate is_public flag
 - Profile updates go through useUpdateProfile mutation for cache coherence
+- Third-party API keys live in Supabase Edge Function secrets and are reached through a function that verifies the user's session in code (setlist-import is the reference)
+- Imports prefill; nothing external is written until the user saves
 
 ## Active Concerns
 - See .planning/codebase/CONCERNS.md for full list

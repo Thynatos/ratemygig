@@ -318,10 +318,14 @@ cards rendered generic tags after Sprint 10 while every check looked green.
 ### Supabase Edge Function secrets
 
 ```bash
-supabase secrets set SENTRY_DSN=...   # optional: og-image errors land in Sentry
+supabase secrets set SENTRY_DSN=...          # optional: og-image errors land in Sentry
+supabase secrets set SETLISTFM_API_KEY=...   # required by setlist-import
 ```
 
 Missing `SENTRY_DSN`: og-image failures are console-only.
+Missing `SETLISTFM_API_KEY`: `setlist-import` answers every signed-in call with
+`not_configured`; the editor shows "Importing from setlist.fm isn't set up on this
+server yet" and manual entry keeps working.
 
 ### Local development
 
@@ -471,6 +475,84 @@ static TTFs (SIL OFL), subset with fonttools to ASCII + Latin-1 + punctuation +
 - **Review photos:** the `review-photos` bucket is private, so the function
   generates short-lived signed URLs (300 s) for card photos instead of public
   URLs.
+
+---
+
+## setlist.fm Import
+
+The setlist editor's **Import from setlist.fm** field turns a pasted setlist.fm link
+into a prefilled song list. The setlist.fm API key never reaches the browser: the
+Edge Function `setlist-import` holds it as a secret. This is the server-side-key
+pattern the deferred Ticketmaster proxy should copy.
+
+```
+Editor ── supabase.functions.invoke('setlist-import', { url }) ──▶ Edge Function
+            (user's session JWT)                                   ├─ verifies the JWT with Supabase Auth (signed-in users only)
+                                                                   ├─ parses the setlist id from the URL (never fetches the URL itself)
+                                                                   └─ GET api.setlist.fm/rest/1.0/setlist/<id>  (x-api-key from secrets)
+Editor ◀── { artistName, eventDate, venueName, url, songs: [{ name, encore }] }
+   └─ matches artistName against the event's artists, prefills positions + encores;
+      nothing is written until the user presses Save (useCreateSetlist)
+```
+
+| Piece | Path |
+|---|---|
+| Function entry (Deno wiring) | `supabase/functions/setlist-import/index.ts` |
+| Request handling (auth, retries, error codes) | `supabase/functions/setlist-import/handler.ts` |
+| Pure parsing + normalization | `supabase/functions/setlist-import/setlistfm.ts` |
+| Unit tests (vitest, no network) | `apps/web/src/features/setlists/api/setlist-import-function.test.ts` |
+| Client mapping, errors, mutation | `apps/web/src/features/setlists/api/setlistImport.ts` |
+
+### Deploy
+
+```bash
+supabase secrets set SETLISTFM_API_KEY=<key> --project-ref lpfyzjfqyyrdknzgxoul
+supabase functions deploy setlist-import --project-ref lpfyzjfqyyrdknzgxoul
+```
+
+`verify_jwt = false` is set for `setlist-import` in `supabase/config.toml`. Supabase
+recommends that once a project uses publishable/secret API keys, because the platform
+check only understands the legacy JWT-based keys. The function makes up for it by
+refusing any request without a valid user session.
+
+Verify (signed-out calls must be refused; a signed-in call needs a user access token):
+
+```bash
+curl -s -X POST "https://lpfyzjfqyyrdknzgxoul.supabase.co/functions/v1/setlist-import" \
+  -H "content-type: application/json" -d '{"url":"63de4613"}'
+# {"error":{"code":"unauthorized",...}}  (HTTP 401)
+```
+
+Then import a real setlist from the editor at `/events/<id>/setlist`.
+
+### Error contract
+
+| HTTP | `error.code` | Cause | Editor toast |
+|---|---|---|---|
+| 400 | `invalid_input` | Not a setlist.fm *setlist* link or id | "That isn't a setlist.fm setlist link…" |
+| 401 | `unauthorized` | No or invalid user session | "Sign in again to import from setlist.fm." |
+| 404 | `not_found` | setlist.fm has no such setlist | "setlist.fm has no setlist at that link…" |
+| 429 | `quota_exceeded` | setlist.fm throttled us twice, or Retry-After > 2 s (daily quota) | "setlist.fm has had too many requests…" |
+| 500/502 | `not_configured` | Secret missing, or setlist.fm rejected the key (401/403) | "…isn't set up on this server yet." |
+| 502 | `upstream_error` | setlist.fm down, timed out (8 s), or sent an unusable payload | "Couldn't reach setlist.fm…" |
+
+Two failures are decided in the browser, not the function: **artist mismatch** (the
+setlist.fm artist matches none of the event's artists) and **empty** (setlist.fm lists
+the show with no songs yet).
+
+### Quota and terms
+
+- setlist.fm's starter key allows about **2 requests/second and 1,440/day** (forum
+  figures, not official), shared by every user of the app. The function retries a
+  429 once when setlist.fm asks for ≤ 2 s, and the editor rate-limits imports to
+  one per 3 s per tab (`RATE_LIMITS.SETLIST_IMPORT`). There is no server-side
+  per-user limit yet (deferred with the other server-side rate limiting).
+- The [API terms](https://www.setlist.fm/help/terms) allow **non-commercial use only**,
+  require an **attribution link wherever setlist.fm data is shown** (the editor shows
+  the link from the response while you review an import), and forbid **retaining
+  copies** of the data beyond short-term caching. Saving an imported setlist stores
+  it permanently. See `.planning/codebase/CONCERNS.md` (Sprint 8) before enabling
+  the feature in production.
 
 ---
 

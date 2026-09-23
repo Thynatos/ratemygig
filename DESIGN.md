@@ -182,6 +182,7 @@ Written at finish, from the built world. Where this section contradicts sections
 | Score strip | `apps/web/src/shared/components/ui/StarRating.tsx` | Exported as `StarRating` / `RatingDisplay` / `ScoreStrip` |
 | League tables and charts | `apps/web/src/shared/components/Leaderboard.tsx` | `Leaderboard`, `Distribution`, `LeaderboardFilters` |
 | `whenLabel` | `apps/web/src/shared/lib/utils.ts` | Lives in utils, not Board.tsx, so that file exports only components (React Fast Refresh) |
+| Error toasts (added in Sprint 8) | `apps/web/src/shared/components/ui/Toast.tsx`, `apps/web/src/shared/hooks/useToast.ts` | Struck hairline panel, board fill, offset lift shadow, slides in on the single axis. Errors only; they stay until dismissed or replaced by id |
 
 ### 7.2 The row contract is CSS
 

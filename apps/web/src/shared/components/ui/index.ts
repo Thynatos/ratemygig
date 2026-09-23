@@ -12,6 +12,7 @@ export {
     RowSkeletonList,
 } from './Loading'
 export { Badge } from './Badge'
+export { ToastProvider } from './Toast'
 export { Avatar } from './Avatar'
 export {
     BoardHeader,
