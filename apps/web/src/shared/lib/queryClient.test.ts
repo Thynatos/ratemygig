@@ -13,6 +13,16 @@ describe('retryUnlessNotFound', () => {
         expect(retryUnlessNotFound(0, { code: 'PGRST116' })).toBe(false)
     })
 
+    it('does not retry Postgres 22P02 (malformed id, e.g. a non-UUID)', () => {
+        expect(retryUnlessNotFound(0, { code: '22P02' })).toBe(false)
+    })
+
+    it('retries other coded errors (e.g. 57014 statement timeout) up to QUERY_DEFAULTS.RETRY', () => {
+        expect(retryUnlessNotFound(0, { code: '57014' })).toBe(true)
+        expect(retryUnlessNotFound(1, { code: '57014' })).toBe(true)
+        expect(retryUnlessNotFound(2, { code: '57014' })).toBe(false)
+    })
+
     it('retries transient errors up to QUERY_DEFAULTS.RETRY', () => {
         expect(retryUnlessNotFound(0, new Error('network timeout'))).toBe(true)
         expect(retryUnlessNotFound(1, new Error('network timeout'))).toBe(true)
