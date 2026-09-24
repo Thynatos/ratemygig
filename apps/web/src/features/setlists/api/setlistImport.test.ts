@@ -9,6 +9,7 @@ import {
     mapSetlistImport,
     runSetlistImportWithDeps,
     SetlistImportError,
+    soleArtistId,
     type ImportSetlistDeps,
 } from './setlistImport'
 import type { SetlistImport } from '@/shared/validation/schemas'
@@ -79,6 +80,30 @@ describe('buildImportCandidates', () => {
 
     it('falls back to line-up names when the event has no linked artists', () => {
         expect(buildImportCandidates([], ['Arctic Monkeys', ' '])).toEqual([{ name: 'Arctic Monkeys' }])
+    })
+})
+
+describe('soleArtistId', () => {
+    it("files a single-act gig's songs under its artist", () => {
+        expect(soleArtistId([HEADLINER], ['Arctic Monkeys'])).toBe('artist-1')
+    })
+
+    it('reads the line-up as loosely as the import does', () => {
+        expect(soleArtistId([HEADLINER], ['The Arctic Monkeys', ' '])).toBe('artist-1')
+        expect(soleArtistId([HEADLINER], [])).toBe('artist-1')
+    })
+
+    it('leaves a shared bill or festival unfiled rather than guess whose set it is', () => {
+        expect(soleArtistId([HEADLINER, SUPPORT], ['Arctic Monkeys', 'Fontaines D.C.'])).toBeUndefined()
+        expect(soleArtistId([HEADLINER, SUPPORT], [])).toBeUndefined()
+    })
+
+    it('leaves the gig unfiled when the line-up names an act that is not linked', () => {
+        expect(soleArtistId([SUPPORT], ['Arctic Monkeys', 'Fontaines D.C.'])).toBeUndefined()
+    })
+
+    it('has nothing to file under without a linked artist', () => {
+        expect(soleArtistId([], ['Arctic Monkeys'])).toBeUndefined()
     })
 })
 

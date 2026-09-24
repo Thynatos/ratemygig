@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import { useEventSetlists, useDeleteSetlist } from '../api/setlists'
-import { useEvent } from '@/features/events/api/events'
+import { soleArtistId } from '../api/setlistImport'
+import { useEvent, useEventArtists } from '@/features/events/api/events'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { SetlistViewer } from '../components/SetlistViewer'
 import { SetlistEditor } from '../components/SetlistEditor'
@@ -17,7 +18,8 @@ import type { SetlistWithSongs } from '@core/index'
 export function SetlistPage() {
     const { eventId } = useParams<{ eventId: string }>()
     const { user } = useAuth()
-    const { data: event } = useEvent(eventId!)
+    const { data: event, isLoading: isEventLoading } = useEvent(eventId!)
+    const { data: eventArtists, isLoading: isArtistsLoading } = useEventArtists(eventId!)
     // No `= []` default: a failed query must surface as an error state, not
     // masquerade as "no setlists yet" (audit finding A13).
     const { data: setlistsData, isLoading, isError, refetch } = useEventSetlists(eventId!)
@@ -29,6 +31,18 @@ export function SetlistPage() {
     const userSetlist = setlists.find(sl => sl.user_id === user?.id)
 
     if (isLoading) return <LoadingPage message="Opening the setlist" />
+
+    // New songs are filed under the gig's artist, so the editor can't open
+    // until the line-up is known; otherwise a slow lookup would save them unfiled.
+    const addSetlist = (
+        <Button
+            onClick={() => setIsCreating(true)}
+            isLoading={isEventLoading || isArtistsLoading}
+            loadingLabel="Checking the line-up"
+        >
+            Add the setlist
+        </Button>
+    )
 
     const handleDelete = (setlistId: string) => {
         if (
@@ -59,11 +73,7 @@ export function SetlistPage() {
                         </>
                     ) : undefined
                 }
-                action={
-                    user && !userSetlist && !isCreating ? (
-                        <Button onClick={() => setIsCreating(true)}>Add the setlist</Button>
-                    ) : undefined
-                }
+                action={user && !userSetlist && !isCreating ? addSetlist : undefined}
             />
 
             {isCreating && (
@@ -71,6 +81,7 @@ export function SetlistPage() {
                     <SetlistEditor
                         eventId={eventId!}
                         event={event}
+                        artistId={soleArtistId(eventArtists ?? [], event?.lineup ?? [])}
                         onClose={() => setIsCreating(false)}
                     />
                 </div>
@@ -97,9 +108,7 @@ export function SetlistPage() {
                             : 'Sign in to add the songs they played.'
                     }
                     action={
-                        user ? (
-                            <Button onClick={() => setIsCreating(true)}>Add the setlist</Button>
-                        ) : (
+                        user ? addSetlist : (
                             <Link to="/login" className="btn-primary">
                                 Sign in
                             </Link>

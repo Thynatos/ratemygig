@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { getOrCreateSongIdWithDeps, isUniqueViolation, songKeys, type SongLookupDeps } from './songs'
+import { getOrCreateSongIdWithDeps, isUniqueViolation, scopeToArtist, songKeys, type SongLookupDeps } from './songs'
 
 function deps(overrides: Partial<SongLookupDeps> = {}): SongLookupDeps {
     return {
@@ -59,6 +59,29 @@ describe('getOrCreateSongIdWithDeps', () => {
         const d = deps({ findSongId: vi.fn(async () => Promise.reject(badFilter)) })
         await expect(getOrCreateSongIdWithDeps('Brianstorm', 'artist-1', d)).rejects.toBe(badFilter)
         expect(d.insertSong).not.toHaveBeenCalled()
+    })
+})
+
+describe('scopeToArtist', () => {
+    function songsQuery() {
+        const query = { eq: vi.fn(), is: vi.fn() }
+        query.eq.mockReturnValue(query)
+        query.is.mockReturnValue(query)
+        return query
+    }
+
+    it("narrows to the artist's songs with eq (PostgREST's is() rejects a uuid)", () => {
+        const query = songsQuery()
+        expect(scopeToArtist(query, 'artist-1')).toBe(query)
+        expect(query.eq).toHaveBeenCalledWith('artist_id', 'artist-1')
+        expect(query.is).not.toHaveBeenCalled()
+    })
+
+    it.each([null, undefined, ''])('narrows to unfiled songs when there is no artist (%s)', artistId => {
+        const query = songsQuery()
+        scopeToArtist(query, artistId)
+        expect(query.is).toHaveBeenCalledWith('artist_id', null)
+        expect(query.eq).not.toHaveBeenCalled()
     })
 })
 

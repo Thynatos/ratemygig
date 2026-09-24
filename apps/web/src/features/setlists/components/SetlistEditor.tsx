@@ -24,6 +24,7 @@ interface SetlistEditorProps {
     eventId: string
     existingSetlist?: SetlistWithSongs
     onClose: () => void
+    /** The artist new songs are searched and filed under (soleArtistId); unset leaves them unfiled. */
     artistId?: string
     /** The gig being written up: a setlist.fm import is checked against its line-up and date. */
     event?: Pick<Event, 'start_at' | 'lineup'>
@@ -63,7 +64,9 @@ export function SetlistEditor({
     const createSetlist = useCreateSetlist()
     const updateSetlist = useUpdateSetlist()
     const importSetlist = useImportSetlist()
-    const { data: searchResults = [] } = useSongSearch(searchQuery, artistId)
+    // An import says whose set this is; otherwise the gig's only act does.
+    const songArtistId = importSource?.artistId ?? artistId
+    const { data: searchResults = [] } = useSongSearch(searchQuery, songArtistId)
 
     const searchRef = useRef<HTMLDivElement>(null)
 
@@ -132,8 +135,7 @@ export function SetlistEditor({
                 isEncore: false,
                 isDebut: false,
                 notes: '',
-                // Songs added by hand to an imported list belong to the same artist.
-                artistId: importSource?.artistId,
+                artistId: songArtistId,
             },
         ])
         setSearchQuery('')
@@ -189,7 +191,7 @@ export function SetlistEditor({
                     songs: songs.map(s => ({
                         songId: s.id,
                         songName: s.name,
-                        artistId: s.artistId ?? artistId,
+                        artistId: s.artistId,
                         position: s.position,
                         isEncore: s.isEncore,
                         isDebut: s.isDebut,

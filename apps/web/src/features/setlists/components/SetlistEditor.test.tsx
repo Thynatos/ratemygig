@@ -298,3 +298,63 @@ describe('SetlistEditor — import from setlist.fm', () => {
         expect(await checkA11y(container)).toHaveNoViolations()
     })
 })
+
+describe('SetlistEditor — songs added by hand', () => {
+    function typeSong(name: string) {
+        fireEvent.change(screen.getByLabelText('Add a song'), { target: { value: name } })
+    }
+
+    function saveAndGetSongs() {
+        fireEvent.click(screen.getByRole('button', { name: 'Save setlist' }))
+        expect(createMutate).toHaveBeenCalledTimes(1)
+        return createMutate.mock.calls[0][0].songs
+    }
+
+    it("files typed songs under the gig's artist", () => {
+        renderEditor({ artistId: 'artist-1' })
+
+        typeSong('Brianstorm')
+        fireEvent.click(screen.getByRole('button', { name: 'Add' }))
+
+        expect(saveAndGetSongs()).toEqual([
+            expect.objectContaining({ songId: '', songName: 'Brianstorm', position: 0, artistId: 'artist-1' }),
+        ])
+    })
+
+    it("searches only that artist's songs, so a picked song is theirs too", () => {
+        vi.mocked(useSongSearch).mockReturnValue({
+            data: [{ id: 'song-1', name: 'Brianstorm', artist_id: 'artist-1', created_at: '2023-01-01T00:00:00Z' }],
+        } as unknown as ReturnType<typeof useSongSearch>)
+        renderEditor({ artistId: 'artist-1' })
+
+        typeSong('Brian')
+        expect(useSongSearch).toHaveBeenLastCalledWith('Brian', 'artist-1')
+        fireEvent.click(screen.getByRole('button', { name: 'Brianstorm' }))
+
+        expect(saveAndGetSongs()).toEqual([
+            expect.objectContaining({ songId: 'song-1', songName: 'Brianstorm', artistId: 'artist-1' }),
+        ])
+    })
+
+    it('keeps search and new songs unfiled when the gig has no single act', () => {
+        renderEditor()
+
+        typeSong('Brianstorm')
+        expect(useSongSearch).toHaveBeenLastCalledWith('Brianstorm', undefined)
+        fireEvent.click(screen.getByRole('button', { name: 'Add' }))
+
+        const [song] = saveAndGetSongs()
+        expect(song.songName).toBe('Brianstorm')
+        expect(song.artistId).toBeUndefined()
+    })
+
+    it('moves search and filing to the imported artist on a gig with no single act', () => {
+        importSucceeds(importResult())
+        renderEditor()
+
+        importFrom(SETLIST_URL)
+        typeSong('505')
+
+        expect(useSongSearch).toHaveBeenLastCalledWith('505', 'artist-1')
+    })
+})

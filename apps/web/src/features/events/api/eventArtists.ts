@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/shared/lib/supabase'
 
 export const eventArtistKeys = {
@@ -35,4 +36,12 @@ export async function fetchEventArtists(eventId: string): Promise<EventArtistRef
 
     if (error) throw error
     return mapEventArtistRows((data ?? []) as unknown as EventArtistRow[])
+}
+
+export function useEventArtists(eventId: string) {
+    return useQuery({
+        queryKey: eventArtistKeys.byEvent(eventId),
+        queryFn: () => fetchEventArtists(eventId),
+        enabled: !!eventId,
+    })
 }
