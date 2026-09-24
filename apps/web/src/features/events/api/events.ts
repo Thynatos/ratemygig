@@ -3,5 +3,5 @@ export { eventKeys, resolveEvents, resolveEventsWithDeps, resolveEvent, resolveE
 export type { VenueRow, EventRow } from './resolver'
 export { useEvents, useEvent, useCities } from './hooks'
 export { useAttendance, useToggleAttendance, useRemoveAttendance } from './attendance'
-export { eventArtistKeys, fetchEventArtists, mapEventArtistRows } from './eventArtists'
+export { eventArtistKeys, fetchEventArtists, mapEventArtistRows, useEventArtists } from './eventArtists'
 export type { EventArtistRef } from './eventArtists'

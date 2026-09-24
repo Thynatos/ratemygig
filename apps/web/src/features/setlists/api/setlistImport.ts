@@ -122,6 +122,19 @@ export function buildImportCandidates(linked: EventArtistRef[], lineup: string[]
     return lineup.filter(name => name.trim()).map(name => ({ name }))
 }
 
+/**
+ * The artist a hand-written setlist's songs are filed under: the event's only
+ * act. A shared bill or festival gets none — a setlist doesn't record whose set
+ * it is — and so does a line-up naming an act that isn't linked. Unfiled songs
+ * are only missing from artist stats; misfiled ones would count for the wrong act.
+ */
+export function soleArtistId(linked: EventArtistRef[], lineup: string[]): string | undefined {
+    if (linked.length !== 1) return undefined
+    const [artist] = linked
+    const othersBilled = lineup.some(name => name.trim() && !artistNamesMatch(name, artist.name))
+    return othersBilled ? undefined : artist.id
+}
+
 // ---------------------------------------------------------------------------
 // Mapping
 // ---------------------------------------------------------------------------

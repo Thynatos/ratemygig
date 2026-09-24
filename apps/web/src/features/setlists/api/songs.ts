@@ -21,6 +21,22 @@ export function isUniqueViolation(error: unknown): boolean {
     return typeof error === 'object' && error !== null && (error as { code?: unknown }).code === '23505'
 }
 
+interface ArtistScopable<Q> {
+    eq: (column: 'artist_id', value: string) => Q
+    is: (column: 'artist_id', value: null) => Q
+}
+
+/**
+ * Narrows a songs query to one artist's songs, or to the unfiled ones when
+ * there is no artist. Lookup and search both go through here, so the editor
+ * only offers songs from the scope it creates them in. PostgREST's `is` only
+ * accepts null/true/false: `.is('artist_id', <uuid>)` is a 400 (PGRST100), so
+ * an artist id must use `eq`.
+ */
+export function scopeToArtist<Q extends ArtistScopable<Q>>(query: Q, artistId: string | null | undefined): Q {
+    return artistId ? query.eq('artist_id', artistId) : query.is('artist_id', null)
+}
+
 /**
  * Get-or-create a song under UNIQUE(name, artist_id). A concurrent insert of
  * the same song loses the race with a unique violation; the winner's row is
@@ -46,11 +62,9 @@ export async function getOrCreateSongIdWithDeps(
 
 async function findSongId(name: string, artistId: string | null): Promise<string | null> {
     const query = supabase.from('songs').select('id').eq('name', name)
-    // PostgREST's `is` only accepts null/true/false: `.is('artist_id', <uuid>)`
-    // is a 400 (PGRST100), so artist-scoped lookups must use `eq`. NULLs are
-    // distinct under the unique constraint, so NULL-artist names can repeat —
-    // hence limit(1) rather than maybeSingle().
-    const { data, error } = await (artistId ? query.eq('artist_id', artistId) : query.is('artist_id', null))
+    // NULLs are distinct under the unique constraint, so NULL-artist names can
+    // repeat — hence limit(1) rather than maybeSingle().
+    const { data, error } = await scopeToArtist(query, artistId)
         .order('created_at', { ascending: true })
         .limit(1)
 
@@ -73,24 +87,21 @@ export function getOrCreateSongId(name: string, artistId: string | null): Promis
     return getOrCreateSongIdWithDeps(name, artistId, { findSongId, insertSong })
 }
 
-export function useSongSearch(query: string, artistId?: string) {
+/** Songs whose name contains the query, in the scope new songs are created in (scopeToArtist). */
+export function useSongSearch(query: string, artistId: string | undefined) {
     return useQuery({
         queryKey: songKeys.search(query, artistId),
         queryFn: async () => {
             if (!query.trim()) return []
 
-            let q = supabase
+            const q = supabase
                 .from('songs')
                 .select('*')
                 .ilike('name', `%${query.trim()}%`)
                 .order('name')
                 .limit(20)
 
-            if (artistId) {
-                q = q.eq('artist_id', artistId)
-            }
-
-            const { data, error } = await q
+            const { data, error } = await scopeToArtist(q, artistId)
             if (error) throw error
             return data as Song[]
         },
