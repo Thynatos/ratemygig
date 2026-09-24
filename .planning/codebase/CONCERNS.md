@@ -269,6 +269,29 @@
 #### ~~reviews → profiles PostgREST embed fails (PGRST200)~~ — FIXED
 - **Resolved (Sprint 10 / audit A1)**: migration `016_schema_fixes.sql` adds FKs to `public.profiles` from `reviews`, `comments`, `lists`, `setlists`, and both `user_follows` columns. `user_follows` embeds now hint the new constraint names (`user_follows_follower_profile_fkey` / `user_follows_following_profile_fkey`). All nine embed sites are covered by the `live-schema` CI job.
 
+## Share cards on production — state after the Sprint 10 merge (2026-08-21)
+
+The first real production deploy of Sprint 7 finally made G3 testable. Results, in order of discovery:
+
+### FIXED — no SPA fallback (every deep link 404'd)
+- See the entry below. `/venues`, `/artists`, `/events/:id`, `/r/:id` all returned a Vercel platform 404; now 200.
+
+### FIXED — `api/og-inject` returned 500 on every request
+- `FUNCTION_INVOCATION_FAILED` for **all** paths including the no-param request that should short-circuit to 400 — so the module never loaded. Cause: `apps/web` is `"type": "module"`, so the Vercel Node runtime uses Node's ESM resolver, and `../src/shared/lib/{og,crawler}` point at `.ts` sources that are only ever compiled by Vite for the browser bundle. Reproduced locally: transpiling the function preserves extensionless specifiers and Node throws `ERR_MODULE_NOT_FOUND` for both the bare and the `.js` form.
+- Fixed by making `api/og-inject.ts` self-contained (node builtins + a type-only `@vercel/node` import). `og-inject-parity.test.ts` guards the duplication and also asserts `vercel.json`'s UA gate carries the same tokens and `(?i)` — closing the manual-sync hazard recorded in the Sprint 7 notes. The guard was validated by injecting four drifts, not assumed.
+
+### OPEN — Vercel env vars are not set, so cards are still generic (G4)
+- Verified live: a crawler request to `/r/:id` returns **200** with the `minimalRedirectHtml` fallback and **no `og:` tags**. `buildReviewTags()` returned null, and the query is not at fault — issuing og-inject's exact PostgREST request (`reviews?id=eq.…&status=eq.published&is_public=eq.true&select=id,title,rating,user_id,event:event_id(name,city)`) with the anon key returns the row and a 200.
+- **Action required (Vercel dashboard, not in this repo):** set `SUPABASE_URL` and `SUPABASE_ANON_KEY` — **without** the `VITE_` prefix — on the Vercel project for the Production (and Preview) environments. These are separate from the GitHub Actions secrets of the same name, which only feed the `live-schema` CI job.
+
+### OPEN — `includeFiles: dist/og-shell.html` does not reach the function at runtime
+- `readOgShell()` checks `process.cwd()/dist/og-shell.html` and `process.cwd()/og-shell.html`; both missed, hence the 138-byte fallback. This is the other half of what G3 warned was unverifiable locally.
+- **Latent hazard while this is broken:** the fallback contains `<meta http-equiv="refresh" content="0; url=/r/:id">`. A crawler that *follows* meta-refresh would re-request `/r/:id` with the same UA, get rewritten back to `og-inject`, and loop. The major crawlers do not execute meta-refresh, so this is not currently biting — but the fallback should serve a terminal document rather than a self-referential redirect.
+
+### VERIFIED WORKING
+- The UA-gated rewrite fires, and `(?i)` genuinely works — `Twitterbot/1.0` and `TWITTERBOT/1.0` both route to the function (this was G3 step 3).
+- A normal browser UA gets the SPA shell with a 200 and no 302 (G3 step 2).
+
 ## Sprint 10 — Make it work on a real database (Notes & Tradeoffs)
 
 ### Production had NO SPA fallback — every deep link 404'd (found during the Sprint 10 merge)
