@@ -2,8 +2,8 @@
 
 ## Current Phase
 **Phase:** Post-M5 Sprints (see .planning/SPRINTS.md)
-**Status:** Sprint 8 (setlist.fm import) **complete in code** (2026-09-23): 450 unit tests, 25/25 e2e, lint 0/0, build clean, no setlist.fm key in `dist/`, and editor behaviour checked in a real browser against a stubbed function. **Not live yet**: it needs the `SETLISTFM_API_KEY` Edge Function secret and `supabase functions deploy setlist-import`, after a decision on setlist.fm's API terms (attribution + no long-term retention; see CONCERNS → Sprint 8). Sprint 11 (audit Tier 1) shipped in `9f2c8a3` but was never added to the SPRINTS.md table. Next: Sprint 9 (PWA + Web Push), the first unchecked sprint. Its spec's migration number (016) is taken; use 019.
-**Last Activity:** 2026-09-23
+**Status:** Sprint 8 (setlist.fm import) **complete in code** (2026-09-23), plus three follow-up fixes merged on 2026-09-25 (CONCERNS → Sprint 8 items 1, 2 and 4: edit mode now saves song changes, hand-entered songs on single-act gigs are filed under the artist, malformed-id lookups aren't retried). `design/overnight-overhaul` at `4d0f2aa`: 481 unit tests, 25/25 e2e, lint 0/0, build clean. **Do not deploy `setlist-import`**: setlist.fm's API terms rule this use out (see their API section and CONCERNS → Sprint 8). Before this branch merges to main, the import field must be removed, hidden, or replaced with a first-party import (paste a list / start from another night of the tour). Sprint 11 (audit Tier 1) shipped in `9f2c8a3` but was never added to the SPRINTS.md table. Next: Sprint 9 (PWA + Web Push), the first unchecked sprint. Its spec's migration number (016) is taken; use 019.
+**Last Activity:** 2026-09-25
 
 **Sprint 10 (audit Tier 0)** was completed and verified against the live project: `016_schema_fixes.sql` applied to `lpfyzjfqyyrdknzgxoul` on 2026-08-21, `npm run test:live` 22/22, all five Task 9.5 routes walked with zero 400s and zero validation failures.
 
@@ -11,7 +11,7 @@
 
 **Live verification evidence (2026-08-21, post-016):** six FKs to `public.profiles` present; reviews SELECT policy = `((is_public AND status='published') OR auth.uid()=user_id)`; storage policy matches `thumbnail_path` and `status`; `handle_new_user` `search_path=public, pg_temp`. Draft leak (B1) probed with a real draft row inside a rolled-back transaction: **anon saw 0 drafts, owner saw 1** — no residue. `/r/f9f9fe86…` renders with its author, `/events/…07` shows "5.0 avg • 1 review", `/venues/…05` and `/artists/…07` show 5.0 (1 review) with distributions, `/artists/…07` has no error boundary, `/venues/top` unchanged.
 
-**Repo secrets (checked 2026-09-23 with `gh secret list`):** `SUPABASE_URL` and `SUPABASE_ANON_KEY` are set (2026-08-21), so the `live-schema` CI job can run. `TICKETMASTER_API_KEY` and `SUPABASE_SERVICE_ROLE_KEY` are **not** set, and the nightly `ingest.yml` has failed on every run since at least 2026-09-18 with "Missing required environment variable: TICKETMASTER_API_KEY".
+**Repo secrets (checked 2026-09-25 with `gh secret list`):** all four are set: `SUPABASE_URL` and `SUPABASE_ANON_KEY` (2026-08-21, used by the `live-schema` CI job), plus `TICKETMASTER_API_KEY` and `SUPABASE_SERVICE_ROLE_KEY` (2026-09-24). The nightly `ingest.yml` still fails on `main` until PR #5 (Ticketmaster date-format fix) merges. A run from the PR branch saved Ticketmaster events into the live DB.
 
 ## Completed
 - Auth (magic link + Google OAuth)

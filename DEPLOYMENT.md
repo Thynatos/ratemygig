@@ -480,6 +480,12 @@ static TTFs (SIL OFL), subset with fonttools to ASCII + Latin-1 + punctuation +
 
 ## setlist.fm Import
 
+> **Do not deploy.** setlist.fm's API terms rule this use out (non-commercial use
+> only, no use in competing products, no long-term copies). The function stays in
+> the repo only as the reference for the server-side-key pattern; see
+> `.planning/codebase/CONCERNS.md` → Sprint 8. The deploy steps below are kept for
+> the record.
+
 The setlist editor's **Import from setlist.fm** field turns a pasted setlist.fm link
 into a prefilled song list. The setlist.fm API key never reaches the browser: the
 Edge Function `setlist-import` holds it as a secret. This is the server-side-key
