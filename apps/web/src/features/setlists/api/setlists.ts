@@ -225,23 +225,135 @@ export function useCreateSetlist() {
     })
 }
 
+/** A saved `setlist_songs` row, reduced to what editing can change. */
+export type SavedSetlistSong = Pick<SetlistSong, 'id' | 'song_id' | 'position' | 'is_encore' | 'is_debut'>
+
+/** An editor row on a saved setlist, matched to its row by `setlistSongId`. */
+export interface EditedSetlistSong {
+    setlistSongId?: string
+    position: number
+    isEncore: boolean
+    isDebut: boolean
+}
+
+export interface SetlistSongUpdate {
+    id: string
+    position: number
+    is_encore?: boolean
+    is_debut?: boolean
+}
+
+export interface SetlistSongsDiff {
+    /** Rows the editor no longer lists. */
+    remove: string[]
+    /** Row updates, to run in this order once `remove` is gone. */
+    updates: SetlistSongUpdate[]
+}
+
+/**
+ * The writes that turn a saved setlist's rows into the edited list: dropped
+ * rows are removed and changed rows updated by id. Edit mode can't add songs,
+ * so an entry with no saved row throws instead of being dropped; a row deleted
+ * elsewhere in the meantime stays deleted.
+ *
+ * UNIQUE(setlist_id, song_id, position) only collides between plays of the
+ * same song, and swapping two of those can't be ordered safely, so repeated
+ * songs that move are parked above every current and target position first.
+ */
+export function diffSetlistSongs(saved: SavedSetlistSong[], edited: EditedSetlistSong[]): SetlistSongsDiff {
+    const editedById = new Map<string, EditedSetlistSong>()
+    for (const song of edited) {
+        if (!song.setlistSongId) throw new Error('Songs can only be added before a setlist is saved')
+        editedById.set(song.setlistSongId, song)
+    }
+
+    const kept = saved.flatMap(row => {
+        const song = editedById.get(row.id)
+        return song ? [{ row, song }] : []
+    })
+    const changed = kept.filter(
+        ({ row, song }) =>
+            song.position !== row.position || song.isEncore !== row.is_encore || song.isDebut !== row.is_debut
+    )
+
+    const plays = new Map<string, number>()
+    for (const { row } of kept) plays.set(row.song_id, (plays.get(row.song_id) ?? 0) + 1)
+    const parked = changed.filter(
+        ({ row, song }) => song.position !== row.position && (plays.get(row.song_id) ?? 0) > 1
+    )
+    const firstFree = Math.max(-1, ...saved.map(row => row.position), ...edited.map(song => song.position)) + 1
+
+    return {
+        remove: saved.filter(row => !editedById.has(row.id)).map(row => row.id),
+        updates: [
+            ...parked.map(({ row }, i) => ({ id: row.id, position: firstFree + i })),
+            ...changed.map(({ row, song }) => ({
+                id: row.id,
+                position: song.position,
+                is_encore: song.isEncore,
+                is_debut: song.isDebut,
+            })),
+        ],
+    }
+}
+
+async function fetchSavedSetlistSongs(setlistId: string): Promise<SavedSetlistSong[]> {
+    const { data, error } = await supabase
+        .from('setlist_songs')
+        .select('id, song_id, position, is_encore, is_debut')
+        .eq('setlist_id', setlistId)
+
+    if (error) throw error
+    return data as SavedSetlistSong[]
+}
+
+async function applySetlistSongsDiff(setlistId: string, { remove, updates }: SetlistSongsDiff) {
+    if (remove.length > 0) {
+        const { error } = await supabase
+            .from('setlist_songs')
+            .delete()
+            .eq('setlist_id', setlistId)
+            .in('id', remove)
+
+        if (error) throw error
+    }
+
+    for (const { id, ...values } of updates) {
+        const { error } = await supabase
+            .from('setlist_songs')
+            .update(values)
+            .eq('setlist_id', setlistId)
+            .eq('id', id)
+
+        if (error) throw error
+    }
+}
+
 interface UpdateSetlistInput {
     setlistId: string
     notes?: string
     source?: 'manual' | 'verified'
+    /** The whole edited list when songs can change; see diffSetlistSongs. */
+    songs?: EditedSetlistSong[]
 }
 
 export function useUpdateSetlist() {
     const queryClient = useQueryClient()
 
     return useMutation({
-        mutationFn: async ({ setlistId, notes, source }: UpdateSetlistInput) => {
+        mutationFn: async ({ setlistId, notes, source, songs }: UpdateSetlistInput) => {
             if (!setlistMutationLimiter.allow()) {
                 throw new Error('Please wait before updating setlists again')
             }
 
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) throw new Error('Not authenticated')
+
+            // Diffed against the rows as they are now, so a retry after a
+            // half-finished save carries on from where it stopped.
+            const songChanges = songs
+                ? diffSetlistSongs(await fetchSavedSetlistSongs(setlistId), songs)
+                : undefined
 
             const updateData: Record<string, unknown> = {}
             if (notes !== undefined) updateData.notes = notes ? sanitizeText(notes) : null
@@ -256,6 +368,10 @@ export function useUpdateSetlist() {
                 .single()
 
             if (error) throw error
+
+            // Only the owner gets this far, and setlist_songs RLS lets owners write.
+            if (songChanges) await applySetlistSongsDiff(setlistId, songChanges)
+
             return data
         },
         onSuccess: (data) => {

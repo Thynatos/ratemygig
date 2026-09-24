@@ -4,7 +4,12 @@ import { checkA11y } from '@/test/axe'
 import { SetlistEditor } from './SetlistEditor'
 import { ToastProvider } from '@/shared/components/ui/Toast'
 import { useAuth } from '@/features/auth/hooks/useAuth'
-import { useCreateSetlist, useUpdateSetlist } from '../api/setlists'
+import {
+    useCreateSetlist,
+    useUpdateSetlist,
+    diffSetlistSongs,
+    type EditedSetlistSong,
+} from '../api/setlists'
 import { useSongSearch } from '../api/songs'
 import {
     useImportSetlist,
@@ -55,6 +60,7 @@ type MutateCallbacks<T> = { onSuccess?: (data: T) => void; onError?: (error: unk
 
 const importMutate = vi.fn()
 const createMutate = vi.fn()
+const updateMutate = vi.fn()
 
 function importSucceeds(result: SetlistImportResult) {
     importMutate.mockImplementation((_vars: unknown, callbacks: MutateCallbacks<SetlistImportResult>) =>
@@ -90,13 +96,114 @@ beforeEach(() => {
         isPending: false,
     } as unknown as ReturnType<typeof useCreateSetlist>)
     vi.mocked(useUpdateSetlist).mockReturnValue({
-        mutate: vi.fn(),
+        mutate: updateMutate,
         isPending: false,
     } as unknown as ReturnType<typeof useUpdateSetlist>)
     vi.mocked(useImportSetlist).mockReturnValue({
         mutate: importMutate,
         isPending: false,
     } as unknown as ReturnType<typeof useImportSetlist>)
+})
+
+function savedSong(
+    id: string,
+    name: string,
+    position: number,
+    flags: { is_encore?: boolean; is_debut?: boolean } = {}
+): SetlistWithSongs['songs'][number] {
+    return {
+        id,
+        setlist_id: 'setlist-1',
+        song_id: `song-${id}`,
+        position,
+        is_encore: false,
+        is_debut: false,
+        notes: null,
+        created_at: '2023-03-15T00:00:00Z',
+        ...flags,
+        song: { id: `song-${id}`, name, artist_id: 'artist-1', created_at: '2023-03-15T00:00:00Z' },
+    }
+}
+
+const SAVED: SetlistWithSongs = {
+    id: 'setlist-1',
+    event_id: 'event-1',
+    user_id: 'user-1',
+    source: 'manual',
+    notes: 'Great night',
+    created_at: '2023-03-15T00:00:00Z',
+    updated_at: '2023-03-15T00:00:00Z',
+    songs: [
+        savedSong('row-1', 'Sculptures of Anything Goes', 0),
+        savedSong('row-2', 'Brianstorm', 1),
+        savedSong('row-3', 'I Wanna Be Yours', 2, { is_encore: true }),
+        savedSong('row-4', 'R U Mine?', 3, { is_encore: true }),
+    ],
+    profile: null,
+    event: null,
+}
+
+describe('SetlistEditor — editing a saved setlist', () => {
+    it('saves removals, reorders and encore/debut changes along with the notes', () => {
+        renderEditor({ existingSetlist: SAVED })
+
+        fireEvent.click(screen.getByRole('button', { name: 'Remove Brianstorm' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Move R U Mine? earlier' }))
+        const rows = screen.getAllByRole('listitem')
+        fireEvent.click(within(rows[0]).getByRole('button', { name: 'Debut' }))
+        fireEvent.click(within(rows[1]).getByRole('button', { name: 'Encore' }))
+        fireEvent.change(screen.getByLabelText('Notes'), { target: { value: 'No Brianstorm tonight' } })
+        fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+        expect(createMutate).not.toHaveBeenCalled()
+        expect(updateMutate).toHaveBeenCalledTimes(1)
+        const [input] = updateMutate.mock.calls[0]
+        expect(input).toMatchObject({ setlistId: 'setlist-1', notes: 'No Brianstorm tonight' })
+        expect(
+            input.songs.map((s: EditedSetlistSong) => [s.setlistSongId, s.position, s.isEncore, s.isDebut])
+        ).toEqual([
+            ['row-1', 0, false, true],
+            ['row-4', 1, false, false],
+            ['row-3', 2, true, false],
+        ])
+        expect(diffSetlistSongs(SAVED.songs, input.songs)).toEqual({
+            remove: ['row-2'],
+            updates: [
+                { id: 'row-1', position: 0, is_encore: false, is_debut: true },
+                { id: 'row-4', position: 1, is_encore: false, is_debut: false },
+            ],
+        })
+    })
+
+    it('leaves the songs alone when only the notes change', () => {
+        renderEditor({ existingSetlist: SAVED })
+
+        fireEvent.change(screen.getByLabelText('Notes'), { target: { value: 'Great night, loud crowd' } })
+        fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+        const [input] = updateMutate.mock.calls[0]
+        expect(input.notes).toBe('Great night, loud crowd')
+        expect(diffSetlistSongs(SAVED.songs, input.songs)).toEqual({ remove: [], updates: [] })
+    })
+
+    it('keeps the edits on screen and says so when the save fails', () => {
+        updateMutate.mockImplementation((_input: unknown, callbacks: MutateCallbacks<unknown>) =>
+            callbacks.onError?.(new Error('Please wait before updating setlists again'))
+        )
+        const onClose = vi.fn()
+        renderEditor({ existingSetlist: SAVED, onClose })
+
+        fireEvent.click(screen.getByRole('button', { name: 'Remove Brianstorm' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+        const alert = screen.getByRole('alert')
+        expect(alert).toHaveTextContent("Couldn't save")
+        expect(alert).toHaveTextContent('Give it a few seconds before saving again.')
+        expect(onClose).not.toHaveBeenCalled()
+        const rows = screen.getAllByRole('listitem')
+        expect(rows).toHaveLength(3)
+        expect(rows[1]).toHaveTextContent('02I Wanna Be Yours')
+    })
 })
 
 describe('SetlistEditor — import from setlist.fm', () => {

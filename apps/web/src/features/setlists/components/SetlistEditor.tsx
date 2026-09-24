@@ -47,6 +47,7 @@ export function SetlistEditor({
         if (!existingSetlist) return []
         return existingSetlist.songs.map(ss => ({
             id: ss.song_id,
+            setlistSongId: ss.id,
             name: ss.song?.name ?? 'Unknown',
             position: ss.position,
             isEncore: ss.is_encore,
@@ -179,7 +180,7 @@ export function SetlistEditor({
 
         if (isEditing && existingSetlist) {
             updateSetlist.mutate(
-                { setlistId: existingSetlist.id, notes: setlistNotes },
+                { setlistId: existingSetlist.id, notes: setlistNotes, songs },
                 { onSuccess: onClose, onError: handleSaveError }
             )
         } else {

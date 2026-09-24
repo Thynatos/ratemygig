@@ -16,6 +16,8 @@ import {
 export interface SetlistSongDraft {
     /** Set when the song was picked from the catalog; imported songs are resolved on save. */
     id?: string
+    /** Set when editing a saved setlist: the `setlist_songs` row this entry came from. */
+    setlistSongId?: string
     name: string
     position: number
     isEncore: boolean
