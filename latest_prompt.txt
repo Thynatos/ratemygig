@@ -8,7 +8,6 @@ Architecture summary:
 - Backend: Supabase (Postgres, Auth, Storage, RLS) — no custom API server
 - State: TanStack React Query + React Hook Form + Zod
 - Codebase docs: .planning/codebase/ has STACK.md, ARCHITECTURE.md, STRUCTURE.md, CONVENTIONS.md, INTEGRATIONS.md, TESTING.md, CONCERNS.md
-- AGENTS.md in repo root has graphify rules — follow them (read graphify-out/GRAPH_REPORT.md first; rebuild graph after code changes with: python -c "from graphify.watch import _rebuild_code; from pathlib import Path; _rebuild_code(Path('.'))")
 
 Current state:
 - M1–M5 + Sprints 1–2 complete: 206 unit tests passing, build clean, 0 lint errors
@@ -145,7 +144,6 @@ After finishing (required doc updates):
 - Add 014_friends_attendance.sql to the migration list in DEPLOYMENT.md and to the
   human migrations step in docs/AGENT_CONTINUATION.md
 - Add any new issues discovered to .planning/codebase/CONCERNS.md
-- Run the graphify rebuild (command above)
 
 Acceptance criteria:
 - Badge renders on event cards when a followed user has planned/attended attendance
