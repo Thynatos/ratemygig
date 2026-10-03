@@ -2,6 +2,7 @@
 // Implements IEventsProvider interface using Ticketmaster Discovery API
 
 import { TicketmasterClient } from './ticketmaster-client.js';
+import { toTicketmasterDateTime } from './datetime.js';
 import type { TmEvent, TmEventSearchParams } from './types.js';
 
 // Provider-specific types (matching core/interfaces/events-provider.ts)
@@ -136,8 +137,8 @@ export class TicketmasterProvider {
             city: params.city,
             countryCode: params.country,
             classificationName: this.classification,
-            startDateTime: params.from?.toISOString().replace('.000Z', 'Z'),
-            endDateTime: params.to?.toISOString().replace('.000Z', 'Z'),
+            startDateTime: toTicketmasterDateTime(params.from),
+            endDateTime: toTicketmasterDateTime(params.to),
             size: params.pageSize || 20,
             page: (params.page || 1) - 1,  // API uses 0-based pages
         };
@@ -168,8 +169,8 @@ export class TicketmasterProvider {
         const response = await this.client.searchEvents({
             venueId,
             classificationName: this.classification,
-            startDateTime: params?.from?.toISOString().replace('.000Z', 'Z'),
-            endDateTime: params?.to?.toISOString().replace('.000Z', 'Z'),
+            startDateTime: toTicketmasterDateTime(params?.from),
+            endDateTime: toTicketmasterDateTime(params?.to),
             size: 200,
         });
 
@@ -182,8 +183,8 @@ export class TicketmasterProvider {
         const response = await this.client.searchEvents({
             attractionId,
             classificationName: this.classification,
-            startDateTime: params?.from?.toISOString().replace('.000Z', 'Z'),
-            endDateTime: params?.to?.toISOString().replace('.000Z', 'Z'),
+            startDateTime: toTicketmasterDateTime(params?.from),
+            endDateTime: toTicketmasterDateTime(params?.to),
             size: 200,
         });
 
@@ -211,8 +212,8 @@ export class TicketmasterProvider {
     }): AsyncGenerator<ProviderEvent[], void, unknown> {
         const dateParams = {
             classificationName: this.classification,
-            startDateTime: params.from.toISOString().replace('.000Z', 'Z'),
-            endDateTime: params.to.toISOString().replace('.000Z', 'Z'),
+            startDateTime: toTicketmasterDateTime(params.from),
+            endDateTime: toTicketmasterDateTime(params.to),
         };
 
         if (params.cities && params.cities.length > 0) {
