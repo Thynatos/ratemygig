@@ -73,7 +73,9 @@ export async function runDailyIngest(): Promise<IngestResult> {
         totalEvents += events.length;
         console.log(`Processing batch ${batchCount}: ${events.length} events (total: ${totalEvents})`);
 
+        const saveStart = Date.now();
         const batchStats = await syncService.syncEvents(events);
+        const saveSeconds = ((Date.now() - saveStart) / 1000).toFixed(1);
 
         // Merge stats
         totalStats.eventsCreated += batchStats.eventsCreated;
@@ -83,7 +85,10 @@ export async function runDailyIngest(): Promise<IngestResult> {
         totalStats.eventArtistsLinked += batchStats.eventArtistsLinked;
         totalStats.errors.push(...batchStats.errors);
 
-        console.log(`  Created: ${batchStats.eventsCreated}, Updated: ${batchStats.eventsUpdated}`);
+        console.log(
+            `  Created: ${batchStats.eventsCreated}, Updated: ${batchStats.eventsUpdated}, ` +
+            `Errors: ${batchStats.errors.length} (saved in ${saveSeconds}s)`
+        );
     }
 
     const endTime = new Date();

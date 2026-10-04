@@ -39,6 +39,10 @@ jobs:
       # this step its sources (the ingest pipeline) are never type-checked.
       - run: npx tsc --noEmit -p packages/jobs/tsconfig.json
 
+      # The root `npm run test` only covers apps/web; the ingest pipeline's own
+      # tests (batching, fallback, input cleaning) live in packages/jobs.
+      - run: npm run test --workspace=packages/jobs
+
       - run: npm run test
 
       - run: npm run build
