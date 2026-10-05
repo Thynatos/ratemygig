@@ -54,6 +54,12 @@ export interface SearchEventsResult {
     hasMore: boolean;
 }
 
+// Ticketmaster pads some values ("Brooklyn ") and omits others entirely, which
+// would otherwise create duplicate venues or violate NOT NULL columns
+function clean(value: string | undefined): string {
+    return typeof value === 'string' ? value.trim() : '';
+}
+
 export class TicketmasterProvider {
     readonly providerId = 'ticketmaster';
     private client: TicketmasterClient;
@@ -80,15 +86,28 @@ export class TicketmasterProvider {
             return null;  // Skip events without date
         }
 
+        // events.name and venues.name are NOT NULL
+        const name = clean(tmEvent.name);
+        const venueName = clean(venue.name);
+        if (!name || !venueName) {
+            return null;  // Skip events without a usable name
+        }
+
         // Get best image
         const image = this.getBestImage(tmEvent.images);
 
-        // Map artists (attractions)
-        const artists: ProviderArtist[] = (tmEvent._embedded?.attractions || []).map(attr => ({
-            id: attr.id,
-            name: attr.name,
-            imageUrl: this.getBestImage(attr.images),
-        }));
+        // Map artists (attractions); artists.name is NOT NULL, so nameless ones are dropped
+        const artists: ProviderArtist[] = [];
+        for (const attr of tmEvent._embedded?.attractions || []) {
+            const artistName = clean(attr.name);
+            if (artistName) {
+                artists.push({
+                    id: attr.id,
+                    name: artistName,
+                    imageUrl: this.getBestImage(attr.images),
+                });
+            }
+        }
 
         // Build ticket URLs
         const ticketUrls: TicketUrl[] = [];
@@ -98,13 +117,13 @@ export class TicketmasterProvider {
 
         return {
             id: tmEvent.id,
-            name: tmEvent.name,
+            name,
             startAt: new Date(dateStr),
             venue: {
                 id: venue.id,
-                name: venue.name,
-                city: venue.city?.name || 'Unknown',
-                country: venue.country?.countryCode || venue.country?.name || 'Unknown',
+                name: venueName,
+                city: clean(venue.city?.name) || 'Unknown',
+                country: clean(venue.country?.countryCode) || clean(venue.country?.name) || 'Unknown',
                 lat: venue.location?.latitude ? parseFloat(venue.location.latitude) : undefined,
                 lng: venue.location?.longitude ? parseFloat(venue.location.longitude) : undefined,
             },
