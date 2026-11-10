@@ -22,6 +22,12 @@ export class TicketmasterClient {
     private rateLimit: number;
     private lastRequestTime: number = 0;
     private requestQueue: Promise<void> = Promise.resolve();
+    // HTTP calls made, retries included; each one counts against the daily quota
+    private requests = 0;
+
+    get requestCount(): number {
+        return this.requests;
+    }
 
     constructor(apiKey: string, baseUrl: string = 'https://app.ticketmaster.com/discovery/v2', rateLimit: number = 5) {
         this.apiKey = apiKey;
@@ -81,6 +87,7 @@ export class TicketmasterClient {
             let attempt = 0;
             while (true) {
                 attempt++;
+                this.requests++;
                 const response = await fetch(url);
 
                 if (response.ok) {
@@ -123,6 +130,7 @@ export class TicketmasterClient {
             city: params.city,
             countryCode: params.countryCode,
             stateCode: params.stateCode,
+            dmaId: params.dmaId,
             classificationName: params.classificationName,
             classificationId: params.classificationId,
             startDateTime: params.startDateTime,
@@ -149,14 +157,18 @@ export class TicketmasterClient {
     /**
      * Fetch all events with pagination
      * Note: Ticketmaster limits deep paging to 1000 items (size * page < 1000)
+     * Pass `firstPage` when page 0 of these params has already been fetched,
+     * so it isn't requested twice.
      */
-    async *searchEventsAll(params: TmEventSearchParams): AsyncGenerator<TmEvent[], void, unknown> {
+    async *searchEventsAll(params: TmEventSearchParams, firstPage?: TmEventsResponse): AsyncGenerator<TmEvent[], void, unknown> {
         let page = 0;
         const size = params.size || 200;
         const maxPage = Math.floor(1000 / size) - 1;  // Stay under 1000 item limit
 
         while (true) {
-            const response = await this.searchEvents({ ...params, page, size });
+            const response = page === 0 && firstPage
+                ? firstPage
+                : await this.searchEvents({ ...params, page, size });
             const events = response._embedded?.events || [];
 
             if (events.length === 0) {

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { TicketmasterClient } from './ticketmaster-client.js';
+import { TicketmasterClient } from './ticketmaster-client.js';
 import { TicketmasterProvider } from './ticketmaster-provider.js';
 import type { ProviderEvent } from './ticketmaster-provider.js';
 import type { TmAttraction, TmEvent } from './types.js';
@@ -130,5 +130,193 @@ describe('TicketmasterProvider input cleaning', () => {
         expect(pages).toHaveLength(1);
         expect(pages[0][0].venue.city).toBe('Brooklyn');
         expect(pages[0][0].artists).toEqual([]);
+    });
+});
+
+// ============================================
+// Areas and date windows, against a fake Ticketmaster
+// ============================================
+
+interface FakeEvent {
+    id: string;
+    startAt: string;
+    dmaId?: string;
+    city?: string;
+}
+
+interface FakeRequest {
+    dmaId: string | null;
+    city: string | null;
+    countryCode: string | null;
+    classificationName: string | null;
+    startDateTime: string;
+    endDateTime: string;
+    page: number;
+    total: number;
+}
+
+// Answers /events.json the way the Discovery API does, including the
+// deep-paging cap. Both date bounds are inclusive, the worst case for
+// windows that share an edge.
+function fakeTicketmaster(events: FakeEvent[]) {
+    const requests: FakeRequest[] = [];
+
+    const fetch = async (input: string | URL): Promise<Response> => {
+        const params = new URL(String(input)).searchParams;
+        const page = Number(params.get('page'));
+        const size = Number(params.get('size'));
+        if (page * size >= 1000) {
+            return new Response('{"errors":[{"code":"DIS1035","detail":"API Limits Exceeded"}]}', { status: 400 });
+        }
+
+        const start = Date.parse(params.get('startDateTime') ?? '');
+        const end = Date.parse(params.get('endDateTime') ?? '');
+        const dmaId = params.get('dmaId');
+        const city = params.get('city');
+        const matches = events
+            .filter(e => (!dmaId || e.dmaId === dmaId) && (!city || e.city === city))
+            .filter(e => Date.parse(e.startAt) >= start && Date.parse(e.startAt) <= end)
+            .sort((a, b) => Date.parse(a.startAt) - Date.parse(b.startAt) || a.id.localeCompare(b.id));
+
+        requests.push({
+            dmaId,
+            city,
+            countryCode: params.get('countryCode'),
+            classificationName: params.get('classificationName'),
+            startDateTime: params.get('startDateTime') ?? '',
+            endDateTime: params.get('endDateTime') ?? '',
+            page,
+            total: matches.length,
+        });
+
+        const slice = matches.slice(page * size, (page + 1) * size);
+        return Response.json({
+            ...(slice.length > 0 ? {
+                _embedded: {
+                    events: slice.map(e => tmEvent({
+                        id: e.id,
+                        dates: { start: { dateTime: e.startAt } },
+                        _embedded: {
+                            venues: [{ id: `V-${e.city ?? 'NYC'}`, name: 'Venue', city: { name: e.city ?? 'New York' } }],
+                            attractions: [],
+                        },
+                    })),
+                },
+            } : {}),
+            page: { size, totalElements: matches.length, totalPages: Math.ceil(matches.length / size), number: page },
+        });
+    };
+
+    return { fetch, requests };
+}
+
+const FROM = new Date('2026-10-20T00:00:00Z');
+const TO = new Date('2027-04-18T00:00:00Z');  // 180 days later
+
+// `count` events spaced evenly from FROM to TO, on whole seconds
+function spread(count: number, fields: Omit<FakeEvent, 'id' | 'startAt'> = {}): FakeEvent[] {
+    const step = (TO.getTime() - FROM.getTime()) / count;
+    const prefix = fields.dmaId ?? fields.city ?? 'US';
+    return Array.from({ length: count }, (_, i) => ({
+        id: `${prefix}-${i}`,
+        startAt: new Date(Math.floor((FROM.getTime() + i * step) / 1000) * 1000).toISOString(),
+        ...fields,
+    }));
+}
+
+describe('TicketmasterProvider.fetchAllEvents areas and windows', () => {
+    beforeEach(() => {
+        vi.spyOn(console, 'log').mockImplementation(() => {});
+        vi.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        vi.unstubAllGlobals();
+        vi.restoreAllMocks();
+    });
+
+    function setup(events: FakeEvent[]) {
+        const tm = fakeTicketmaster(events);
+        vi.stubGlobal('fetch', tm.fetch);
+        // A high rate limit keeps the client's throttle from slowing the tests
+        const client = new TicketmasterClient('test-key', 'https://tm.test/discovery/v2', 1000);
+        return { tm, client, provider: new TicketmasterProvider(client) };
+    }
+
+    async function idsFrom(provider: TicketmasterProvider, areas: { dmaIds?: string[]; cities?: string[] }) {
+        const ids: string[] = [];
+        for await (const page of provider.fetchAllEvents({ countries: ['US'], ...areas, from: FROM, to: TO })) {
+            ids.push(...page.map(event => event.id));
+        }
+        return ids;
+    }
+
+    it('pages through a metro area that fits under the cap without splitting it', async () => {
+        const { tm, client, provider } = setup(spread(450, { dmaId: '345' }));
+
+        const ids = await idsFrom(provider, { dmaIds: ['345'] });
+
+        expect(ids).toHaveLength(450);
+        expect(tm.requests.map(r => r.page)).toEqual([0, 1, 2]);
+        expect(tm.requests.every(r => r.dmaId === '345' && r.classificationName === 'music')).toBe(true);
+        expect(client.requestCount).toBe(3);
+    });
+
+    it('splits a date range with more than 1,000 events until every window fits', async () => {
+        // The first split falls exactly on 2027-01-18; an event there is in both halves
+        const boundary = { id: 'boundary', startAt: '2027-01-18T00:00:00.000Z', dmaId: '345' };
+        const events = [...spread(2500, { dmaId: '345' }), boundary];
+        const { tm, provider } = setup(events);
+
+        const ids = await idsFrom(provider, { dmaIds: ['345'] });
+
+        expect(ids).toHaveLength(events.length);
+        expect(new Set(ids)).toEqual(new Set(events.map(e => e.id)));
+        expect(tm.requests[0]).toMatchObject({ page: 0, total: 2501 });
+        // Only windows within the cap are paged past their first page
+        expect(tm.requests.filter(r => r.page > 0).every(r => r.total <= 1000)).toBe(true);
+        expect(console.warn).not.toHaveBeenCalled();
+    });
+
+    it('takes the first 1,000 events of an hour-long window instead of splitting forever', async () => {
+        const sameStart = Array.from({ length: 1200 }, (_, i) => ({
+            id: `crowded-${i}`,
+            startAt: '2026-12-01T20:00:00.000Z',
+            dmaId: '345',
+        }));
+        const { tm, provider } = setup(sameStart);
+
+        const ids = await idsFrom(provider, { dmaIds: ['345'] });
+
+        expect(ids).toHaveLength(1000);
+        expect(tm.requests.length).toBeLessThan(40);
+        const paged = tm.requests.filter(r => r.page > 0);
+        expect(paged.length).toBeGreaterThan(0);
+        expect(paged.every(r => Date.parse(r.endDateTime) - Date.parse(r.startDateTime) <= 60 * 60 * 1000)).toBe(true);
+        expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('pagination cap reached'));
+    });
+
+    it('yields an event once when a metro area and a city both return it', async () => {
+        const nyc = spread(300, { dmaId: '345' }).map((e, i) => (i % 3 === 0 ? { ...e, city: 'Brooklyn' } : e));
+        const brooklynOnly = { id: 'brooklyn-only', startAt: '2026-11-05T01:00:00.000Z', city: 'Brooklyn' };
+        const { provider } = setup([...nyc, brooklynOnly]);
+
+        const ids = await idsFrom(provider, { dmaIds: ['345'], cities: ['Brooklyn'] });
+
+        expect(ids).toHaveLength(301);
+        expect(new Set(ids).size).toBe(301);
+        expect(ids.at(-1)).toBe('brooklyn-only');
+    });
+
+    it('keeps country mode to one query per country, capped at 1,000 events', async () => {
+        const { tm, provider } = setup(spread(1500));
+
+        const ids = await idsFrom(provider, {});
+
+        expect(ids).toHaveLength(1000);
+        expect(tm.requests.map(r => r.page)).toEqual([0, 1, 2, 3, 4]);
+        expect(tm.requests.every(r => r.countryCode === 'US' && r.dmaId === null)).toBe(true);
+        expect(new Set(tm.requests.map(r => r.startDateTime)).size).toBe(1);
+        expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('pagination cap reached'));
     });
 });

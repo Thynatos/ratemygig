@@ -31,6 +31,7 @@ jobs:
           TICKETMASTER_API_KEY: ${{ secrets.TICKETMASTER_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          INGEST_DMAS: ${{ vars.INGEST_DMAS }}
           INGEST_CITIES: ${{ vars.INGEST_CITIES }}
           INGEST_DAYS_AHEAD: ${{ vars.INGEST_DAYS_AHEAD }}
 

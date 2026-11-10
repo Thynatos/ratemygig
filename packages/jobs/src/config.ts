@@ -14,6 +14,7 @@ export interface JobsConfig {
     ingest: {
         countries: string[];
         cities: string[];
+        dmaIds: string[];
         classification: string;
         daysAhead: number;
     };
@@ -31,6 +32,24 @@ function getEnvOrDefault(key: string, defaultValue: string): string {
     return process.env[key] || defaultValue;
 }
 
+function getEnvList(key: string): string[] {
+    return getEnvOrDefault(key, '').split(',').map(c => c.trim()).filter(c => c.length > 0);
+}
+
+// Ticketmaster answers a non-numeric dmaId with a 400, which would fail the
+// whole run; catch a metro name pasted in by mistake before any request
+function getDmaIds(): string[] {
+    const ids = getEnvList('INGEST_DMAS');
+    const invalid = ids.filter(id => !/^\d+$/.test(id));
+    if (invalid.length > 0) {
+        throw new Error(
+            `INGEST_DMAS takes Ticketmaster DMA ids, e.g. 345,324 (see DEPLOYMENT.md); ` +
+            `these are not ids: ${invalid.join(', ')}`
+        );
+    }
+    return ids;
+}
+
 export function loadConfig(): JobsConfig {
     return {
         ticketmaster: {
@@ -44,7 +63,8 @@ export function loadConfig(): JobsConfig {
         },
         ingest: {
             countries: getEnvOrDefault('INGEST_COUNTRIES', 'US').split(',').map(c => c.trim()),
-            cities: getEnvOrDefault('INGEST_CITIES', '').split(',').map(c => c.trim()).filter(c => c.length > 0),
+            cities: getEnvList('INGEST_CITIES'),
+            dmaIds: getDmaIds(),
             classification: getEnvOrDefault('INGEST_CLASSIFICATION', 'music'),
             daysAhead: parseInt(getEnvOrDefault('INGEST_DAYS_AHEAD', '180'), 10),
         },

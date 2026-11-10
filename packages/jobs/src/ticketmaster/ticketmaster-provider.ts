@@ -54,6 +54,14 @@ export interface SearchEventsResult {
     hasMore: boolean;
 }
 
+// Ticketmaster serves only the first 1,000 results of any search
+// (size * page < 1000), so the ingest splits date ranges that match more
+const RESULT_CAP = 1000;
+const PAGE_SIZE = 200;
+// A window this short that still matches more than RESULT_CAP events is
+// fetched truncated rather than split again, so the splitting always ends
+const MIN_WINDOW_MS = 60 * 60 * 1000;
+
 // Ticketmaster pads some values ("Brooklyn ") and omits others entirely, which
 // would otherwise create duplicate venues or violate NOT NULL columns
 function clean(value: string | undefined): string {
@@ -217,43 +225,104 @@ export class TicketmasterProvider {
     // ============================================
 
     /**
-     * Fetch all events matching criteria (for daily ingestion)
-     * Uses pagination to get as many events as possible.
-     * When `cities` is provided, fetches per city instead of per country
-     * (Ticketmaster caps deep paging at 1000 items per query, so
-     * city-scoped queries truncate less than country-wide ones).
+     * Fetch all events matching criteria (for daily ingestion).
+     * Areas are Ticketmaster DMAs (metro areas, suburbs included) and city
+     * names. Each area's date range is split into windows small enough that
+     * Ticketmaster's 1,000-result cap never truncates them.
+     * With no areas set, each country is a single query, which the cap cuts
+     * off after its first 1,000 events. Splitting a whole country would pull
+     * tens of thousands of events a night, so full coverage is opt-in per area.
+     * An event returned by more than one area or window is yielded once.
      */
     async *fetchAllEvents(params: {
         countries: string[];
         cities?: string[];
+        dmaIds?: string[];
         from: Date;
         to: Date;
     }): AsyncGenerator<ProviderEvent[], void, unknown> {
-        const dateParams = {
-            classificationName: this.classification,
-            startDateTime: toTicketmasterDateTime(params.from),
-            endDateTime: toTicketmasterDateTime(params.to),
-        };
+        const seen = new Set<string>();
+        const areas = [
+            ...(params.dmaIds ?? []).map(dmaId => ({ label: `DMA ${dmaId}`, search: { dmaId } })),
+            ...(params.cities ?? []).map(city => ({ label: `city ${city}`, search: { city } })),
+        ];
 
-        if (params.cities && params.cities.length > 0) {
-            for (const city of params.cities) {
-                console.log(`Fetching events for city: ${city}`);
-                yield* this.fetchBatches({ ...dateParams, city });
+        if (areas.length > 0) {
+            for (const area of areas) {
+                console.log(`Fetching events for ${area.label}`);
+                const windows = this.searchWindows(
+                    { ...area.search, classificationName: this.classification },
+                    params.from,
+                    params.to
+                );
+                let count = 0;
+                for await (const events of this.fetchBatches(windows, seen)) {
+                    count += events.length;
+                    yield events;
+                }
+                console.log(`  ${area.label}: ${count} events`);
             }
             return;
         }
 
         for (const country of params.countries) {
             console.log(`Fetching events for country: ${country}`);
-            yield* this.fetchBatches({ ...dateParams, countryCode: country });
+            yield* this.fetchBatches(this.client.searchEventsAll({
+                countryCode: country,
+                classificationName: this.classification,
+                startDateTime: toTicketmasterDateTime(params.from),
+                endDateTime: toTicketmasterDateTime(params.to),
+            }), seen);
         }
     }
 
-    private async *fetchBatches(searchParams: TmEventSearchParams): AsyncGenerator<ProviderEvent[], void, unknown> {
-        for await (const batch of this.client.searchEventsAll(searchParams)) {
-            const events = batch
-                .map(e => this.mapEvent(e))
-                .filter((e): e is ProviderEvent => e !== null);
+    /**
+     * Page through one area's events from `from` to `to`, halving the range
+     * until each piece matches no more events than the paging cap lets through.
+     * A range is only split after its first page shows it is too big, so an
+     * area that fits costs no extra requests.
+     */
+    private async *searchWindows(
+        search: TmEventSearchParams,
+        from: Date,
+        to: Date
+    ): AsyncGenerator<TmEvent[], void, unknown> {
+        const params: TmEventSearchParams = {
+            ...search,
+            startDateTime: toTicketmasterDateTime(from),
+            endDateTime: toTicketmasterDateTime(to),
+            size: PAGE_SIZE,
+        };
+        const firstPage = await this.client.searchEvents({ ...params, page: 0 });
+        const total = firstPage.page?.totalElements ?? 0;
+
+        if (total > RESULT_CAP && to.getTime() - from.getTime() > MIN_WINDOW_MS) {
+            // Whole seconds, as Ticketmaster rejects milliseconds. Both halves
+            // include the midpoint, so an event starting exactly then can't
+            // slip between them; fetchAllEvents drops the second copy.
+            const mid = new Date(Math.floor((from.getTime() + to.getTime()) / 2000) * 1000);
+            console.log(`  ${params.startDateTime} to ${params.endDateTime} has ${total} events; splitting at ${toTicketmasterDateTime(mid)}`);
+            yield* this.searchWindows(search, from, mid);
+            yield* this.searchWindows(search, mid, to);
+            return;
+        }
+
+        yield* this.client.searchEventsAll(params, firstPage);
+    }
+
+    private async *fetchBatches(
+        batches: AsyncIterable<TmEvent[]>,
+        seen: Set<string>
+    ): AsyncGenerator<ProviderEvent[], void, unknown> {
+        for await (const batch of batches) {
+            const events: ProviderEvent[] = [];
+            for (const tmEvent of batch) {
+                if (seen.has(tmEvent.id)) continue;
+                seen.add(tmEvent.id);
+
+                const event = this.mapEvent(tmEvent);
+                if (event) events.push(event);
+            }
 
             if (events.length > 0) {
                 yield events;

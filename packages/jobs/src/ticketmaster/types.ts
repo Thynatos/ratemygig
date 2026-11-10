@@ -198,6 +198,7 @@ export interface TmEventSearchParams {
     city?: string;
     countryCode?: string;
     stateCode?: string;
+    dmaId?: string;          // Designated Market Area (metro area) id, e.g. '345' for New York
     classificationName?: string;
     classificationId?: string;
     startDateTime?: string;  // ISO 8601 format
