@@ -127,8 +127,10 @@ TICKETMASTER_API_KEY=your-ticketmaster-key
 INGEST_COUNTRIES=US
 INGEST_CLASSIFICATION=music
 INGEST_DAYS_AHEAD=180
-# Optional: comma-separated cities; when set, ingest is per city and INGEST_COUNTRIES is ignored
-# INGEST_CITIES=New York,Los Angeles,Chicago
+# Optional: comma-separated Ticketmaster DMA (metro area) ids and/or city names; when either
+# is set, ingest is per area and INGEST_COUNTRIES is ignored (see "Coverage" below)
+# INGEST_DMAS=345,324,249
+# INGEST_CITIES=Nashville,Austin
 ```
 
 ---
@@ -249,26 +251,74 @@ In your GitHub repo, go to **Settings > Secrets and variables > Actions**:
 
 | Variable | Default | Notes |
 |---|---|---|
-| `INGEST_CITIES` | _(empty)_ | Comma-separated, e.g. `New York,Los Angeles,Chicago`. When set, ingest fetches per city and ignores `INGEST_COUNTRIES`. **Recommended** — see paging note below. |
+| `INGEST_DMAS` | _(empty)_ | Comma-separated Ticketmaster DMA (metro area) ids, e.g. `345,324,249` for New York, Los Angeles and Chicago. Suburbs are included, and a metro can't be confused with a same-named city elsewhere. **Recommended** — see coverage below for the ids. |
+| `INGEST_CITIES` | _(empty)_ | Comma-separated city names, e.g. `Nashville,Austin`, matched against each venue's city. Misses suburbs, and `Portland` matches Oregon and Maine. Can be combined with `INGEST_DMAS`. |
 | `INGEST_DAYS_AHEAD` | `180` | How far ahead to fetch events. |
+
+When either `INGEST_DMAS` or `INGEST_CITIES` is set, `INGEST_COUNTRIES` is ignored. With neither,
+the job runs in country mode (`US`), which stops at Ticketmaster's 1,000-result cap.
 
 ### Running it manually
 
 **Actions** tab → **Scheduled event ingest** → **Run workflow** (workflow_dispatch). Logs live in
-the same place: open the run → `ingest` job → the `npm run jobs:ingest` step shows per-city/country
-fetch progress and sync stats (events created/updated, venues, artists, errors).
+the same place: open the run → `ingest` job → the `npm run jobs:ingest` step shows per-area fetch
+progress (each DMA, city or country, and any date-window splits), sync stats (events
+created/updated, venues, artists, errors) and the number of Ticketmaster requests made.
 
 Overlapping runs are prevented by a workflow concurrency group (`cancel-in-progress: false`), so a
 slow run queues the next one rather than double-ingesting. Re-runs are safe regardless: events
 upsert on `(provider, provider_event_id)` and notifications dedupe on `(user_id, type, link)`.
 
-### Ticketmaster paging cap (why INGEST_CITIES exists)
+### Coverage: metro areas and date windows
 
-Ticketmaster caps deep paging at **1000 items per query** (`size * page < 1000`; enforced by the
-`maxPage` guard in `packages/jobs/src/ticketmaster/ticketmaster-client.ts`). A country-wide US
-query with the default 180-day window returns far more than 1000 music events, so country mode
-silently truncates. City-scoped queries stay well under the cap, so set `INGEST_CITIES` to the
-metros you care about (each city is a separate paged query; same city name as on Ticketmaster).
+Ticketmaster returns at most **1,000 results per search** (`size * page < 1000`; enforced by the
+`maxPage` guard in `packages/jobs/src/ticketmaster/ticketmaster-client.ts`). The job works
+around it for each area it fetches:
+
+- **Areas.** Each DMA in `INGEST_DMAS` and each city in `INGEST_CITIES` is a separate search. An
+  event that two areas both return (a Brooklyn show under `345` and under `Brooklyn`) is saved once.
+- **Date windows.** When an area has more than 1,000 events in the look-ahead window, the job
+  halves the date range until each piece fits, then pages through every piece. Each 200-event
+  page is one request, plus one per split; an area that fits costs nothing extra. A one-hour
+  window that still holds more than 1,000 events is fetched truncated, with a warning.
+- **Country mode** (neither variable set) is one search per country and stops at the cap, which
+  for the US is only the next day or two of gigs. It is never split: a whole country would mean
+  tens of thousands of events a night.
+
+Ticketmaster's default quota is 5,000 requests a day at 5 per second; the run log ends with the
+number used.
+
+DMA ids for common metros, from Ticketmaster's
+[supported DMA list](https://developer.ticketmaster.com/products-and-docs/apis/discovery-api/v2/#supported-dma):
+
+| DMA id | Name on Ticketmaster |
+|---|---|
+| 220 | Atlanta |
+| 222 | Austin |
+| 235 | Boston (Manchester) |
+| 249 | Chicago |
+| 261 | Dallas - Fort Worth |
+| 264 | Denver |
+| 266 | Detroit |
+| 300 | Houston |
+| 319 | Las Vegas |
+| 324 | Los Angeles |
+| 334 | Miami - Fort Lauderdale |
+| 336 | Minneapolis - Saint Paul |
+| 343 | Nashville |
+| 344 | New Orleans |
+| 345 | New York |
+| 358 | Philadelphia |
+| 359 | Phoenix |
+| 362 | Portland, OR (361 is Portland - Auburn, Maine) |
+| 382 | San Francisco - Oakland - San Jose |
+| 385 | Seattle - Tacoma |
+| 409 | Washington DC (Hagerstown) |
+| 527 | Toronto |
+| 602 | London, UK (510 is London-Sarnia, Ontario) |
+
+Outside the US and Canada most DMAs are whole regions or countries, e.g. 610 Germany, 611
+Netherlands, 902 Barcelona, 903 Madrid.
 
 ---
 
@@ -312,7 +362,8 @@ cards rendered generic tags after Sprint 10 while every check looked green.
 
 | Variable | Default | Notes |
 |---|---|---|
-| `INGEST_CITIES` | _(empty)_ | Empty = country mode, which truncates at Ticketmaster's 1000-item paging cap |
+| `INGEST_DMAS` | _(empty)_ | Metro-area ids, each fetched in full (split into date windows as needed) |
+| `INGEST_CITIES` | _(empty)_ | City names, fetched the same way. Both empty = country mode, which truncates at Ticketmaster's 1000-item paging cap |
 | `INGEST_DAYS_AHEAD` | `180` | Look-ahead window |
 
 ### Supabase Edge Function secrets

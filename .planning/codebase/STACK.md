@@ -83,6 +83,8 @@ Defined in `apps/web/vite.config.ts`:
 | `SUPABASE_URL` | Jobs | Supabase project URL (service role) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Jobs | Supabase service role key (bypasses RLS) |
 | `INGEST_COUNTRIES` | Jobs | Comma-sep country codes (default: `US`) |
+| `INGEST_DMAS` | Jobs | Comma-sep Ticketmaster DMA (metro area) ids; per-area ingest split into date windows |
+| `INGEST_CITIES` | Jobs | Comma-sep city names; per-area ingest like `INGEST_DMAS` |
 | `INGEST_CLASSIFICATION` | Jobs | Event classification (default: `music`) |
 | `INGEST_DAYS_AHEAD` | Jobs | Days ahead to fetch (default: `180`) |
 

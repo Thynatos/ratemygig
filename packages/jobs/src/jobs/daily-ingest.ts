@@ -12,6 +12,7 @@ export interface IngestResult {
     durationMs: number;
     countries: string[];
     cities: string[];
+    dmaIds: string[];
     stats: SyncStats;
 }
 
@@ -23,9 +24,14 @@ export async function runDailyIngest(): Promise<IngestResult> {
 
     // Load configuration
     const config = loadConfig();
+    const { dmaIds, cities, countries } = config.ingest;
+    const countryMode = dmaIds.length === 0 && cities.length === 0;
     console.log(`Configuration loaded:`);
-    console.log(`  - Countries: ${config.ingest.countries.join(', ')}`);
-    console.log(`  - Cities: ${config.ingest.cities.length > 0 ? config.ingest.cities.join(', ') : '(not set — country mode)'}`);
+    console.log(`  - DMAs: ${dmaIds.length > 0 ? dmaIds.join(', ') : '(not set)'}`);
+    console.log(`  - Cities: ${cities.length > 0 ? cities.join(', ') : '(not set)'}`);
+    console.log(`  - Countries: ${countryMode
+        ? `${countries.join(', ')} (country mode: capped at 1,000 events per country)`
+        : '(not used while DMAs or cities are set)'}`);
     console.log(`  - Classification: ${config.ingest.classification}`);
     console.log(`  - Days ahead: ${config.ingest.daysAhead}`);
 
@@ -64,8 +70,9 @@ export async function runDailyIngest(): Promise<IngestResult> {
 
     // Fetch and sync events in batches
     for await (const events of tmProvider.fetchAllEvents({
-        countries: config.ingest.countries,
-        cities: config.ingest.cities,
+        countries,
+        cities,
+        dmaIds,
         from,
         to,
     })) {
@@ -101,6 +108,7 @@ export async function runDailyIngest(): Promise<IngestResult> {
     console.log(`Duration: ${(durationMs / 1000).toFixed(2)} seconds`);
     console.log(`Total batches: ${batchCount}`);
     console.log(`Total events processed: ${totalEvents}`);
+    console.log(`Ticketmaster requests: ${tmClient.requestCount} (daily quota: 5,000)`);
     console.log('');
     console.log('Sync Statistics:');
     console.log(`  - Events created: ${totalStats.eventsCreated}`);
@@ -122,8 +130,9 @@ export async function runDailyIngest(): Promise<IngestResult> {
         startTime,
         endTime,
         durationMs,
-        countries: config.ingest.countries,
-        cities: config.ingest.cities,
+        countries,
+        cities,
+        dmaIds,
         stats: totalStats,
     };
 }

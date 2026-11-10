@@ -199,8 +199,9 @@
 ## Sprint 2 — Scheduled Ingest (Notes & Tradeoffs)
 
 ### Ticketmaster deep-paging cap truncates country-mode ingest
-- `TicketmasterClient.searchEventsAll()` stops at 1000 items per query (`maxPage` guard, TM API limit). Country-wide US ingest with the default 180-day window exceeds this, so country mode **silently truncates** — no error is logged when the cap is hit.
-- Mitigation shipped in Sprint 2: `INGEST_CITIES` (comma-separated) switches `fetchAllEvents` to per-city queries, which stay under the cap. Very large metros with long windows could still hit it; reduce `INGEST_DAYS_AHEAD` or split cities further if so.
+- `TicketmasterClient.searchEventsAll()` stops at 1000 items per query (`maxPage` guard, TM API limit) and logs a "pagination cap reached" warning. Country-wide US ingest with the default 180-day window exceeds this, so country mode truncates to about the next day or two of gigs.
+- Mitigation shipped in Sprint 2: `INGEST_CITIES` (comma-separated) switches `fetchAllEvents` to per-city queries.
+- Since the metro-areas PR (2026-10): `INGEST_DMAS` adds Ticketmaster metro areas, and every DMA or city search is halved by date until each piece matches ≤1000 events, so areas are no longer truncated. Country mode stays one capped search per country on purpose: windowing a whole country would mean tens of thousands of events a night.
 
 ### GitHub Actions scheduled-workflow caveats
 - Scheduled runs can be delayed during periods of high GitHub Actions load — ingest is not guaranteed to start exactly at 06:00 UTC. Acceptable for daily sync.
